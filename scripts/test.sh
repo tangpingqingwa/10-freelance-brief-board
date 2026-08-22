@@ -148,9 +148,27 @@ grep -q 'kind: quote.kind' src/billing/port.ts || fail "checkout must plan creat
 grep -q 'chargeUsd' src/billing/port.ts || fail "checkout must charge the raise difference"
 grep -q 'bid_not_higher' tests/checkout.test.ts || fail "checkout tests missing bid_not_higher"
 grep -q 'pays \$7' tests/checkout.test.ts || fail "checkout tests missing \$5 → \$12 pays \$7"
-if [[ -f scripts/live-smoke.sh ]]; then
-  fail "PR 5 must not add live-smoke"
+
+echo "== live-smoke stays operator-only =="
+[[ -f scripts/live-smoke.sh ]] || fail "missing scripts/live-smoke.sh"
+[[ -x scripts/live-smoke.sh ]] || fail "scripts/live-smoke.sh must be executable"
+[[ -f docs/live-smoke.md ]] || fail "missing docs/live-smoke.md"
+[[ -s docs/live-smoke.md ]] || fail "empty docs/live-smoke.md"
+[[ -f tests/live-smoke.test.ts ]] || fail "missing tests/live-smoke.test.ts"
+if grep -Eq '^\s*(bash )?(\./)?scripts/live-smoke\.sh' scripts/test.sh; then
+  fail "test.sh must not invoke live-smoke.sh"
 fi
+if grep -E '^[[:space:]]*(export[[:space:]]+)?POLAR_LIVE=1' scripts/test.sh >/dev/null; then
+  fail "test.sh must not set POLAR_LIVE=1"
+fi
+grep -q 'BLOCKED-SECRET: POLAR_ACCESS_TOKEN' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must name BLOCKED-SECRET: POLAR_ACCESS_TOKEN"
+grep -q 'POLAR_LIVE' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must gate live Polar on POLAR_LIVE"
+grep -q 'live-smoke refuses CI=true' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must refuse CI=true"
+grep -q 'PASS-ERROR' docs/live-smoke.md || fail "docs/live-smoke.md missing PASS-ERROR"
+grep -q 'BLOCKED-SECRET' docs/live-smoke.md || fail "docs/live-smoke.md missing BLOCKED-SECRET"
 
 echo "== rules / about / url / honesty / click =="
 for f in \
@@ -299,6 +317,8 @@ if [[ -f package.json ]]; then
     || fail "honesty rating_forbidden test did not run"
   grep -q 'about and rules' "$test_log" \
     || fail "about/rules copy test did not run"
+  grep -q 'live-smoke.sh is executable' "$test_log" \
+    || fail "live-smoke offline guard test did not run"
 fi
 
 echo "OK: buildable and testable"
