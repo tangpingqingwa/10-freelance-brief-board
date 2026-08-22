@@ -1,5 +1,7 @@
+import { HonestyError, rejectInventedRatings } from "../core/honesty";
 import { ListingError, canonicalBriefUrl, quoteBid } from "../core/listing";
 import { findPaidByIdentity } from "../core/listings";
+import { isNsfwCopy } from "../core/url";
 import { currentWeekUtc } from "../core/week";
 
 export type CheckoutKind = "create" | "raise";
@@ -88,9 +90,6 @@ export function publicBaseUrl(env: PolarEnv = process.env): string {
   return "http://localhost:3000";
 }
 
-const RATING_KEY = /^(stars?|rating|reviewScore|review_score|hireRate|hire_rate)$/i;
-const RATING_TEXT = /★|⭐|star rating|review score|top rated|hire rate/i;
-
 export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckoutInput {
   rejectRatings(body);
 
@@ -108,6 +107,9 @@ export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckou
   const winnerRule = readTrimmed(body.winnerRule);
   if (!winnerRule || winnerRule.length > 280) {
     throw new CheckoutError("invalid_listing", 400);
+  }
+  if (isNsfwCopy(buyer) || isNsfwCopy(winnerRule)) {
+    throw new CheckoutError("url_forbidden", 400);
   }
 
   const briefUrl = parseHttpsUrl(body.briefUrl);
@@ -149,13 +151,13 @@ function planQuote(
 }
 
 function rejectRatings(body: Record<string, unknown>): void {
-  for (const [key, value] of Object.entries(body)) {
-    if (RATING_KEY.test(key)) {
-      throw new CheckoutError("rating_forbidden", 400);
+  try {
+    rejectInventedRatings(body);
+  } catch (error) {
+    if (error instanceof HonestyError) {
+      throw new CheckoutError(error.code, error.httpStatus);
     }
-    if (typeof value === "string" && RATING_TEXT.test(value)) {
-      throw new CheckoutError("rating_forbidden", 400);
-    }
+    throw error;
   }
 }
 

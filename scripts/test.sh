@@ -130,14 +130,10 @@ grep -q 'data-deadline' src/app/board.tsx || fail "cards must show deadline"
 grep -q 'board.css' src/app/layout.tsx || fail "root layout must load board styles"
 grep -q 'older' tests/rank.test.ts || fail "rank tests missing older-wins-ties"
 if grep -RInEi '★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating' \
-  src/app src/core >/dev/null
+  src/app src/core --exclude='honesty.ts' --exclude-dir=about --exclude-dir=rules >/dev/null
 then
   fail "board UI must not render stars or invented ratings"
 fi
-if [[ -f src/app/about/page.tsx ]] || [[ -f src/app/rules/page.tsx ]]; then
-  fail "PR 4 must not add about/rules pages"
-fi
-
 echo "== raise-bid files =="
 for f in src/core/listing.ts tests/checkout.test.ts; do
   [[ -f "$f" ]] || fail "missing $f"
@@ -152,14 +148,56 @@ grep -q 'kind: quote.kind' src/billing/port.ts || fail "checkout must plan creat
 grep -q 'chargeUsd' src/billing/port.ts || fail "checkout must charge the raise difference"
 grep -q 'bid_not_higher' tests/checkout.test.ts || fail "checkout tests missing bid_not_higher"
 grep -q 'pays \$7' tests/checkout.test.ts || fail "checkout tests missing \$5 → \$12 pays \$7"
-if [[ -f src/app/click ]]; then
-  fail "PR 4 must not add the click route"
-fi
-if [[ -f src/core/url.ts ]] || [[ -f src/core/honesty.ts ]]; then
-  fail "PR 4 must not add URL hygiene or honesty modules"
-fi
 if [[ -f scripts/live-smoke.sh ]]; then
-  fail "PR 4 must not add live-smoke"
+  fail "PR 5 must not add live-smoke"
+fi
+
+echo "== rules / about / url / honesty / click =="
+for f in \
+  src/app/about/page.tsx \
+  src/app/rules/page.tsx \
+  src/core/url.ts \
+  src/core/honesty.ts \
+  src/app/click/\[id\]/route.ts \
+  tests/listing.test.ts \
+  tests/click.test.ts \
+  tests/honesty.test.ts
+do
+  [[ -f "$f" ]] || fail "missing $f"
+  [[ -s "$f" ]] || fail "empty $f"
+done
+grep -q 'href="/about"' src/app/layout.tsx || fail "nav must link to /about"
+grep -q 'href="/rules"' src/app/layout.tsx || fail "nav must link to /rules"
+grep -q 'Rank is the bid' src/app/about/page.tsx || fail "about must state rank is the bid"
+grep -q 'no invented ratings' src/app/about/page.tsx || fail "about must forbid invented ratings"
+grep -q 'freelance-brief-board' src/app/about/page.tsx || fail "about must name the freelance-brief-board vertical"
+grep -q '\$5' src/app/rules/page.tsx || fail "rules must state min \$5"
+grep -q 'Older wins ties' src/app/rules/page.tsx || fail "rules must state older wins ties"
+grep -q 'Raise pays difference' src/app/rules/page.tsx || fail "rules must state raise pays difference"
+grep -q 'Monday 00:00:00.000 UTC' src/app/rules/page.tsx || fail "rules must state weekly UTC reset"
+grep -q 'No invented ratings' src/app/rules/page.tsx || fail "rules must forbid invented ratings"
+grep -q 'utm_' src/core/url.ts || fail "url.ts must strip utm_ tracking keys"
+grep -q 'url_forbidden' src/core/url.ts || fail "url.ts must reject forbidden URLs"
+grep -q 't.me' src/core/url.ts || fail "url.ts must reject telegram invites"
+grep -q 'export function canonicalizeBriefUrl' src/core/url.ts \
+  || fail "url.ts must export canonicalizeBriefUrl"
+grep -q 'rating_forbidden' src/core/honesty.ts || fail "honesty.ts must reject invented ratings"
+grep -q 'rejectInventedRatings' src/core/honesty.ts \
+  || fail "honesty.ts must export rejectInventedRatings"
+grep -q 'incrementListingClicks' 'src/app/click/[id]/route.ts' \
+  || fail "click route must increment public clicks"
+grep -q 'NextResponse.redirect' 'src/app/click/[id]/route.ts' \
+  || fail "click route must 302 to the brief URL"
+grep -q 'briefClickPath' src/app/board.tsx || fail "board brief CTA must use the click route"
+grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
+grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
+grep -q 'rating_forbidden' tests/listing.test.ts \
+  || fail "listing tests must reject invented ratings"
+grep -q '302' tests/click.test.ts || fail "click tests must assert 302"
+grep -q 'rating_forbidden' tests/honesty.test.ts \
+  || fail "honesty tests must reject invented ratings"
+if grep -RInE '4\.8 stars' src/app/about/page.tsx src/app/rules/page.tsx >/dev/null; then
+  fail "about/rules must not invent ratings"
 fi
 
 echo "== checkout files =="
@@ -251,6 +289,16 @@ if [[ -f package.json ]]; then
     || fail "raise $5 → $12 pays $7 test did not run"
   grep -q 'bid_not_higher' "$test_log" \
     || fail "bid_not_higher raise test did not run"
+  grep -q 'utm_source' "$test_log" \
+    || fail "url tracking-strip test did not run"
+  grep -q 'telegram' "$test_log" \
+    || fail "chat-ban test did not run"
+  grep -q 'GET /click' "$test_log" \
+    || fail "click route test did not run"
+  grep -q 'rating_forbidden' "$test_log" \
+    || fail "honesty rating_forbidden test did not run"
+  grep -q 'about and rules' "$test_log" \
+    || fail "about/rules copy test did not run"
 fi
 
 echo "OK: buildable and testable"
