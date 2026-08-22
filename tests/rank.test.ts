@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Board, ListingCard } from "../src/app/board";
+import { resetListings } from "../src/core/listings";
 import {
   getBoardListings,
   rankListings,
@@ -26,6 +27,10 @@ const formSource = readFileSync(
 
 const RATINGS_FORBIDDEN =
   /★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating/i;
+
+afterEach(() => {
+  resetListings();
+});
 
 function listing(
   partial: Partial<Listing> & Pick<Listing, "id" | "bidUsd" | "firstPaidAt">,

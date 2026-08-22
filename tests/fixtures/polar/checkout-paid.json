@@ -1,0 +1,19 @@
+{
+  "type": "checkout.updated",
+  "data": {
+    "id": "chk_recorded_paid",
+    "status": "succeeded",
+    "amount": 500,
+    "currency": "usd",
+    "metadata": {
+      "buyer": "Acme Studio",
+      "budgetUsd": "3200",
+      "deadline": "2026-09-15",
+      "winnerRule": "Best portfolio by Friday",
+      "briefUrl": "https://example.com/acme",
+      "bidUsd": "5",
+      "weekId": "2026-W34",
+      "kind": "create"
+    }
+  }
+}

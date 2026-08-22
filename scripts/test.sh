@@ -84,9 +84,6 @@ done
 grep -q '/healthz' src/app/healthz/route.ts || grep -q 'HealthzOk' src/app/healthz/route.ts \
   || fail "src/app/healthz/route.ts missing healthz contract"
 grep -q 'ok: true' src/app/healthz/route.ts || fail "healthz route missing { ok: true }"
-if grep -RInE 'https?://([^/]*\.)?polar\.sh' src tests >/dev/null 2>&1; then
-  fail "src/tests must not hard-code polar.sh HTTP"
-fi
 if grep -E '"@polar-sh/sdk"|"@polar-sh/' package.json >/dev/null 2>&1; then
   fail "do not add a live Polar SDK in this unit"
 fi
@@ -113,7 +110,7 @@ grep -q 'export function rankListings' src/core/rank.ts \
 grep -q 'bidUsd' src/core/rank.ts || fail "rank.ts missing bidUsd sort"
 grep -q 'firstPaidAt' src/core/rank.ts || fail "rank.ts missing firstPaidAt older-wins-ties"
 grep -q 'getBoardListings' src/core/rank.ts || fail "rank.ts missing getBoardListings"
-grep -q 'return \[\]' src/core/rank.ts || fail "live board must invent no briefs"
+grep -q 'listPaid' src/core/rank.ts || fail "live board must load paid listings only"
 grep -q 'rankListings' src/app/page.tsx || fail "page.tsx must rank through rankListings"
 grep -q 'getBoardListings' src/app/page.tsx \
   || fail "page.tsx must load the board through getBoardListings"
@@ -137,14 +134,56 @@ if grep -RInEi '★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|
 then
   fail "board UI must not render stars or invented ratings"
 fi
-if grep -RInE 'createCheckout|POLAR_LIVE|polar\.sh' src/app src/core >/dev/null 2>&1; then
-  fail "PR 2 board UI must not wire Polar checkout"
-fi
-if [[ -d src/billing ]] || [[ -f src/app/api/checkout/route.ts ]]; then
-  fail "PR 2 must not add billing or checkout"
-fi
 if [[ -f src/app/about/page.tsx ]] || [[ -f src/app/rules/page.tsx ]]; then
-  fail "PR 2 must not add about/rules pages"
+  fail "PR 3 must not add about/rules pages"
+fi
+
+echo "== checkout files =="
+for f in \
+  src/billing/port.ts \
+  src/billing/fixture.ts \
+  src/billing/polar.ts \
+  src/app/api/checkout/route.ts \
+  src/app/api/polar/webhook/route.ts \
+  src/app/return/page.tsx \
+  tests/checkout.test.ts
+do
+  [[ -f "$f" ]] || fail "missing $f"
+  [[ -s "$f" ]] || fail "empty $f"
+done
+grep -q 'createCheckout' src/billing/port.ts || fail "port.ts must define createCheckout"
+grep -q 'handleWebhook' src/billing/port.ts || fail "port.ts must define handleWebhook"
+grep -q 'POLAR_FIXTURE_ONLY' src/billing/port.ts \
+  || fail "port.ts must honor POLAR_FIXTURE_ONLY"
+grep -q 'export class FixturePaymentPort' src/billing/fixture.ts \
+  || fail "fixture.ts must export FixturePaymentPort"
+grep -q 'export class PolarPaymentPort' src/billing/polar.ts \
+  || fail "polar.ts must export PolarPaymentPort"
+grep -q 'POLAR_LIVE' src/billing/polar.ts || fail "polar.ts must stay env-gated"
+grep -q 'data-return' src/app/return/page.tsx || fail "return page must expose paid/pending"
+grep -q 'does not trust the query' src/app/return/page.tsx \
+  || fail "return page must not trust the query string alone"
+grep -q 'action="/api/checkout"' src/app/outbid-form.tsx \
+  || fail "Outbid form must POST to /api/checkout"
+if grep -nE 'fetch\(|polar\.sh|api\.polar' src/billing/fixture.ts src/billing/port.ts >/dev/null; then
+  fail "fixture/port must not call Polar over the network"
+fi
+if grep -R --include='*.ts' --include='*.tsx' -E "from ['\"]@polar-sh" src tests >/dev/null 2>&1; then
+  fail "src/tests must not import a Polar SDK"
+fi
+if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" tests >/dev/null 2>&1; then
+  fail "tests must not call live Polar"
+fi
+if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" src >/dev/null 2>&1; then
+  if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" src | grep -v 'src/billing/polar.ts' >/dev/null 2>&1; then
+    fail "only src/billing/polar.ts may mention the Polar API host"
+  fi
+fi
+if grep -RInE 'billing/polar' src/app src/core >/dev/null 2>&1; then
+  fail "HTTP / pages must not import billing/polar.ts directly"
+fi
+if grep -Eq '^(export )?POLAR_LIVE=1' scripts/test.sh .github/workflows/ci.yml; then
+  fail "CI / test.sh must not set POLAR_LIVE=1"
 fi
 
 if [[ -f package.json ]]; then
@@ -168,7 +207,7 @@ if [[ -f package.json ]]; then
   test_log="$(mktemp)"
   trap 'rm -f "$test_log"' EXIT
   set +e
-  npx tsx --test --test-reporter spec 'tests/**/*.test.ts' | tee "$test_log"
+  npx tsx --test --test-concurrency=1 --test-reporter spec 'tests/**/*.test.ts' | tee "$test_log"
   test_status=${PIPESTATUS[0]}
   set -e
   [[ $test_status -eq 0 ]] || fail "unit tests failed"
@@ -178,6 +217,12 @@ if [[ -f package.json ]]; then
     || fail "healthz test did not run"
   grep -q 'older' "$test_log" \
     || fail "rank older-wins-ties test did not run"
+  grep -q 'fixture create' "$test_log" \
+    || fail "checkout $5 fixture create test did not run"
+  grep -q 'abandoned' "$test_log" \
+    || fail "abandoned checkout test did not run"
+  grep -q 'underbid' "$test_log" \
+    || fail "underbid still-lists test did not run"
 fi
 
 echo "OK: buildable and testable"

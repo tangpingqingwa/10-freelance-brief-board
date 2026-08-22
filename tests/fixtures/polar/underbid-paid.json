@@ -1,0 +1,19 @@
+{
+  "type": "checkout.updated",
+  "data": {
+    "id": "chk_underbid_paid",
+    "status": "succeeded",
+    "amount": 800,
+    "currency": "usd",
+    "metadata": {
+      "buyer": "Under Bid",
+      "budgetUsd": "1200",
+      "deadline": "2026-10-01",
+      "winnerRule": "Fixed price, first qualified",
+      "briefUrl": "https://example.com/under",
+      "bidUsd": "8",
+      "weekId": "2026-W34",
+      "kind": "create"
+    }
+  }
+}

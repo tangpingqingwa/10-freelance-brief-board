@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, type FormEvent } from "react";
+import React, { useState } from "react";
 import { MIN_BID_USD } from "../core/rank";
 
 type OutbidFormProps = {
@@ -14,16 +14,9 @@ function clampAmount(value: number): number {
 
 export function OutbidForm({ defaultAmount }: OutbidFormProps) {
   const [amount, setAmount] = useState(() => clampAmount(defaultAmount));
-  const [notice, setNotice] = useState<string | null>(null);
 
   function bump(delta: number) {
     setAmount((current) => clampAmount(current + delta));
-  }
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    // Unpaid stub: no Polar in this PR. Submitting must not invent a listing.
-    event.preventDefault();
-    setNotice("Checkout is not live. No charge and no rank claimed.");
   }
 
   return (
@@ -31,8 +24,7 @@ export function OutbidForm({ defaultAmount }: OutbidFormProps) {
       <form
         className="outbid-form"
         method="post"
-        action="/"
-        onSubmit={onSubmit}
+        action="/api/checkout"
         data-bid-form=""
       >
         <h2>
@@ -134,11 +126,6 @@ export function OutbidForm({ defaultAmount }: OutbidFormProps) {
           Already on this week? Enter the same brief URL and raise. Raise pays
           the difference only after checkout lands.
         </p>
-        {notice ? (
-          <p className="stub-note" data-checkout-stub="">
-            {notice}
-          </p>
-        ) : null}
       </form>
     </section>
   );

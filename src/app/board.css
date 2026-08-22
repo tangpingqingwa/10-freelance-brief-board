@@ -233,7 +233,6 @@ a:hover {
   filter: brightness(0.95);
 }
 
-.stub-note,
 .raise-hint {
   margin: 0.65rem 0 0;
   text-align: center;
@@ -241,8 +240,27 @@ a:hover {
   font-size: 0.8rem;
 }
 
-.stub-note {
-  color: var(--fg);
+.return-page {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 2.5rem 1rem 4rem;
+  text-align: center;
+}
+
+.return-page h1 {
+  margin: 0 0 0.75rem;
+  letter-spacing: -0.03em;
+}
+
+.return-page p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+}
+
+.return-page a {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .leaderboard {
