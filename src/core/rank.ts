@@ -1,3 +1,5 @@
+import { listPaid } from "./listings";
+
 /** Rank is the bid. Budget and deadline are public facts; they do not sort. */
 
 export const MIN_BID_USD = 5;
@@ -39,6 +41,6 @@ export function rankListings(listings: readonly Listing[]): RankedListing[] {
 }
 
 /** Live board has no paid rows until checkout lands. Never invent a #1 brief. */
-export function getBoardListings(_weekId: string): Listing[] {
-  return [];
+export function getBoardListings(weekId: string): Listing[] {
+  return listPaid(weekId);
 }

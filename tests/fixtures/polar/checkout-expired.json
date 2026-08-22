@@ -1,0 +1,19 @@
+{
+  "type": "checkout.updated",
+  "data": {
+    "id": "chk_recorded_expired",
+    "status": "expired",
+    "amount": 500,
+    "currency": "usd",
+    "metadata": {
+      "buyer": "Ghost Co",
+      "budgetUsd": "800",
+      "deadline": "2026-09-01",
+      "winnerRule": "First qualified",
+      "briefUrl": "https://example.com/ghost",
+      "bidUsd": "5",
+      "weekId": "2026-W34",
+      "kind": "create"
+    }
+  }
+}
