@@ -18,6 +18,7 @@ import {
   resetPaymentPort,
   setPaymentPort,
 } from "../src/billing/select";
+import { ListingError, quoteBid } from "../src/core/listing";
 import { applyPaidEvent, listPaid, resetListings } from "../src/core/listings";
 import { getBoardListings, MIN_BID_USD, rankListings } from "../src/core/rank";
 import { currentWeekUtc } from "../src/core/week";
@@ -44,6 +45,23 @@ function draftFields(overrides: Record<string, string> = {}): Record<string, str
 
 function formBody(fields: Record<string, string>): URLSearchParams {
   return new URLSearchParams(fields);
+}
+
+async function payFixture(
+  checkout: FixturePaymentPort,
+  fields: Record<string, string>,
+) {
+  const started = await checkout.createCheckout(parseCheckoutInput(fields));
+  const paid = await checkout.handleWebhook(
+    JSON.stringify({
+      type: "checkout.updated",
+      data: { id: started.sessionId, status: "succeeded" },
+    }),
+    {},
+  );
+  const listing = applyPaidEvent(paid);
+  assert.ok(listing);
+  return { started, paid, listing };
 }
 
 afterEach(() => {
@@ -399,6 +417,307 @@ test("getPaymentPort shares the fixture across checkout and webhook", async () =
   );
   applyPaidEvent(paid);
   assert.equal(getBoardListings(WEEK).length, 1);
+});
+
+test("quoteBid charges the full first bid and only the raise difference", () => {
+  assert.deepEqual(quoteBid(undefined, 5), {
+    kind: "create",
+    targetBidUsd: 5,
+    chargeUsd: 5,
+  });
+  assert.deepEqual(quoteBid({ bidUsd: 5 }, 12), {
+    kind: "raise",
+    targetBidUsd: 12,
+    chargeUsd: 7,
+  });
+  assert.throws(
+    () => quoteBid({ bidUsd: 5 }, 5),
+    (error: unknown) => {
+      assert.ok(error instanceof ListingError);
+      assert.equal(error.code, "bid_not_higher");
+      return true;
+    },
+  );
+  assert.throws(
+    () => quoteBid({ bidUsd: 12 }, 7),
+    (error: unknown) => {
+      assert.ok(error instanceof ListingError);
+      assert.equal(error.code, "bid_not_higher");
+      return true;
+    },
+  );
+});
+
+test("SPEC acceptance 5: #2 raises $5 → $12, pays $7, firstPaidAt unchanged", async () => {
+  const checkout = new FixturePaymentPort();
+  const first = await payFixture(
+    checkout,
+    draftFields({
+      buyer: "Acme Studio",
+      amountUsd: "5",
+      briefUrl: "https://example.com/acme",
+    }),
+  );
+  await payFixture(
+    checkout,
+    draftFields({
+      buyer: "Cover Bid",
+      amountUsd: "8",
+      briefUrl: "https://example.com/cover",
+    }),
+  );
+
+  const before = rankListings(getBoardListings(WEEK));
+  assert.equal(before[0]?.briefUrl, "https://example.com/cover");
+  assert.equal(before[1]?.briefUrl, "https://example.com/acme");
+  assert.equal(before[1]?.bidUsd, 5);
+  const firstPaidAt = first.listing.firstPaidAt;
+
+  const raiseInput = parseCheckoutInput(
+    draftFields({
+      buyer: "Acme Studio",
+      amountUsd: "12",
+      briefUrl: "https://example.com/acme",
+    }),
+  );
+  assert.equal(raiseInput.kind, "raise");
+  assert.equal(raiseInput.amountUsd, 7);
+  assert.equal(raiseInput.listingDraft.bidUsd, 12);
+
+  setPaymentPort(checkout);
+  const raiseResponse = await checkoutPost(
+    new Request("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+      },
+      body: formBody(
+        draftFields({
+          buyer: "Acme Studio",
+          amountUsd: "12",
+          briefUrl: "https://example.com/acme",
+        }),
+      ),
+    }),
+  );
+  assert.equal(raiseResponse.status, 200);
+  const started = (await raiseResponse.json()) as { sessionId: string };
+  const session = checkout.getSession(started.sessionId);
+  assert.ok(session);
+  assert.equal(session.kind, "raise");
+  assert.equal(session.amountUsd, 7);
+  assert.equal(session.listingDraft.bidUsd, 12);
+  assert.equal(listPaid(WEEK).find((row) => row.id === first.listing.id)?.bidUsd, 5);
+
+  const paid = await checkout.handleWebhook(
+    JSON.stringify({
+      type: "checkout.updated",
+      data: { id: started.sessionId, status: "succeeded" },
+    }),
+    {},
+  );
+  const raised = applyPaidEvent(paid);
+  assert.ok(raised);
+  assert.equal(paid.kind, "raise");
+  assert.equal(paid.amountUsd, 7);
+  assert.equal(raised.id, first.listing.id);
+  assert.equal(raised.bidUsd, 12);
+  assert.equal(raised.firstPaidAt, firstPaidAt);
+  assert.equal(raised.lastPaidAt, paid.paidAt);
+
+  const ranked = rankListings(getBoardListings(WEEK));
+  assert.equal(ranked.length, 2);
+  assert.equal(ranked[0]?.briefUrl, "https://example.com/acme");
+  assert.equal(ranked[0]?.rank, 1);
+  assert.equal(ranked[0]?.bidUsd, 12);
+  assert.equal(ranked[0]?.firstPaidAt, firstPaidAt);
+  assert.equal(ranked[1]?.briefUrl, "https://example.com/cover");
+  assert.equal(ranked[1]?.bidUsd, 8);
+});
+
+test("different listing cannot steal by paying only the raise difference", async () => {
+  const checkout = new FixturePaymentPort();
+  await payFixture(
+    checkout,
+    draftFields({
+      amountUsd: "12",
+      briefUrl: "https://example.com/incumbent",
+    }),
+  );
+
+  const steal = parseCheckoutInput(
+    draftFields({
+      buyer: "Rival",
+      amountUsd: "7",
+      briefUrl: "https://example.com/rival",
+    }),
+  );
+  assert.equal(steal.kind, "create");
+  assert.equal(steal.amountUsd, 7);
+  assert.equal(steal.listingDraft.bidUsd, 7);
+
+  await payFixture(
+    checkout,
+    draftFields({
+      buyer: "Rival",
+      amountUsd: "7",
+      briefUrl: "https://example.com/rival",
+    }),
+  );
+
+  const ranked = rankListings(getBoardListings(WEEK));
+  assert.equal(ranked.length, 2);
+  assert.equal(ranked[0]?.briefUrl, "https://example.com/incumbent");
+  assert.equal(ranked[0]?.bidUsd, 12);
+  assert.equal(ranked[1]?.briefUrl, "https://example.com/rival");
+  assert.equal(ranked[1]?.bidUsd, 7);
+});
+
+test("bid_not_higher when raise is not above the current bid", async () => {
+  const checkout = new FixturePaymentPort();
+  setPaymentPort(checkout);
+  await payFixture(
+    checkout,
+    draftFields({ amountUsd: "8", briefUrl: "https://example.com/stay" }),
+  );
+
+  const same = await checkoutPost(
+    new Request("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+      },
+      body: formBody(draftFields({ amountUsd: "8", briefUrl: "https://example.com/stay" })),
+    }),
+  );
+  assert.equal(same.status, 400);
+  assert.deepEqual(await same.json(), { error: "bid_not_higher" });
+
+  const lower = await checkoutPost(
+    new Request("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+      },
+      body: formBody(draftFields({ amountUsd: "7", briefUrl: "https://example.com/stay" })),
+    }),
+  );
+  assert.equal(lower.status, 400);
+  assert.deepEqual(await lower.json(), { error: "bid_not_higher" });
+
+  const listed = listPaid(WEEK);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0]?.bidUsd, 8);
+});
+
+test("unpaid raise checkout leaves the current bid unchanged", async () => {
+  const checkout = new FixturePaymentPort();
+  const first = await payFixture(
+    checkout,
+    draftFields({ amountUsd: "5", briefUrl: "https://example.com/hold" }),
+  );
+  const started = await checkout.createCheckout(
+    parseCheckoutInput(
+      draftFields({ amountUsd: "12", briefUrl: "https://example.com/hold" }),
+    ),
+  );
+  checkout.abandonSession(started.sessionId);
+  await assert.rejects(
+    () =>
+      checkout.handleWebhook(
+        JSON.stringify({
+          type: "checkout.updated",
+          data: { id: started.sessionId, status: "expired" },
+        }),
+        {},
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof CheckoutError);
+      assert.equal(error.code, "payment_incomplete");
+      return true;
+    },
+  );
+  const listed = listPaid(WEEK);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0]?.id, first.listing.id);
+  assert.equal(listed[0]?.bidUsd, 5);
+  assert.equal(listed[0]?.firstPaidAt, first.listing.firstPaidAt);
+});
+
+test("same canonical brief URL in the same week is a raise", async () => {
+  const checkout = new FixturePaymentPort();
+  const first = await payFixture(
+    checkout,
+    draftFields({
+      amountUsd: "5",
+      briefUrl: "https://EXAMPLE.com/same#frag",
+    }),
+  );
+  assert.equal(first.listing.briefUrl, "https://example.com/same");
+
+  const raiseInput = parseCheckoutInput(
+    draftFields({
+      amountUsd: "9",
+      briefUrl: "https://example.com:443/same/",
+    }),
+  );
+  assert.equal(raiseInput.kind, "raise");
+  assert.equal(raiseInput.amountUsd, 4);
+  assert.equal(raiseInput.listingDraft.briefUrl, "https://example.com/same");
+
+  const raised = await payFixture(
+    checkout,
+    draftFields({
+      amountUsd: "9",
+      briefUrl: "https://example.com:443/same/",
+    }),
+  );
+  assert.equal(raised.listing.id, first.listing.id);
+  assert.equal(raised.listing.bidUsd, 9);
+  assert.equal(raised.listing.firstPaidAt, first.listing.firstPaidAt);
+  assert.equal(listPaid(WEEK).length, 1);
+});
+
+test("same brief URL in a later UTC week pays a full new bid", () => {
+  const thisWeek = applyPaidEvent({
+    sessionId: "chk_this_week",
+    listingDraft: {
+      buyer: "Acme Studio",
+      budgetUsd: 3200,
+      deadline: "2026-09-15",
+      winnerRule: "Best portfolio by Friday",
+      briefUrl: "https://example.com/weekly",
+      bidUsd: 12,
+      weekId: WEEK,
+    },
+    amountUsd: 12,
+    kind: "create",
+    paidAt: "2026-08-17T09:00:00.000Z",
+  });
+  const nextWeek = applyPaidEvent({
+    sessionId: "chk_next_week",
+    listingDraft: {
+      buyer: "Acme Studio",
+      budgetUsd: 3200,
+      deadline: "2026-09-15",
+      winnerRule: "Best portfolio by Friday",
+      briefUrl: "https://example.com/weekly",
+      bidUsd: 5,
+      weekId: "2026-W99",
+    },
+    amountUsd: 5,
+    kind: "create",
+    paidAt: "2026-08-24T00:00:00.000Z",
+  });
+  assert.ok(thisWeek);
+  assert.ok(nextWeek);
+  assert.notEqual(nextWeek.id, thisWeek.id);
+  assert.equal(nextWeek.bidUsd, 5);
+  assert.equal(listPaid(WEEK).length, 1);
+  assert.equal(listPaid("2026-W99").length, 1);
 });
 
 test("HTTP pages do not import billing/polar.ts", () => {

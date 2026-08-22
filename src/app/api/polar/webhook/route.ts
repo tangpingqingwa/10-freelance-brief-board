@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CheckoutError } from "../../../../billing/port";
 import { getPaymentPort } from "../../../../billing/select";
+import { ListingError } from "../../../../core/listing";
 import { applyPaidEvent } from "../../../../core/listings";
 
 export async function POST(request: Request): Promise<Response> {
@@ -17,6 +18,9 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof CheckoutError && error.code === "payment_incomplete") {
       return NextResponse.json({ received: true, applied: false });
+    }
+    if (error instanceof ListingError) {
+      return NextResponse.json({ error: error.code }, { status: error.httpStatus });
     }
     const message = error instanceof Error ? error.message : "invalid webhook";
     const status =

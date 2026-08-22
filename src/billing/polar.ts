@@ -137,13 +137,17 @@ export class PolarPaymentPort implements PaymentPort {
       throw new CheckoutError("payment_incomplete", 402);
     }
     const existing = this.sessions.get(sessionId);
-    const listingDraft = existing?.listingDraft ?? draftFromMetadata(data);
+    const reconstructed = existing ? undefined : draftFromMetadata(data);
+    const listingDraft = existing?.listingDraft ?? reconstructed?.draft;
     if (!listingDraft) {
       throw new CheckoutError("payment_incomplete", 402);
     }
     const paidAt = new Date().toISOString();
-    const amountUsd = existing?.amountUsd ?? listingDraft.bidUsd;
-    const kind = existing?.kind ?? "create";
+    const amountUsd = existing?.amountUsd ?? reconstructed?.amountUsd;
+    const kind = existing?.kind ?? reconstructed?.kind ?? "create";
+    if (amountUsd === undefined) {
+      throw new CheckoutError("payment_incomplete", 402);
+    }
     this.sessions.set(sessionId, {
       sessionId,
       status: "complete",
@@ -234,7 +238,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function draftFromMetadata(data: Record<string, unknown>): ListingDraft | undefined {
+function draftFromMetadata(
+  data: Record<string, unknown>,
+): { draft: ListingDraft; amountUsd: number; kind: "create" | "raise" } | undefined {
   const metadata = isRecord(data.metadata) ? data.metadata : {};
   const buyer = readString(metadata.buyer);
   const budgetUsd = readInt(metadata.budgetUsd);
@@ -254,15 +260,25 @@ function draftFromMetadata(data: Record<string, unknown>): ListingDraft | undefi
   ) {
     return undefined;
   }
+  const charged = readInt(data.amountUsd) ?? centsToUsd(readInt(data.amount)) ?? bidUsd;
   return {
-    buyer,
-    budgetUsd,
-    deadline,
-    winnerRule,
-    briefUrl,
-    bidUsd,
-    weekId,
+    draft: {
+      buyer,
+      budgetUsd,
+      deadline,
+      winnerRule,
+      briefUrl,
+      bidUsd,
+      weekId,
+    },
+    amountUsd: charged,
+    kind: metadata.kind === "raise" ? "raise" : "create",
   };
+}
+
+function centsToUsd(cents: number | undefined): number | undefined {
+  if (cents === undefined || cents % 100 !== 0) return undefined;
+  return cents / 100;
 }
 
 function readString(value: unknown): string | undefined {

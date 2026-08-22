@@ -135,7 +135,31 @@ then
   fail "board UI must not render stars or invented ratings"
 fi
 if [[ -f src/app/about/page.tsx ]] || [[ -f src/app/rules/page.tsx ]]; then
-  fail "PR 3 must not add about/rules pages"
+  fail "PR 4 must not add about/rules pages"
+fi
+
+echo "== raise-bid files =="
+for f in src/core/listing.ts tests/checkout.test.ts; do
+  [[ -f "$f" ]] || fail "missing $f"
+  [[ -s "$f" ]] || fail "empty $f"
+done
+grep -q 'export function quoteBid' src/core/listing.ts || fail "listing.ts must export quoteBid"
+grep -q 'bid_not_higher' src/core/listing.ts || fail "listing.ts missing bid_not_higher"
+grep -q 'canonicalBriefUrl' src/core/listing.ts || fail "listing.ts missing canonical brief URL identity"
+grep -q 'firstPaidAt' src/core/listings.ts || fail "listings.ts must keep firstPaidAt"
+grep -q 'quoteBid' src/core/listings.ts || fail "paid raise must go through quoteBid"
+grep -q 'kind: quote.kind' src/billing/port.ts || fail "checkout must plan create vs raise"
+grep -q 'chargeUsd' src/billing/port.ts || fail "checkout must charge the raise difference"
+grep -q 'bid_not_higher' tests/checkout.test.ts || fail "checkout tests missing bid_not_higher"
+grep -q 'pays \$7' tests/checkout.test.ts || fail "checkout tests missing \$5 → \$12 pays \$7"
+if [[ -f src/app/click ]]; then
+  fail "PR 4 must not add the click route"
+fi
+if [[ -f src/core/url.ts ]] || [[ -f src/core/honesty.ts ]]; then
+  fail "PR 4 must not add URL hygiene or honesty modules"
+fi
+if [[ -f scripts/live-smoke.sh ]]; then
+  fail "PR 4 must not add live-smoke"
 fi
 
 echo "== checkout files =="
@@ -223,6 +247,10 @@ if [[ -f package.json ]]; then
     || fail "abandoned checkout test did not run"
   grep -q 'underbid' "$test_log" \
     || fail "underbid still-lists test did not run"
+  grep -q 'pays $7' "$test_log" \
+    || fail "raise $5 → $12 pays $7 test did not run"
+  grep -q 'bid_not_higher' "$test_log" \
+    || fail "bid_not_higher raise test did not run"
 fi
 
 echo "OK: buildable and testable"
