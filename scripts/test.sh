@@ -90,8 +90,61 @@ fi
 if grep -E '"@polar-sh/sdk"|"@polar-sh/' package.json >/dev/null 2>&1; then
   fail "do not add a live Polar SDK in this unit"
 fi
-if [[ -d src/core ]] || [[ -d src/billing ]] || [[ -f src/app/page.tsx ]]; then
-  fail "skeleton must not add board, core, or billing"
+echo "== board UI files =="
+for f in \
+  src/app/page.tsx \
+  src/app/layout.tsx \
+  src/app/board.tsx \
+  src/app/board.css \
+  src/app/outbid-form.tsx \
+  src/core/week.ts \
+  src/core/rank.ts \
+  tests/rank.test.ts \
+  tests/week.test.ts
+do
+  [[ -f "$f" ]] || fail "missing $f"
+  [[ -s "$f" ]] || fail "empty $f"
+done
+grep -q 'currentWeekUtc' src/core/week.ts || fail "week.ts missing currentWeekUtc"
+grep -q 'Monday' src/core/week.ts || fail "week.ts must document Monday 00:00 UTC"
+grep -q 'weekIdUtc' src/core/week.ts || fail "week.ts missing weekIdUtc"
+grep -q 'export function rankListings' src/core/rank.ts \
+  || fail "rank.ts must export rankListings"
+grep -q 'bidUsd' src/core/rank.ts || fail "rank.ts missing bidUsd sort"
+grep -q 'firstPaidAt' src/core/rank.ts || fail "rank.ts missing firstPaidAt older-wins-ties"
+grep -q 'getBoardListings' src/core/rank.ts || fail "rank.ts missing getBoardListings"
+grep -q 'return \[\]' src/core/rank.ts || fail "live board must invent no briefs"
+grep -q 'rankListings' src/app/page.tsx || fail "page.tsx must rank through rankListings"
+grep -q 'getBoardListings' src/app/page.tsx \
+  || fail "page.tsx must load the board through getBoardListings"
+grep -q 'currentWeekUtc' src/app/page.tsx || fail "page.tsx must use currentWeekUtc"
+grep -q 'Outbid' src/app/outbid-form.tsx || fail "form missing Outbid button"
+grep -q 'name="buyer"' src/app/outbid-form.tsx || fail "form missing buyer"
+grep -q 'name="budgetUsd"' src/app/outbid-form.tsx || fail "form missing budget"
+grep -q 'name="deadline"' src/app/outbid-form.tsx || fail "form missing deadline"
+grep -q 'name="winnerRule"' src/app/outbid-form.tsx || fail "form missing winner rule"
+grep -q 'name="briefUrl"' src/app/outbid-form.tsx || fail "form missing brief URL"
+grep -q 'name="amountUsd"' src/app/outbid-form.tsx || fail "form missing amount"
+grep -q 'data-empty-week' src/app/board.tsx || fail "board missing honest empty week"
+grep -q 'data-bid' src/app/board.tsx || fail "cards must show the bid amount"
+grep -q 'data-clicks' src/app/board.tsx || fail "cards must show public clicks"
+grep -q 'data-budget' src/app/board.tsx || fail "cards must show budget"
+grep -q 'data-deadline' src/app/board.tsx || fail "cards must show deadline"
+grep -q 'board.css' src/app/layout.tsx || fail "root layout must load board styles"
+grep -q 'older' tests/rank.test.ts || fail "rank tests missing older-wins-ties"
+if grep -RInEi '★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating' \
+  src/app src/core >/dev/null
+then
+  fail "board UI must not render stars or invented ratings"
+fi
+if grep -RInE 'createCheckout|POLAR_LIVE|polar\.sh' src/app src/core >/dev/null 2>&1; then
+  fail "PR 2 board UI must not wire Polar checkout"
+fi
+if [[ -d src/billing ]] || [[ -f src/app/api/checkout/route.ts ]]; then
+  fail "PR 2 must not add billing or checkout"
+fi
+if [[ -f src/app/about/page.tsx ]] || [[ -f src/app/rules/page.tsx ]]; then
+  fail "PR 2 must not add about/rules pages"
 fi
 
 if [[ -f package.json ]]; then
@@ -123,6 +176,8 @@ if [[ -f package.json ]]; then
     || fail "test runner reported 0 tests"
   grep -q '/healthz' "$test_log" \
     || fail "healthz test did not run"
+  grep -q 'older' "$test_log" \
+    || fail "rank older-wins-ties test did not run"
 fi
 
 echo "OK: buildable and testable"
