@@ -75,18 +75,17 @@ export class FixturePaymentPort implements PaymentPort {
       throw new CheckoutError("payment_incomplete", 402);
     }
     if (!this.sessions.has(sessionId)) {
-      const draft = draftFromMetadata(data);
-      if (!draft) {
+      const reconstructed = draftFromMetadata(data);
+      if (!reconstructed) {
         throw new CheckoutError("payment_incomplete", 402);
       }
-      const amountUsd = draft.bidUsd;
       this.sessions.set(sessionId, {
         sessionId,
         status: "open",
         checkoutUrl: `/return?sessionId=${encodeURIComponent(sessionId)}`,
-        listingDraft: draft,
-        amountUsd,
-        kind: "create",
+        listingDraft: reconstructed.draft,
+        amountUsd: reconstructed.amountUsd,
+        kind: reconstructed.kind,
       });
     }
     return this.completeSession(sessionId);
@@ -143,17 +142,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function draftFromMetadata(data: Record<string, unknown>): ListingDraft | undefined {
+function draftFromMetadata(
+  data: Record<string, unknown>,
+): { draft: ListingDraft; amountUsd: number; kind: "create" | "raise" } | undefined {
   const metadata = isRecord(data.metadata) ? data.metadata : {};
   const buyer = readString(metadata.buyer);
   const budgetUsd = readInt(metadata.budgetUsd);
   const deadline = readString(metadata.deadline);
   const winnerRule = readString(metadata.winnerRule);
   const briefUrl = readString(metadata.briefUrl);
-  const bidUsd =
-    readInt(metadata.bidUsd) ??
-    readInt(data.amountUsd) ??
-    centsToUsd(readInt(data.amount));
+  const bidUsd = readInt(metadata.bidUsd);
   const weekId = readString(metadata.weekId);
   if (
     !buyer ||
@@ -166,14 +164,22 @@ function draftFromMetadata(data: Record<string, unknown>): ListingDraft | undefi
   ) {
     return undefined;
   }
+  const charged =
+    readInt(data.amountUsd) ??
+    centsToUsd(readInt(data.amount)) ??
+    bidUsd;
   return {
-    buyer,
-    budgetUsd,
-    deadline,
-    winnerRule,
-    briefUrl,
-    bidUsd,
-    weekId,
+    draft: {
+      buyer,
+      budgetUsd,
+      deadline,
+      winnerRule,
+      briefUrl,
+      bidUsd,
+      weekId,
+    },
+    amountUsd: charged,
+    kind: metadata.kind === "raise" ? "raise" : "create",
   };
 }
 

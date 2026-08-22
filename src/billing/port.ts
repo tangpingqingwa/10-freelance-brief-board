@@ -1,4 +1,5 @@
-import { MIN_BID_USD } from "../core/rank";
+import { ListingError, canonicalBriefUrl, quoteBid } from "../core/listing";
+import { findPaidByIdentity } from "../core/listings";
 import { currentWeekUtc } from "../core/week";
 
 export type CheckoutKind = "create" | "raise";
@@ -110,8 +111,13 @@ export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckou
   }
 
   const briefUrl = parseHttpsUrl(body.briefUrl);
-  const amountUsd = parseBidAmount(body.amountUsd ?? body.bidUsd);
+  const targetBidUsd = parseWholeUsd(body.amountUsd ?? body.bidUsd);
+  if (targetBidUsd === undefined) {
+    throw new CheckoutError("bid_not_whole", 400);
+  }
   const weekId = readTrimmed(body.weekId) || currentWeekUtc().weekId;
+  const existing = findPaidByIdentity(weekId, briefUrl);
+  const quote = planQuote(existing, targetBidUsd);
 
   return {
     listingDraft: {
@@ -120,12 +126,26 @@ export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckou
       deadline,
       winnerRule,
       briefUrl,
-      bidUsd: amountUsd,
+      bidUsd: quote.targetBidUsd,
       weekId,
     },
-    amountUsd,
-    kind: "create",
+    amountUsd: quote.chargeUsd,
+    kind: quote.kind,
   };
+}
+
+function planQuote(
+  existing: { bidUsd: number } | undefined,
+  targetBidUsd: number,
+) {
+  try {
+    return quoteBid(existing, targetBidUsd);
+  } catch (error) {
+    if (error instanceof ListingError) {
+      throw new CheckoutError(error.code, error.httpStatus);
+    }
+    throw error;
+  }
 }
 
 function rejectRatings(body: Record<string, unknown>): void {
@@ -137,17 +157,6 @@ function rejectRatings(body: Record<string, unknown>): void {
       throw new CheckoutError("rating_forbidden", 400);
     }
   }
-}
-
-function parseBidAmount(raw: unknown): number {
-  const amount = parseWholeUsd(raw);
-  if (amount === undefined) {
-    throw new CheckoutError("bid_not_whole", 400);
-  }
-  if (amount < MIN_BID_USD) {
-    throw new CheckoutError("bid_below_min", 400);
-  }
-  return amount;
 }
 
 function parseWholeUsd(raw: unknown): number | undefined {
@@ -192,7 +201,14 @@ function parseHttpsUrl(raw: unknown): string {
   if (parsed.protocol !== "https:") {
     throw new CheckoutError("url_insecure", 400);
   }
-  return parsed.toString();
+  try {
+    return canonicalBriefUrl(parsed.toString());
+  } catch (error) {
+    if (error instanceof ListingError) {
+      throw new CheckoutError(error.code, error.httpStatus);
+    }
+    throw error;
+  }
 }
 
 function readTrimmed(raw: unknown): string {
