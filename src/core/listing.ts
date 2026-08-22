@@ -1,4 +1,5 @@
 import { MIN_BID_USD, type Listing } from "./rank";
+import { canonicalizeBriefUrl, UrlError } from "./url";
 
 /** Identity for raise: canonical brief URL + UTC weekId. */
 
@@ -25,27 +26,21 @@ export type ListingIdentity = {
 
 /**
  * Stable identity form of a brief URL.
- * Hostname is lowercased; default port and fragment are dropped.
- * Tracking-query strip lands with URL hygiene.
+ * Tracking keys stripped; chat / NSFW / shorteners rejected.
  */
 export function canonicalBriefUrl(raw: string): string {
-  const value = raw.trim();
-  let parsed: URL;
   try {
-    parsed = new URL(value);
-  } catch {
-    throw new ListingError("url_insecure", 400);
+    return canonicalizeBriefUrl(raw);
+  } catch (error) {
+    if (error instanceof UrlError) {
+      throw new ListingError(error.code, error.httpStatus);
+    }
+    throw error;
   }
-  if (parsed.protocol !== "https:") {
-    throw new ListingError("url_insecure", 400);
-  }
-  parsed.hash = "";
-  parsed.hostname = parsed.hostname.toLowerCase();
-  if (parsed.port === "443") parsed.port = "";
-  if (parsed.pathname.length > 1 && parsed.pathname.endsWith("/")) {
-    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
-  }
-  return parsed.toString();
+}
+
+export function briefClickPath(id: string): string {
+  return `/click/${id}`;
 }
 
 export function listingIdentity(input: ListingIdentity): ListingIdentity {

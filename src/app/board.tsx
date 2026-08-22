@@ -1,4 +1,5 @@
 import React from "react";
+import { briefClickPath } from "../core/listing";
 import type { RankedListing } from "../core/rank";
 import { MIN_BID_USD } from "../core/rank";
 import type { UtcWeek } from "../core/week";
@@ -52,7 +53,7 @@ export function ListingCard({ listing }: { listing: RankedListing }) {
           </span>
           <a
             className="brief-url"
-            href={listing.briefUrl}
+            href={briefClickPath(listing.id)}
             data-brief-url={listing.briefUrl}
           >
             Open brief

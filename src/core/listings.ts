@@ -34,6 +34,19 @@ export function findPaidByIdentity(
   return row ? { ...row } : undefined;
 }
 
+export function getListingById(id: string): Listing | undefined {
+  const row = listings.find((listing) => listing.id === id);
+  return row ? { ...row } : undefined;
+}
+
+/** Public brief-URL hops. Never a rating. */
+export function incrementListingClicks(id: string): Listing | undefined {
+  const row = listings.find((listing) => listing.id === id);
+  if (!row) return undefined;
+  row.clicks += 1;
+  return { ...row };
+}
+
 export function applyPaidEvent(event: PaidEvent): Listing | null {
   if (appliedSessions.has(event.sessionId)) {
     return listings.find((row) => matchingDraft(row, event)) ?? null;
