@@ -147,6 +147,8 @@ grep -q 'concentrates writing a new ticket after Open this brief wins the first 
   || fail "rank tests missing occupied-week write-after-open first-write hop"
 grep -q 'concentrates opening the paid #1 brief after Write this ticket is concentrated' tests/rank.test.ts \
   || fail "rank tests missing occupied-week open-after-write-first freelancer hop"
+grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week write-after-open-two buyer hop"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -390,6 +392,21 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must concentrate Open this brief after Write this ticket"
 fi
+grep -q 'data-write-after-open-two' src/app/board.tsx \
+  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated"
+grep -q 'data-write-after-open-two' src/app/board.css \
+  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-two'; then
+  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated"
+fi
+if ! awk '
+  /ticket-featured \.open-this-brief\[data-open-after-write-first\]/ { open=NR }
+  /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
+  /ticket-featured \.write-after-rule\[data-write-after-open-two\]/ { two=NR }
+  END { exit !(open && write && two && open < write && write < two) }
+' src/app/board.css; then
+  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -535,6 +552,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week write-after-open first-write test did not run"
   grep -q 'concentrates opening the paid #1 brief after Write this ticket' "$test_log" \
     || fail "occupied-week open-after-write-first freelancer test did not run"
+  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated' "$test_log" \
+    || fail "occupied-week write-after-open-two buyer test did not run"
 fi
 
 echo "OK: buildable and testable"
