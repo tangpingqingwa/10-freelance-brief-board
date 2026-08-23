@@ -14,8 +14,23 @@ import {
   type PolarEnv,
 } from "./port";
 
-/** Only used when POLAR_LIVE=1. tests/ never fetch this host. */
+/** Production Polar API. Override with POLAR_API_BASE (sandbox smoke). */
 export const POLAR_API_BASE = "https://api.polar.sh";
+
+/** Default stays production. Empty / unset POLAR_API_BASE does not change that. */
+export function polarApiBase(env: PolarEnv = process.env): string {
+  const fromEnv = env.POLAR_API_BASE?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, "");
+  }
+  return POLAR_API_BASE;
+}
+
+/** Optional Polar product. Sandbox Checkout typically requires it. */
+export function polarProductId(env: PolarEnv = process.env): string | undefined {
+  const id = env.POLAR_PRODUCT_ID?.trim();
+  return id ? id : undefined;
+}
 
 export type PolarPaymentPortOptions = {
   env?: PolarEnv;
@@ -46,28 +61,14 @@ export class PolarPaymentPort implements PaymentPort {
     const token = this.requireToken();
     let response: Response;
     try {
-      response = await this.fetchFn(`${POLAR_API_BASE}/v1/checkouts/`, {
+      response = await this.fetchFn(`${polarApiBase(this.env)}/v1/checkouts/`, {
         method: "POST",
         headers: {
           authorization: `Bearer ${token}`,
           "content-type": "application/json",
           accept: "application/json",
         },
-        body: JSON.stringify({
-          amount: input.amountUsd * 100,
-          currency: "usd",
-          success_url: `${publicBaseUrl(this.env)}/return?sessionId={CHECKOUT_ID}`,
-          metadata: {
-            buyer: input.listingDraft.buyer,
-            budgetUsd: String(input.listingDraft.budgetUsd),
-            deadline: input.listingDraft.deadline,
-            winnerRule: input.listingDraft.winnerRule,
-            briefUrl: input.listingDraft.briefUrl,
-            bidUsd: String(input.listingDraft.bidUsd),
-            weekId: input.listingDraft.weekId,
-            kind: input.kind,
-          },
-        }),
+        body: JSON.stringify(checkoutBody(this.env, input)),
       });
     } catch {
       throw new CheckoutError("polar_unavailable", 503);
@@ -196,6 +197,32 @@ export function verifyPolarSignature(
     }
   }
   return false;
+}
+
+function checkoutBody(
+  env: PolarEnv,
+  input: CreateCheckoutInput,
+): Record<string, unknown> {
+  const metadata: Record<string, string> = {
+    buyer: input.listingDraft.buyer,
+    budgetUsd: String(input.listingDraft.budgetUsd),
+    deadline: input.listingDraft.deadline,
+    winnerRule: input.listingDraft.winnerRule,
+    briefUrl: input.listingDraft.briefUrl,
+    bidUsd: String(input.listingDraft.bidUsd),
+    weekId: input.listingDraft.weekId,
+    kind: input.kind,
+    amountUsd: String(input.amountUsd),
+  };
+  const body: Record<string, unknown> = {
+    amount: input.amountUsd * 100,
+    currency: "usd",
+    success_url: `${publicBaseUrl(env)}/return?sessionId={CHECKOUT_ID}`,
+    metadata,
+  };
+  const productId = polarProductId(env);
+  if (productId) body.product_id = productId;
+  return body;
 }
 
 function header(
