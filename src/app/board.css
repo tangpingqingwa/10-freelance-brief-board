@@ -178,6 +178,19 @@ a:hover {
   color: var(--manila);
 }
 
+.desk-surface-empty {
+  grid-template-columns: minmax(0, 36rem);
+  justify-content: start;
+}
+
+.desk-surface-empty .claim {
+  order: 0;
+}
+
+.desk-surface-empty .spike-quiet {
+  order: 1;
+}
+
 .empty-week {
   margin: 0;
 }
@@ -195,6 +208,23 @@ a:hover {
     ),
     rgba(26, 22, 18, 0.38);
   color: rgba(243, 230, 200, 0.78);
+}
+
+.desk-surface-empty .empty-ticket {
+  min-height: 0;
+  padding: 0.75rem 1rem 0.85rem;
+}
+
+.desk-surface-empty .empty-stamp {
+  transform: none;
+  margin-bottom: 0.45rem;
+}
+
+.desk-surface-empty .empty-ticket p:last-child {
+  margin: 0;
+  max-width: 34rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .spike-pin {

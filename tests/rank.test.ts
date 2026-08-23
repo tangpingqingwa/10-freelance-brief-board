@@ -271,6 +271,51 @@ test("empty week is no paid brief, never a sample gig", () => {
   assert.doesNotMatch(html, /data-buyer=/);
 });
 
+test("empty week yields the desk to Claim #1", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(html, /data-desk-surface="empty"/);
+  assert.match(html, /desk-surface-empty/);
+  assert.match(html, /data-empty-week="true"/);
+  assert.match(html, /no paid brief/i);
+  assert.match(html, /no invented #1 brief/i);
+  assert.match(html, /no sample gig/i);
+  assert.match(html, /id="claim"/);
+  const emptyAt = html.indexOf('data-empty-week="true"');
+  const claimAt = html.indexOf('id="claim"');
+  assert.ok(emptyAt >= 0 && claimAt >= 0);
+  assert.ok(claimAt < emptyAt);
+  assert.doesNotMatch(html, /data-listing-card/);
+  assert.doesNotMatch(html, /spike-pin/);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("occupied week keeps the paid ticket beside Claim #1", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(html, /data-desk-surface="occupied"/);
+  assert.doesNotMatch(html, /desk-surface-empty/);
+  assert.doesNotMatch(html, /data-empty-week/);
+  assert.match(html, /ticket-featured/);
+  assert.match(html, /id="claim"/);
+  const ticketAt = html.indexOf('data-listing-id="lst_lead"');
+  const claimAt = html.indexOf('id="claim"');
+  assert.ok(ticketAt >= 0 && claimAt >= 0);
+  assert.ok(ticketAt < claimAt);
+});
+
 test("current week header uses UTC ISO week", () => {
   const week = currentWeekUtc(new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(week.weekId, "2026-W34");
