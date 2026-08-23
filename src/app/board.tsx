@@ -163,6 +163,7 @@ export function ListingCard({
               href="#claim"
               data-write-after-rule=""
               data-write-after-open=""
+              data-write-after-open-two=""
               aria-label="Write this ticket after the winner rule"
             >
               Write this ticket

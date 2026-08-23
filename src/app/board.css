@@ -610,6 +610,19 @@ a:hover {
   color: var(--stamp);
 }
 
+.ticket-featured .write-after-rule[data-write-after-open-two] {
+  min-width: 10.5rem;
+  min-height: 2.85rem;
+  padding: 0 1.15rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+}
+
+.ticket-featured .write-after-rule[data-write-after-open-two]:hover {
+  background: rgba(180, 35, 24, 0.06);
+  color: var(--stamp);
+}
+
 .write-this-ticket {
   display: inline-flex;
   align-items: center;
