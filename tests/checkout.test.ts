@@ -10,7 +10,11 @@ import { POST as checkoutPost } from "../src/app/api/checkout/route";
 import { POST as webhookPost } from "../src/app/api/polar/webhook/route";
 import ReturnPage from "../src/app/return/page";
 import { FixturePaymentPort } from "../src/billing/fixture";
-import { PolarPaymentPort, POLAR_API_BASE } from "../src/billing/polar";
+import {
+  PolarPaymentPort,
+  POLAR_API_BASE,
+  polarApiBase,
+} from "../src/billing/polar";
 import { CheckoutError, parseCheckoutInput, polarLiveEnabled } from "../src/billing/port";
 import {
   createPaymentPort,
@@ -278,6 +282,17 @@ test("recorded expired Polar session is a no-op", async () => {
   assert.equal(listPaid("2026-W34").length, 0);
 });
 
+test("polarApiBase defaults to production and honors POLAR_API_BASE", () => {
+  assert.equal(POLAR_API_BASE, "https://api.polar.sh");
+  assert.equal(polarApiBase({}), POLAR_API_BASE);
+  assert.equal(polarApiBase({ POLAR_API_BASE: "" }), POLAR_API_BASE);
+  assert.equal(polarApiBase({ POLAR_API_BASE: "   " }), POLAR_API_BASE);
+  assert.equal(
+    polarApiBase({ POLAR_API_BASE: "https://sandbox-api.polar.sh/" }),
+    "https://sandbox-api.polar.sh",
+  );
+});
+
 test("live PolarPaymentPort never fetches unless POLAR_LIVE=1", async () => {
   assert.throws(
     () => new PolarPaymentPort({ env: {} }),
@@ -297,6 +312,7 @@ test("live PolarPaymentPort never fetches unless POLAR_LIVE=1", async () => {
     },
     fetch: async (input) => {
       fetches += 1;
+      assert.equal(String(input), `${polarApiBase({})}/v1/checkouts/`);
       assert.equal(String(input), `${POLAR_API_BASE}/v1/checkouts/`);
       return new Response(loadPolarFixture("checkout-created.json"), {
         status: 200,
@@ -309,6 +325,43 @@ test("live PolarPaymentPort never fetches unless POLAR_LIVE=1", async () => {
   assert.equal(fetches, 1);
   assert.equal(session.sessionId, "chk_recorded_open");
   assert.equal(session.checkoutUrl, "https://polar.example/checkout/chk_recorded_open");
+});
+
+test("live Polar createCheckout uses POLAR_API_BASE override and optional product_id", async () => {
+  let fetches = 0;
+  const polar = new PolarPaymentPort({
+    env: {
+      POLAR_LIVE: "1",
+      POLAR_ACCESS_TOKEN: "polar_tok_test",
+      POLAR_API_BASE: "https://sandbox-api.polar.sh/",
+      POLAR_PRODUCT_ID: "prod_sandbox_test",
+      PUBLIC_BASE_URL: "http://localhost:3000",
+    },
+    fetch: async (input, init) => {
+      fetches += 1;
+      assert.equal(String(input), "https://sandbox-api.polar.sh/v1/checkouts/");
+      assert.notEqual(String(input), `${POLAR_API_BASE}/v1/checkouts/`);
+      const raw = typeof init?.body === "string" ? init.body : "";
+      const body = JSON.parse(raw) as Record<string, unknown>;
+      assert.equal(body.product_id, "prod_sandbox_test");
+      assert.equal(body.amount, 500);
+      assert.equal(body.currency, "usd");
+      return new Response(
+        JSON.stringify({
+          id: "chk_sandbox_open",
+          status: "open",
+          url: "https://sandbox.polar.sh/checkout/chk_sandbox_open",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+
+  const session = await polar.createCheckout(parseCheckoutInput(draftFields()));
+  assert.equal(fetches, 1);
+  assert.equal(session.sessionId, "chk_sandbox_open");
+  assert.equal(session.checkoutUrl, "https://sandbox.polar.sh/checkout/chk_sandbox_open");
+  assert.equal(listPaid(WEEK).length, 0);
 });
 
 test("live Polar webhook applies only with a valid signature", async () => {

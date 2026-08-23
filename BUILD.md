@@ -166,6 +166,8 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 | `POLAR_FIXTURE_ONLY` | `1` always wins |
 | `POLAR_ACCESS_TOKEN` | Live Polar. Missing → live-smoke `BLOCKED-SECRET` |
 | `POLAR_WEBHOOK_SECRET` | Live webhook verify |
+| `POLAR_API_BASE` | Optional. Default `https://api.polar.sh`. Sandbox smoke uses `https://sandbox-api.polar.sh`. Never set in `scripts/test.sh` or Actions. |
+| `POLAR_PRODUCT_ID` | Optional Polar product. Sandbox Checkout typically requires it. |
 | `DATABASE_PATH` | SQLite file; default `./data/freelance-brief-board.sqlite` |
 
 Dockerfile / runbook may land with a later deploy PR. Image must not set `POLAR_LIVE=1`.

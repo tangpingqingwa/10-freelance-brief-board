@@ -3,6 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { POLAR_API_BASE, polarApiBase } from "../src/billing/polar";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -26,6 +27,9 @@ test("live-smoke.sh is executable and operator-only", () => {
   assert.match(script, /\/click\//);
   assert.match(script, /rating_forbidden/);
   assert.match(script, /no invented ratings/i);
+  assert.match(script, /sandbox\.polar\.sh/);
+  assert.match(script, /POLAR_API_BASE/);
+  assert.match(script, /sandbox-api\.polar\.sh/);
   assert.doesNotMatch(script, /invented paid #1|fake #1 brief/i);
 });
 
@@ -38,6 +42,7 @@ test("docs/live-smoke.md records verdict labels and is not a paid-rank invention
   assert.match(docs, /scripts\/live-smoke\.sh/);
   assert.match(docs, /not\*\* called from `scripts\/test\.sh`|not called from `scripts\/test\.sh`/i);
   assert.match(docs, /POLAR_ACCESS_TOKEN/);
+  assert.match(docs, /sandbox\.polar\.sh|POLAR_API_BASE/);
   assert.doesNotMatch(docs, /invented paid #1|seeded #1 brief/i);
 });
 
@@ -55,4 +60,15 @@ test("scripts/test.sh and CI stay offline and do not invoke live-smoke", () => {
   assert.doesNotMatch(ci, /POLAR_LIVE/);
   assert.doesNotMatch(ci, /POLAR_ACCESS_TOKEN/);
   assert.match(ci, /bash scripts\/test\.sh/);
+});
+
+test("POLAR_API_BASE overrides Polar host; default stays production", () => {
+  assert.equal(POLAR_API_BASE, "https://api.polar.sh");
+  assert.equal(polarApiBase({}), "https://api.polar.sh");
+  assert.equal(polarApiBase({ POLAR_API_BASE: "" }), "https://api.polar.sh");
+  assert.equal(polarApiBase({ POLAR_API_BASE: "   " }), "https://api.polar.sh");
+  assert.equal(
+    polarApiBase({ POLAR_API_BASE: "https://sandbox-api.polar.sh/" }),
+    "https://sandbox-api.polar.sh",
+  );
 });

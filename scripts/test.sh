@@ -165,6 +165,10 @@ grep -q 'BLOCKED-SECRET: POLAR_ACCESS_TOKEN' scripts/live-smoke.sh \
   || fail "live-smoke.sh must name BLOCKED-SECRET: POLAR_ACCESS_TOKEN"
 grep -q 'POLAR_LIVE' scripts/live-smoke.sh \
   || fail "live-smoke.sh must gate live Polar on POLAR_LIVE"
+grep -q 'sandbox.polar.sh' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must require a sandbox.polar.sh Checkout URL"
+grep -q 'POLAR_API_BASE' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must pass POLAR_API_BASE to the live process"
 grep -q 'live-smoke refuses CI=true' scripts/live-smoke.sh \
   || fail "live-smoke.sh must refuse CI=true"
 grep -q 'PASS-ERROR' docs/live-smoke.md || fail "docs/live-smoke.md missing PASS-ERROR"
@@ -240,6 +244,10 @@ grep -q 'export class FixturePaymentPort' src/billing/fixture.ts \
 grep -q 'export class PolarPaymentPort' src/billing/polar.ts \
   || fail "polar.ts must export PolarPaymentPort"
 grep -q 'POLAR_LIVE' src/billing/polar.ts || fail "polar.ts must stay env-gated"
+grep -q 'export function polarApiBase' src/billing/polar.ts \
+  || fail "polar.ts must honor POLAR_API_BASE override"
+grep -q 'https://api.polar.sh' src/billing/polar.ts \
+  || fail "polar.ts default Polar API must stay production"
 grep -q 'data-return' src/app/return/page.tsx || fail "return page must expose paid/pending"
 grep -q 'does not trust the query' src/app/return/page.tsx \
   || fail "return page must not trust the query string alone"
@@ -251,7 +259,14 @@ fi
 if grep -R --include='*.ts' --include='*.tsx' -E "from ['\"]@polar-sh" src tests >/dev/null 2>&1; then
   fail "src/tests must not import a Polar SDK"
 fi
-if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" tests >/dev/null 2>&1; then
+if grep -R --include='*.ts' --include='*.tsx' -nE 'fetch\(|https://api\.polar\.sh|https://sandbox-api\.polar\.sh' tests \
+  | grep -v 'polarApiBase' \
+  | grep -v 'POLAR_API_BASE' \
+  | grep -v 'sandbox-api' \
+  | grep -v 'sandbox.polar.sh' \
+  | grep -v 'api.polar.sh' \
+  | grep -v 'POLAR_API_BASE/' \
+  | grep -v 'checkout-created.json' >/dev/null; then
   fail "tests must not call live Polar"
 fi
 if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" src >/dev/null 2>&1; then
@@ -276,7 +291,7 @@ if [[ -f package.json ]]; then
     fi
   fi
 
-  unset POLAR_LIVE POLAR_ACCESS_TOKEN POLAR_WEBHOOK_SECRET
+  unset POLAR_LIVE POLAR_ACCESS_TOKEN POLAR_WEBHOOK_SECRET POLAR_API_BASE POLAR_PRODUCT_ID
   export POLAR_FIXTURE_ONLY=1
   [[ "${POLAR_LIVE:-}" != "1" ]] || fail "POLAR_LIVE must stay unset in test.sh"
 
