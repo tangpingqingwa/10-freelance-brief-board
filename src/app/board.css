@@ -1,14 +1,17 @@
 :root {
-  --bg: #f4efe8;
-  --fg: #1c1917;
-  --muted: #78716c;
-  --card: #fffcf8;
-  --line: #e7ddd2;
-  --primary: #e24a16;
-  --primary-fg: #fffaf6;
-  --primary-soft: rgba(226, 74, 22, 0.12);
-  --shadow: 0 12px 40px rgba(40, 38, 36, 0.08);
-  --max: 52rem;
+  --desk: #3a332c;
+  --desk-deep: #241f1b;
+  --ink: #1a1612;
+  --paper: #f3e6c8;
+  --paper-edge: #d8c49a;
+  --manila: #e8d3a0;
+  --carbon: #2a2622;
+  --muted: #6b6256;
+  --stamp: #b42318;
+  --stamp-ink: #fff6ee;
+  --rule: #c4b089;
+  --pin: #8a8478;
+  --max: 68rem;
 }
 
 * {
@@ -19,9 +22,11 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: "DM Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  background:
+    radial-gradient(ellipse at 12% 0, rgba(255, 232, 186, 0.08), transparent 42%),
+    linear-gradient(180deg, var(--desk) 0%, var(--desk-deep) 100%);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 a {
@@ -30,37 +35,36 @@ a {
 }
 
 a:hover {
-  color: var(--primary);
+  color: var(--stamp);
 }
 
 .site-header {
   width: 100%;
-}
-
-.site-header-inner,
-.board {
-  width: 100%;
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: 1.25rem 1rem 0;
+  border-bottom: 1px solid rgba(243, 230, 200, 0.12);
 }
 
 .site-header-inner {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding-bottom: 1rem;
 }
 
 .logo {
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.04em;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper);
 }
 
 .logo span {
-  color: var(--primary);
+  color: var(--manila);
 }
 
 .site-nav ul {
@@ -69,21 +73,25 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .site-nav a[aria-current="page"] {
-  color: var(--fg);
+  color: var(--paper);
 }
 
 .site-nav a:not([aria-current="page"]) {
-  color: var(--muted);
+  color: rgba(243, 230, 200, 0.62);
 }
 
 .board {
-  padding-top: 1.5rem;
-  padding-bottom: 4rem;
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 4.5rem;
 }
 
 .sr-only {
@@ -98,61 +106,330 @@ a:hover {
   border: 0;
 }
 
+.desk-mast {
+  margin-bottom: 1.5rem;
+}
+
 .kicker {
-  margin: 0 0 0.35rem;
-  text-align: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  margin: 0 0 0.4rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--manila);
+}
+
+.desk-mast h1 {
+  margin: 0;
+  font-family: "Source Serif 4", "Times New Roman", serif;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--paper);
 }
 
 .period-meta {
-  margin: 0 0 1.5rem;
-  text-align: center;
-  color: var(--muted);
+  margin: 0.55rem 0 0;
+  max-width: 38rem;
+  color: rgba(243, 230, 200, 0.68);
   font-size: 0.95rem;
+}
+
+.desk-surface {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.spike-note {
+  margin: 0 0 0.85rem;
+  color: rgba(243, 230, 200, 0.68);
+  font-size: 0.92rem;
+}
+
+.spike .ticket-featured {
+  transform: rotate(-1.2deg);
+}
+
+.spike .ticket-featured::before {
+  content: "";
+  position: absolute;
+  top: -0.45rem;
+  left: 50%;
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ece8e1, var(--pin) 55%, #4d4840);
+  box-shadow: 0 10px 0 -4px rgba(26, 22, 18, 0.35);
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.spike h2,
+.hopper h2 {
+  margin: 0 0 0.7rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--manila);
+}
+
+.empty-week {
+  margin: 0;
+}
+
+.empty-ticket {
+  position: relative;
+  min-height: 16rem;
+  padding: 2.8rem 1.35rem 1.4rem;
+  border: 1px dashed var(--rule);
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(243, 230, 200, 0.05) 0 1.65rem,
+      transparent 1.65rem 1.67rem
+    ),
+    rgba(26, 22, 18, 0.38);
+  color: rgba(243, 230, 200, 0.78);
+}
+
+.spike-pin {
+  position: absolute;
+  top: 0.7rem;
+  left: 50%;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ece8e1, var(--pin) 55%, #4d4840);
+  box-shadow: 0 0 0 4px rgba(138, 132, 120, 0.18);
+  transform: translateX(-50%);
+}
+
+.empty-stamp {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 2px solid var(--stamp);
+  color: var(--stamp);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: rotate(-6deg);
+}
+
+.ticket,
+.outbid-form {
+  display: grid;
+  grid-template-columns: 6.4rem minmax(0, 1fr);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 18px 40px rgba(12, 9, 6, 0.28);
+}
+
+.ticket {
+  position: relative;
+  align-items: stretch;
+}
+
+.ticket::before,
+.ticket::after {
+  content: "";
+  position: absolute;
+  left: 6.05rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--desk-deep);
+}
+
+.ticket::before {
+  top: -0.35rem;
+}
+
+.ticket::after {
+  bottom: -0.35rem;
+}
+
+.ticket-stub,
+.ticket-write-stub {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.85rem 0.55rem;
+  background: repeating-linear-gradient(
+      -18deg,
+      transparent,
+      transparent 7px,
+      rgba(26, 22, 18, 0.05) 7px,
+      rgba(26, 22, 18, 0.05) 8px
+    ),
+    var(--manila);
+  border-right: 1px dashed #9d8860;
+  text-align: center;
+}
+
+.ticket-write-stub {
+  justify-content: center;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.rank {
+  min-width: 0;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ticket-featured .rank {
+  color: var(--stamp-ink);
+  background: var(--stamp);
+  border-radius: 0;
+  padding: 0.15rem 0.2rem;
+}
+
+.ticket-featured .bid {
+  color: var(--stamp);
+}
+
+.card-body,
+.ticket-face,
+.ticket-write-face {
+  min-width: 0;
+  padding: 0.95rem 1rem 1rem;
+}
+
+.ticket-kicker,
+.ticket-serial,
+.ticket-facts dt {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ticket-serial {
+  margin-bottom: 0.35rem;
+}
+
+.card-top {
+  display: block;
+}
+
+.buyer {
+  margin: 0.15rem 0 0;
+  font-family: "Source Serif 4", "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ticket-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.85rem;
+  margin: 0.75rem 0 0;
+}
+
+.ticket-facts .ticket-rule {
+  grid-column: 1 / -1;
+}
+
+.ticket-facts dd,
+.budget,
+.deadline,
+.winner-rule {
+  margin: 0.12rem 0 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.bid {
+  margin: 0;
+  color: var(--ink);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.clicks {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: var(--ink);
+}
+
+.brief-url {
+  font-weight: 700;
+  color: var(--stamp);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .claim h2 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem 0.65rem;
+  gap: 0.45rem 0.6rem;
   margin: 0;
-  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-family: "Source Serif 4", "Times New Roman", serif;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
   letter-spacing: -0.03em;
-  text-align: center;
 }
 
 .amount-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .step {
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary);
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
   font-weight: 700;
   cursor: pointer;
 }
 
 .step:hover {
-  background: rgba(226, 74, 22, 0.22);
+  background: var(--manila);
 }
 
 .amount-field {
-  color: var(--primary);
+  color: var(--stamp);
   text-decoration: underline dashed;
-  text-underline-offset: 0.3em;
+  text-underline-offset: 0.28em;
   font-variant-numeric: tabular-nums;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
 }
 
 .amount-field input {
@@ -164,68 +441,75 @@ a:hover {
   outline: none;
 }
 
-.claim-note {
-  margin: 0.6rem 0 0;
-  text-align: center;
+.claim-note,
+.raise-hint {
+  margin: 0.5rem 0 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
-.fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
-  margin-top: 1.1rem;
-}
-
-.fields label {
+.ticket-fields {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.ticket-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.ticket-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-.fields label.wide {
-  grid-column: 1 / -1;
-}
-
-.fields input {
+.ticket-fields input {
   width: 100%;
-  height: 2.75rem;
-  padding: 0 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 0.85rem;
-  background: var(--card);
-  color: var(--fg);
+  height: 2.4rem;
+  padding: 0 0.55rem;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
   font: inherit;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   font-size: 0.95rem;
   text-transform: none;
   letter-spacing: 0;
 }
 
-.fields input:focus {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
+.ticket-fields input:focus {
+  outline: none;
+  border-bottom-width: 2px;
+  background: rgba(180, 35, 24, 0.05);
 }
 
 .bid-row {
   display: flex;
-  justify-content: center;
-  margin-top: 1rem;
+  margin-top: 0.95rem;
 }
 
 .outbid {
-  height: 2.75rem;
-  padding: 0 1.6rem;
+  height: 2.55rem;
+  padding: 0 1.25rem;
   border: 0;
-  border-radius: 999px;
-  background: var(--primary);
-  color: var(--primary-fg);
-  font: inherit;
+  border-radius: 0;
+  background: var(--stamp);
+  color: var(--stamp-ink);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -233,178 +517,73 @@ a:hover {
   filter: brightness(0.95);
 }
 
-.raise-hint {
-  margin: 0.65rem 0 0;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.8rem;
+.hopper {
+  margin-top: 2rem;
 }
 
-.return-page {
-  width: 100%;
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: 2.5rem 1rem 4rem;
-  text-align: center;
-}
-
-.return-page h1 {
-  margin: 0 0 0.75rem;
-  letter-spacing: -0.03em;
-}
-
-.return-page p {
-  margin: 0.4rem 0 0;
-  color: var(--muted);
-}
-
-.return-page a {
-  color: var(--primary);
-  font-weight: 600;
+.hopper-note {
+  margin: -0.25rem 0 0.85rem;
+  color: rgba(243, 230, 200, 0.62);
+  font-size: 0.88rem;
 }
 
 .leaderboard {
   list-style: none;
-  margin: 1.75rem 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-}
-
-.empty-week {
-  margin: 1.75rem 0 0;
-  padding: 1.25rem 1rem;
-  border-radius: 1rem;
-  background: var(--card);
-  color: var(--muted);
-  text-align: center;
-  box-shadow: var(--shadow);
-}
-
-.card {
-  display: flex;
   gap: 0.85rem;
-  align-items: flex-start;
-  padding: 0.9rem 1rem;
-  border-radius: 1rem;
-  background: var(--card);
-  box-shadow: var(--shadow);
 }
 
-.card[data-rank="1"] {
-  border: 2px solid var(--primary);
-  background: rgba(226, 74, 22, 0.1);
-}
-
-.rank {
-  min-width: 2.4rem;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.card[data-rank="1"] .rank,
-.card[data-rank="2"] .rank,
-.card[data-rank="3"] .rank {
-  color: var(--primary-fg);
-  background: var(--primary);
-  border-radius: 999px;
-  text-align: center;
-  padding: 0.1rem 0.45rem;
-}
-
-.card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: baseline;
-}
-
-.buyer {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.budget,
-.deadline,
-.winner-rule {
-  margin: 0.15rem 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.bid {
-  margin: 0;
-  color: var(--primary);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: baseline;
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.clicks {
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.brief-url {
-  font-weight: 600;
-  color: var(--primary);
-}
-
+.return-page,
 .doc-page {
   width: 100%;
-  max-width: var(--max);
+  max-width: 46rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: 2.25rem 1.25rem 4rem;
+  color: var(--paper);
 }
 
+.return-page {
+  text-align: left;
+}
+
+.return-page h1,
 .doc-page h1 {
-  margin: 0 0 0.85rem;
-  font-size: 1.9rem;
+  margin: 0 0 0.75rem;
+  font-family: "Source Serif 4", "Times New Roman", serif;
   letter-spacing: -0.03em;
+  color: var(--paper);
+}
+
+.return-page p,
+.doc-page p,
+.doc-page li {
+  margin: 0.4rem 0 0.85rem;
+  color: rgba(243, 230, 200, 0.74);
+  line-height: 1.55;
+}
+
+.return-page a,
+.doc-page a {
+  color: var(--manila);
+  font-weight: 600;
 }
 
 .doc-page h2 {
   margin: 2rem 0 0.75rem;
   font-size: 1.15rem;
   letter-spacing: -0.02em;
-}
-
-.doc-page p,
-.doc-page li {
-  margin: 0 0 0.85rem;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.doc-page a {
-  color: var(--primary);
-  font-weight: 600;
+  color: var(--paper);
 }
 
 .doc-page table {
   width: 100%;
   border-collapse: collapse;
   margin: 0 0 1rem;
-  background: var(--card);
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: var(--shadow);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .doc-page th,
@@ -412,19 +591,19 @@ a:hover {
   text-align: left;
   vertical-align: top;
   padding: 0.7rem 0.9rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--paper-edge);
   font-size: 0.92rem;
   line-height: 1.45;
 }
 
 .doc-page th {
   width: 11rem;
-  color: var(--fg);
+  color: var(--ink);
   font-weight: 600;
 }
 
 .doc-page td {
-  color: var(--muted);
+  color: var(--carbon);
 }
 
 .doc-page tr:last-child th,
@@ -442,8 +621,30 @@ a:hover {
   padding-left: 1.25rem;
 }
 
-@media (max-width: 640px) {
-  .fields {
+@media (max-width: 860px) {
+  .desk-surface,
+  .ticket-pair,
+  .ticket-facts {
     grid-template-columns: 1fr;
+  }
+
+  .ticket,
+  .outbid-form {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-stub,
+  .ticket-write-stub {
+    flex-direction: row;
+    align-items: center;
+    writing-mode: horizontal-tb;
+    transform: none;
+    border-right: 0;
+    border-bottom: 1px dashed #9d8860;
+  }
+
+  .ticket::before,
+  .ticket::after {
+    display: none;
   }
 }

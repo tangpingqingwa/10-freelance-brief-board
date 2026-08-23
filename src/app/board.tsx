@@ -18,39 +18,60 @@ export function formatClicks(clicks: number): string {
   return `${clicks} ${clicks === 1 ? "click" : "clicks"}`;
 }
 
-export function ListingCard({ listing }: { listing: RankedListing }) {
+export function ListingCard({
+  listing,
+  featured = false,
+}: {
+  listing: RankedListing;
+  featured?: boolean;
+}) {
+  const ticketClass = featured ? "card ticket ticket-featured" : "card ticket";
   return (
     <article
-      className="card"
+      className={ticketClass}
       data-listing-card=""
       data-rank={listing.rank}
       data-listing-id={listing.id}
       data-buyer={listing.buyer}
       data-bid={listing.bidUsd}
     >
-      <span className="rank">#{listing.rank}</span>
-      <div className="card-body">
+      <div className="ticket-stub">
+        <span className="rank">#{listing.rank}</span>
+        <p className="bid" data-bid="">
+          {formatUsd(listing.bidUsd)}
+        </p>
+        <span className="clicks" data-clicks="">
+          {formatClicks(listing.clicks)}
+        </span>
+      </div>
+      <div className="card-body ticket-face">
         <div className="card-top">
+          <p className="ticket-kicker">Who is buying</p>
           <h3 className="buyer" data-buyer-name="">
             {listing.buyer}
           </h3>
-          <p className="bid" data-bid="">
-            {formatUsd(listing.bidUsd)}
-          </p>
         </div>
-        <p className="budget" data-budget="">
-          Budget {formatUsd(listing.budgetUsd)}
-        </p>
-        <p className="deadline" data-deadline="">
-          Deadline {listing.deadline}
-        </p>
-        <p className="winner-rule" data-winner-rule="">
-          {listing.winnerRule}
-        </p>
+        <dl className="ticket-facts">
+          <div>
+            <dt>What it pays</dt>
+            <dd className="budget" data-budget="">
+              Budget {formatUsd(listing.budgetUsd)}
+            </dd>
+          </div>
+          <div>
+            <dt>When it’s due</dt>
+            <dd className="deadline" data-deadline="">
+              Deadline {listing.deadline}
+            </dd>
+          </div>
+          <div className="ticket-rule">
+            <dt>How a winner is chosen</dt>
+            <dd className="winner-rule" data-winner-rule="">
+              {listing.winnerRule}
+            </dd>
+          </div>
+        </dl>
         <p className="meta">
-          <span className="clicks" data-clicks="">
-            {formatClicks(listing.clicks)}
-          </span>
           <a
             className="brief-url"
             href={briefClickPath(listing.id)}
@@ -70,19 +91,14 @@ export function Leaderboard({
   listings: readonly RankedListing[];
 }) {
   if (listings.length === 0) {
-    return (
-      <p className="empty-week" data-empty-week="true">
-        This week’s board is empty. No buyer has paid to list a brief yet. There
-        is no invented #1 brief and no invented ratings.
-      </p>
-    );
+    return null;
   }
 
   return (
     <ol className="leaderboard" data-leaderboard="">
       {listings.map((listing) => (
         <li key={listing.id}>
-          <ListingCard listing={listing} />
+          <ListingCard listing={listing} featured={listing.rank === 1} />
         </li>
       ))}
     </ol>
@@ -90,18 +106,59 @@ export function Leaderboard({
 }
 
 export function Board({ week, listings }: BoardProps) {
-  const topBid = listings[0]?.bidUsd ?? 0;
+  const featured = listings[0];
+  const rest = listings.slice(1);
+  const topBid = featured?.bidUsd ?? 0;
   const defaultAmount = topBid > 0 ? topBid + 1 : MIN_BID_USD;
 
   return (
-    <main className="board" data-board="" data-week={week.weekId}>
-      <p className="kicker">This week’s #1 freelance brief</p>
-      <p className="period-meta" data-week-id={week.weekId}>
-        Week {week.weekId}. Next reset {week.endsAt}. Rank is the bid. Budget
-        and deadline are public facts, not scores.
-      </p>
-      <OutbidForm defaultAmount={defaultAmount} />
-      <Leaderboard listings={listings} />
+    <main
+      className="board desk"
+      data-board=""
+      data-brief-desk=""
+      data-week={week.weekId}
+    >
+      <header className="desk-mast">
+        <p className="kicker">This week’s #1 freelance brief</p>
+        <h1>Brief desk</h1>
+        <p className="period-meta" data-week-id={week.weekId}>
+          Week {week.weekId}. Next reset {week.endsAt}. Rank is the bid. Budget
+          and deadline are public facts, not scores.
+        </p>
+      </header>
+
+      <div className="desk-surface">
+        <section className="spike" aria-labelledby="spike-heading">
+          <h2 id="spike-heading">This week’s #1</h2>
+          {featured ? (
+            <ListingCard listing={featured} featured />
+          ) : (
+            <div className="empty-week" data-empty-week="true">
+              <div className="empty-ticket">
+                <div className="spike-pin" aria-hidden="true" />
+                <p className="empty-stamp">No paid brief</p>
+                <p>
+                  This week’s board is empty. No buyer has paid to pin a ticket.
+                  There is no invented #1 brief and no invented ratings. There
+                  is no sample gig.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+        <OutbidForm defaultAmount={defaultAmount} />
+      </div>
+
+      {rest.length > 0 ? (
+        <section className="hopper" aria-labelledby="hopper-heading">
+          <h2 id="hopper-heading">Tickets on the desk</h2>
+          <p className="hopper-note">
+            Paying less than #1 still lists. Rank is the bid, not the project
+            budget.
+          </p>
+          <Leaderboard listings={rest} />
+        </section>
+      ) : null}
     </main>
   );
 }
