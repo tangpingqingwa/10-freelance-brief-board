@@ -149,6 +149,8 @@ grep -q 'concentrates opening the paid #1 brief after Write this ticket is conce
   || fail "rank tests missing occupied-week open-after-write-first freelancer hop"
 grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated' tests/rank.test.ts \
   || fail "rank tests missing occupied-week write-after-open-two buyer hop"
+grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week open-after-write-two freelancer hop"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -340,8 +342,8 @@ grep -q 'href="#claim"' src/app/board.tsx \
   || fail "write-after-rule hop must jump to Claim #1"
 if ! awk '
   /ticket-featured \.ticket-read-winner/ { fact=NR }
-  /ticket-featured \.write-after-rule/ { hop=NR }
-  /ticket-featured \.open-this-brief/ { open=NR }
+  /ticket-featured \.write-after-rule \{/ { hop=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
   END { exit !(fact && hop && open && fact < open && open < hop) }
 ' src/app/board.css; then
   fail "featured CSS must paint Open this brief between winner rule and write-after-rule"
@@ -400,12 +402,27 @@ if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after
   fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated"
 fi
 if ! awk '
-  /ticket-featured \.open-this-brief\[data-open-after-write-first\]/ { open=NR }
+  /ticket-featured \.open-this-brief\[data-open-after-write-first\] \{/ { open=NR }
   /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
   /ticket-featured \.write-after-rule\[data-write-after-open-two\]/ { two=NR }
   END { exit !(open && write && two && open < write && write < two) }
 ' src/app/board.css; then
   fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated"
+fi
+grep -q 'data-open-after-write-two' src/app/board.tsx \
+  || fail "featured #1 Open this brief must concentrate after Write this ticket is re-concentrated"
+grep -q 'data-open-after-write-two' src/app/board.css \
+  || fail "CSS must concentrate Open this brief after Write this ticket is re-concentrated"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-two'; then
+  fail "empty week must not concentrate Open this brief after Write this ticket is re-concentrated"
+fi
+if ! awk '
+  /ticket-featured \.write-after-rule\[data-write-after-open-two\]/ { write=NR }
+  /ticket-featured \.open-this-brief\[data-open-after-write-first\] \{/ { open=NR }
+  /ticket-featured \.open-this-brief\[data-open-after-write-two\]/ { two=NR }
+  END { exit !(write && open && two && open < write && write < two) }
+' src/app/board.css; then
+  fail "featured CSS must concentrate Open this brief after Write this ticket is re-concentrated"
 fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
@@ -554,6 +571,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week open-after-write-first freelancer test did not run"
   grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated' "$test_log" \
     || fail "occupied-week write-after-open-two buyer test did not run"
+  grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated' "$test_log" \
+    || fail "occupied-week open-after-write-two freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"
