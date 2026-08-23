@@ -183,11 +183,11 @@ a:hover {
   justify-content: start;
 }
 
-.desk-surface-empty .claim {
+.desk-surface-empty .spike-quiet {
   order: 0;
 }
 
-.desk-surface-empty .spike-quiet {
+.desk-surface-empty .claim {
   order: 1;
 }
 

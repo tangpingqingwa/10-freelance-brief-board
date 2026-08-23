@@ -285,9 +285,25 @@ test("empty week yields the desk to Claim #1", () => {
   const emptyAt = html.indexOf('data-empty-week="true"');
   const claimAt = html.indexOf('id="claim"');
   assert.ok(emptyAt >= 0 && claimAt >= 0);
-  assert.ok(claimAt < emptyAt);
+  assert.ok(emptyAt < claimAt);
   assert.doesNotMatch(html, /data-listing-card/);
   assert.doesNotMatch(html, /spike-pin/);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("empty week tells a freelancer no one has paid before Claim #1", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  const stampAt = html.indexOf("No paid brief");
+  const emptyAt = html.indexOf('data-empty-week="true"');
+  const claimAt = html.indexOf('id="claim"');
+  assert.ok(stampAt >= 0 && emptyAt >= 0 && claimAt >= 0);
+  assert.ok(emptyAt < claimAt);
+  assert.ok(stampAt < claimAt);
+  assert.match(html, /data-bid-form=""/);
+  assert.match(html, /Claim #1 for/);
+  assert.doesNotMatch(html, /data-listing-card/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
 });
 
