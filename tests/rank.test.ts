@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, test } from "node:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Board, ListingCard } from "../src/app/board";
+import { Board, ListingCard, formatDeadline } from "../src/app/board";
 import { resetListings } from "../src/core/listings";
 import {
   getBoardListings,
@@ -220,6 +220,8 @@ test("cards show buyer, budget, deadline, $, clicks — not ratings", () => {
   assert.match(html, /class="[^"]*ticket/);
   assert.doesNotMatch(html, /data-read-budget/);
   assert.doesNotMatch(html, /Project budget, not the bid/);
+  assert.doesNotMatch(html, /data-read-deadline/);
+  assert.doesNotMatch(html, /Due date, not a score/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
 });
 
@@ -467,7 +469,8 @@ test("occupied week makes reading the paid #1 budget the freelancer fact", () =>
   assert.match(html, /Claim #1 for/);
   assert.match(html, />Outbid</);
   assert.match(html, /Best portfolio by Friday/);
-  assert.match(html, /Deadline 2026-09-15/);
+  assert.match(html, /15 September 2026/);
+  assert.match(html, /Due date, not a score/);
 
   const leadStart = html.indexOf('data-listing-id="lst_lead"');
   const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
@@ -499,6 +502,91 @@ test("empty week does not stamp a project budget over No paid brief", () => {
   assert.match(html, /Claim #1 for/);
   assert.doesNotMatch(html, /data-read-budget/);
   assert.doesNotMatch(html, /Project budget, not the bid/);
+  assert.doesNotMatch(html, /data-read-deadline/);
+  assert.doesNotMatch(html, /Due date, not a score/);
+  assert.doesNotMatch(html, /data-listing-card/);
+  const stampAt = html.indexOf("No paid brief");
+  const claimAt = html.indexOf('id="claim"');
+  assert.ok(stampAt >= 0 && claimAt > stampAt);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("occupied week makes reading the paid #1 deadline the freelancer fact", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(html, /data-desk-surface="occupied"/);
+  assert.match(html, /data-read-deadline="lead"/);
+  assert.match(html, /Due date, not a score/);
+  assert.match(html, /15 September 2026/);
+  assert.match(html, /dateTime="2026-09-15"/);
+  assert.match(html, /\$3,200/);
+  assert.match(html, /\$12/);
+  assert.match(html, /Open this brief/);
+  assert.match(html, /Write this ticket/);
+  assert.match(html, /Claim #1 for/);
+  assert.match(html, />Outbid</);
+  assert.match(html, /Project budget, not the bid/);
+  assert.equal(formatDeadline("2026-09-15"), "15 September 2026");
+
+  const leadStart = html.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
+  const claimAt = html.indexOf('id="claim"');
+  const budgetAt = html.indexOf('data-read-budget="lead"');
+  const deadlineAt = html.indexOf('data-read-deadline="lead"');
+  const openLead = html.indexOf("Open this brief");
+  const writeAt = html.indexOf("Write this ticket");
+  const bidStub = html.indexOf('data-bid="">$12<');
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(deadlineAt > leadStart && deadlineAt < hopperStart);
+  assert.ok(budgetAt > leadStart && budgetAt < deadlineAt);
+  assert.ok(deadlineAt < openLead);
+  assert.ok(openLead < claimAt);
+  assert.ok(writeAt > claimAt);
+  assert.ok(bidStub > leadStart && bidStub < deadlineAt);
+  assert.equal(html.includes('data-read-deadline="lead"', hopperStart), false);
+  assert.doesNotMatch(html.slice(hopperStart), /Due date, not a score/);
+  assert.doesNotMatch(html.slice(hopperStart), /15 September 2026/);
+  assert.match(html.slice(hopperStart), /Deadline 2026-10-01/);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("empty week does not stamp a due date over No paid brief", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(html, /data-desk-surface="empty"/);
+  assert.match(html, /data-empty-week="true"/);
+  assert.match(html, /No paid brief/);
+  assert.match(html, /no sample gig/i);
+  assert.match(html, /Claim #1 for/);
+  assert.doesNotMatch(html, /data-read-deadline/);
+  assert.doesNotMatch(html, /Due date, not a score/);
+  assert.doesNotMatch(html, /15 September 2026/);
   assert.doesNotMatch(html, /data-listing-card/);
   const stampAt = html.indexOf("No paid brief");
   const claimAt = html.indexOf('id="claim"');

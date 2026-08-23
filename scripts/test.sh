@@ -135,6 +135,8 @@ grep -q 'writing a new ticket the buyer move' tests/rank.test.ts \
   || fail "rank tests missing occupied-week write-this-ticket buyer move"
 grep -q 'reading the paid #1 budget the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-budget freelancer fact"
+grep -q 'reading the paid #1 deadline the freelancer fact' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week read-this-deadline freelancer fact"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -283,6 +285,22 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must paint project budget above Open this brief"
 fi
+grep -q 'data-read-deadline' src/app/board.tsx \
+  || fail "featured #1 ticket must mark the due date"
+grep -q 'Due date, not a score' src/app/board.tsx \
+  || fail "featured #1 ticket must say the due date is not a score"
+grep -q 'read-this-deadline' src/app/board.css \
+  || fail "CSS missing featured due-date fact"
+grep -q 'deadline-date' src/app/board.tsx \
+  || fail "featured #1 ticket must name the submitted due date"
+if ! awk '
+  /ticket-featured \.ticket-read-budget/ { budget=NR }
+  /ticket-featured \.ticket-read-deadline/ { fact=NR }
+  /ticket-featured \.open-this-brief/ { open=NR }
+  END { exit !(budget && fact && open && budget < fact && fact < open) }
+' src/app/board.css; then
+  fail "featured CSS must paint due date between project budget and Open this brief"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -416,6 +434,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week write-this-ticket buyer test did not run"
   grep -q 'reading the paid #1 budget' "$test_log" \
     || fail "occupied-week read-this-budget freelancer test did not run"
+  grep -q 'reading the paid #1 deadline' "$test_log" \
+    || fail "occupied-week read-this-deadline freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"

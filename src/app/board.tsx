@@ -18,6 +18,31 @@ export function formatClicks(clicks: number): string {
   return `${clicks} ${clicks === 1 ? "click" : "clicks"}`;
 }
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+/** Submitted YYYY-MM-DD as a calendar date. Never invents a day. */
+export function formatDeadline(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return isoDate;
+  const monthName = MONTHS[Number(match[2]) - 1];
+  const day = Number(match[3]);
+  if (!monthName || day < 1 || day > 31) return isoDate;
+  return `${day} ${monthName} ${match[1]}`;
+}
+
 export function ListingCard({
   listing,
   featured = false,
@@ -73,10 +98,25 @@ export function ListingCard({
               )}
             </dd>
           </div>
-          <div>
+          <div className={featured ? "ticket-read-deadline" : undefined}>
             <dt>When it’s due</dt>
-            <dd className="deadline" data-deadline="">
-              Deadline {listing.deadline}
+            <dd
+              className={featured ? "deadline read-this-deadline" : "deadline"}
+              data-deadline=""
+              data-read-deadline={featured ? "lead" : undefined}
+            >
+              {featured ? (
+                <>
+                  <time className="deadline-date" dateTime={listing.deadline}>
+                    {formatDeadline(listing.deadline)}
+                  </time>
+                  <span className="deadline-not-score">
+                    Due date, not a score
+                  </span>
+                </>
+              ) : (
+                <>Deadline {listing.deadline}</>
+              )}
             </dd>
           </div>
           <div className="ticket-rule">
