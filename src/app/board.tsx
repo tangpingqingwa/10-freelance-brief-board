@@ -143,7 +143,6 @@ export function Board({ week, listings }: BoardProps) {
           </>
         ) : (
           <>
-            <OutbidForm defaultAmount={defaultAmount} />
             <section className="spike spike-quiet" aria-labelledby="spike-heading">
               <h2 id="spike-heading">This week’s #1</h2>
               <div className="empty-week" data-empty-week="true">
@@ -157,6 +156,7 @@ export function Board({ week, listings }: BoardProps) {
                 </div>
               </div>
             </section>
+            <OutbidForm defaultAmount={defaultAmount} />
           </>
         )}
       </div>

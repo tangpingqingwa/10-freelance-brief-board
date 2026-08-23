@@ -125,8 +125,17 @@ grep -q 'name="amountUsd"' src/app/outbid-form.tsx || fail "form missing amount"
 grep -q 'data-empty-week' src/app/board.tsx || fail "board missing honest empty week"
 grep -q 'No paid brief' src/app/board.tsx || fail "empty week must say no paid brief"
 grep -q 'no sample gig' src/app/board.tsx || fail "empty week must refuse a sample gig"
-grep -q 'desk-surface-empty' src/app/board.tsx || fail "empty week must yield the desk to Claim #1"
+grep -q 'desk-surface-empty' src/app/board.tsx || fail "empty week must keep the empty-desk surface"
 grep -q 'desk-surface-empty' src/app/board.css || fail "CSS missing empty-desk claim focus"
+grep -q 'tells a freelancer no one has paid before Claim #1' tests/rank.test.ts \
+  || fail "rank tests missing freelancer empty-week honesty-first order"
+if ! awk '
+  /desk-surface-empty \.spike-quiet/ { spike=NR }
+  /desk-surface-empty \.claim/ { claim=NR }
+  END { exit !(spike && claim && spike < claim) }
+' src/app/board.css; then
+  fail "empty-desk CSS must paint No paid brief above Claim #1"
+fi
 grep -q 'data-brief-desk' src/app/board.tsx || fail "board must be a brief desk"
 grep -q 'card ticket' src/app/board.tsx || fail "paid listings must render as tickets"
 grep -q 'Who is buying' src/app/board.tsx || fail "ticket missing who is buying"
