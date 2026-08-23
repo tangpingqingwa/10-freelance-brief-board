@@ -143,6 +143,19 @@ export function ListingCard({
             </dd>
           </div>
         </dl>
+        {featured ? (
+          <p className="write-after-rule-wrap">
+            <a
+              className="write-after-rule"
+              href="#claim"
+              data-write-after-rule=""
+              aria-label="Write this ticket after the winner rule"
+            >
+              Write this ticket
+            </a>{" "}
+            after the winner rule. Paying less than #1 still lists.
+          </p>
+        ) : null}
         <p className={featured ? "ticket-open" : "meta"}>
           <a
             className={featured ? "brief-url open-this-brief" : "brief-url"}
