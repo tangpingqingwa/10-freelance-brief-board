@@ -18,6 +18,56 @@ export function formatClicks(clicks: number): string {
   return `${clicks} ${clicks === 1 ? "click" : "clicks"}`;
 }
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/** Submitted YYYY-MM-DD as a calendar date. Never invents a day. */
+export function formatDeadline(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return isoDate;
+  const year = match[1];
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return isoDate;
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+export function formatDeadline(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return isoDate;
+  const monthName = MONTHS[Number(match[2]) - 1];
+  const day = Number(match[3]);
+  if (!monthName || day < 1 || day > 31) return isoDate;
+  return `${day} ${monthName} ${match[1]}`;
+}
+
 export function ListingCard({
   listing,
   featured = false,
@@ -73,10 +123,25 @@ export function ListingCard({
               )}
             </dd>
           </div>
-          <div>
+          <div className={featured ? "ticket-read-deadline" : undefined}>
             <dt>When it’s due</dt>
-            <dd className="deadline" data-deadline="">
-              Deadline {listing.deadline}
+            <dd
+              className={featured ? "deadline read-this-deadline" : "deadline"}
+              data-deadline=""
+              data-read-deadline={featured ? "lead" : undefined}
+            >
+              {featured ? (
+                <>
+                  <span className="deadline-date">
+                    {formatDeadline(listing.deadline)}
+                  </span>
+                  <span className="deadline-not-score">
+                    Due date, not a score
+                  </span>
+                </>
+              ) : (
+                <>Deadline {listing.deadline}</>
+              )}
             </dd>
           </div>
           <div className="ticket-rule">
