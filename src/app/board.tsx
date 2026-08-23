@@ -52,10 +52,25 @@ export function ListingCard({
           </h3>
         </div>
         <dl className="ticket-facts">
-          <div>
+          <div className={featured ? "ticket-read-budget" : undefined}>
             <dt>What it pays</dt>
-            <dd className="budget" data-budget="">
-              Budget {formatUsd(listing.budgetUsd)}
+            <dd
+              className={featured ? "budget read-this-budget" : "budget"}
+              data-budget=""
+              data-read-budget={featured ? "lead" : undefined}
+            >
+              {featured ? (
+                <>
+                  <span className="budget-amount">
+                    {formatUsd(listing.budgetUsd)}
+                  </span>
+                  <span className="budget-not-bid">
+                    Project budget, not the bid
+                  </span>
+                </>
+              ) : (
+                <>Budget {formatUsd(listing.budgetUsd)}</>
+              )}
             </dd>
           </div>
           <div>
