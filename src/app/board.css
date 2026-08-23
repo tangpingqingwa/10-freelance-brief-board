@@ -559,6 +559,19 @@ a:hover {
   color: var(--stamp);
 }
 
+.ticket-featured .open-this-brief[data-open-after-write-first] {
+  min-height: 3.45rem;
+  padding: 0 1.55rem;
+  font-size: 1.12rem;
+  letter-spacing: 0.12em;
+  box-shadow: 6px 6px 0 rgba(26, 22, 18, 0.28);
+}
+
+.ticket-featured .open-this-brief[data-open-after-write-first]:hover {
+  background: rgba(180, 35, 24, 0.1);
+  color: var(--stamp);
+}
+
 .ticket-featured .write-after-rule-wrap {
   margin: 0.55rem 0 0;
   font-size: 0.82rem;

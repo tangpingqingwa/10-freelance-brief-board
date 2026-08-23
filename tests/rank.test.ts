@@ -773,6 +773,8 @@ test("empty week does not stamp Write this ticket over No paid brief", () => {
   assert.doesNotMatch(html, /data-write-after-open/);
   assert.doesNotMatch(html, /after the winner rule/);
   assert.doesNotMatch(html, /data-first-click="open"/);
+  assert.doesNotMatch(html, /data-open-after-write-first/);
+  assert.doesNotMatch(html, /data-first-read="open"/);
   const stampAt = html.indexOf("No paid brief");
   const claimAt = html.indexOf('id="claim"');
   assert.ok(stampAt >= 0 && claimAt > stampAt);
@@ -950,6 +952,129 @@ test("empty week does not concentrate Write this ticket after Open this brief", 
   assert.doesNotMatch(html, /data-write-after-open/);
   assert.doesNotMatch(html, /data-write-after-rule/);
   assert.doesNotMatch(html, /data-first-click="open"/);
+  assert.doesNotMatch(html, /data-open-after-write-first/);
+  assert.doesNotMatch(html, /data-first-read="open"/);
+  assert.doesNotMatch(html, /Write this ticket/);
+  assert.doesNotMatch(html, /after the winner rule/);
+  const stampAt = html.indexOf("No paid brief");
+  const claimAt = html.indexOf('id="claim"');
+  assert.ok(stampAt >= 0 && claimAt > stampAt);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("occupied week concentrates opening the paid #1 brief after Write this ticket is concentrated", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(html, /data-desk-surface="occupied"/);
+  assert.match(html, /data-first-click="open"/);
+  assert.match(html, /data-open-brief="lead"/);
+  assert.match(html, /data-open-after-write-first=""/);
+  assert.match(html, /data-first-read="open"/);
+  assert.match(html, /Open this brief/);
+  assert.match(html, /href="\/click\/lst_lead"/);
+  assert.match(
+    html,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""/,
+  );
+  assert.match(html, /after the winner rule/);
+  assert.match(html, /Write this ticket/);
+  assert.match(html, /data-write-ticket="buyer"/);
+  assert.match(html, /Claim #1 for/);
+  assert.match(html, />Outbid</);
+  assert.match(html, /Winner rule, not a score/);
+  assert.match(html, /Best portfolio by Friday/);
+  assert.match(html, /Project budget, not the bid/);
+  assert.match(html, /Due date, not a score/);
+  assert.match(html, /\$12/);
+  assert.equal((html.match(/data-first-click="open"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-open-after-write-first=""/g) ?? []).length, 1);
+  assert.equal((html.match(/data-first-read="open"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-open-brief="lead"/g) ?? []).length, 1);
+  assert.equal((html.match(/href="\/click\/lst_lead"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-write-after-rule=""/g) ?? []).length, 1);
+  assert.equal((html.match(/data-write-after-open=""/g) ?? []).length, 1);
+  assert.equal((html.match(/href="#claim"/g) ?? []).length, 1);
+
+  const leadStart = html.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
+  const claimAt = html.indexOf('id="claim"');
+  const budgetAt = html.indexOf('data-read-budget="lead"');
+  const deadlineAt = html.indexOf('data-read-deadline="lead"');
+  const winnerAt = html.indexOf('data-read-winner="lead"');
+  const firstClickAt = html.indexOf('data-first-click="open"');
+  const openAfterWriteAt = html.indexOf('data-open-after-write-first=""');
+  const firstReadAt = html.indexOf('data-first-read="open"');
+  const openLead = html.indexOf("Open this brief");
+  const writeAfterAt = html.indexOf('data-write-after-rule=""');
+  const writeAfterOpenAt = html.indexOf('data-write-after-open=""');
+  const writeStampAt = html.indexOf("data-write-ticket-stamp");
+  const bidStub = html.indexOf('data-bid="">$12<');
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(openAfterWriteAt > leadStart && openAfterWriteAt < hopperStart);
+  assert.ok(budgetAt > leadStart && budgetAt < deadlineAt);
+  assert.ok(deadlineAt > budgetAt && deadlineAt < winnerAt);
+  assert.ok(winnerAt < firstClickAt);
+  assert.ok(firstClickAt < openAfterWriteAt);
+  assert.ok(openAfterWriteAt < firstReadAt);
+  assert.ok(firstReadAt < openLead);
+  assert.ok(openLead < writeAfterAt);
+  assert.ok(writeAfterAt < writeAfterOpenAt);
+  assert.ok(writeAfterOpenAt < claimAt);
+  assert.ok(writeStampAt > claimAt);
+  assert.ok(bidStub > leadStart && bidStub < firstClickAt);
+  assert.ok(Math.abs(openAfterWriteAt - firstClickAt) < 120);
+  assert.equal(html.includes('data-open-after-write-first=""', hopperStart), false);
+  assert.equal(html.includes('data-first-read="open"', hopperStart), false);
+  assert.equal(html.includes('data-write-after-open=""', hopperStart), false);
+  assert.equal(html.includes('data-first-click="open"', hopperStart), false);
+  assert.doesNotMatch(html.slice(hopperStart), /Open this brief/);
+  assert.doesNotMatch(html.slice(hopperStart), /after the winner rule/);
+  assert.doesNotMatch(html.slice(hopperStart), /Write this ticket/);
+  assert.match(html.slice(hopperStart), /First qualified/);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("empty week does not concentrate Open this brief after Write this ticket", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(html, /data-desk-surface="empty"/);
+  assert.match(html, /data-empty-week="true"/);
+  assert.match(html, /No paid brief/);
+  assert.match(html, /no sample gig/i);
+  assert.match(html, /Claim #1 for/);
+  assert.doesNotMatch(html, /data-open-after-write-first/);
+  assert.doesNotMatch(html, /data-first-read="open"/);
+  assert.doesNotMatch(html, /data-first-click="open"/);
+  assert.doesNotMatch(html, /data-open-brief/);
+  assert.doesNotMatch(html, /Open this brief/);
+  assert.doesNotMatch(html, /data-write-after-open/);
+  assert.doesNotMatch(html, /data-write-after-rule/);
   assert.doesNotMatch(html, /Write this ticket/);
   assert.doesNotMatch(html, /after the winner rule/);
   const stampAt = html.indexOf("No paid brief");

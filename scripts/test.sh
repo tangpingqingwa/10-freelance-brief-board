@@ -145,6 +145,8 @@ grep -q 'win the first click after Write follows the winner rule' tests/rank.tes
   || fail "rank tests missing occupied-week open-after-write first click"
 grep -q 'concentrates writing a new ticket after Open this brief wins the first click' tests/rank.test.ts \
   || fail "rank tests missing occupied-week write-after-open first-write hop"
+grep -q 'concentrates opening the paid #1 brief after Write this ticket is concentrated' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week open-after-write-first freelancer hop"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -371,6 +373,23 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must concentrate Write this ticket after first-click Open this brief"
 fi
+grep -q 'data-open-after-write-first' src/app/board.tsx \
+  || fail "featured #1 Open this brief must concentrate after Write this ticket"
+grep -q 'data-first-read' src/app/board.tsx \
+  || fail "featured #1 Open this brief must mark the first read"
+grep -q 'data-open-after-write-first' src/app/board.css \
+  || fail "CSS must concentrate Open this brief after Write this ticket"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-first'; then
+  fail "empty week must not concentrate Open this brief after Write this ticket"
+fi
+if ! awk '
+  /ticket-featured \.open-this-brief\[data-first-click="open"\]/ { first=NR }
+  /ticket-featured \.open-this-brief\[data-open-after-write-first\]/ { open=NR }
+  /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
+  END { exit !(first && open && write && first < open && open < write) }
+' src/app/board.css; then
+  fail "featured CSS must concentrate Open this brief after Write this ticket"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -514,6 +533,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week open-after-write first-click test did not run"
   grep -q 'concentrates writing a new ticket after Open this brief' "$test_log" \
     || fail "occupied-week write-after-open first-write test did not run"
+  grep -q 'concentrates opening the paid #1 brief after Write this ticket' "$test_log" \
+    || fail "occupied-week open-after-write-first freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"
