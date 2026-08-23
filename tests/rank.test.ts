@@ -157,6 +157,9 @@ test("empty week markup shows the form and no #1 brief", () => {
   );
   assert.match(html, /data-empty-week="true"/);
   assert.match(html, /board is empty/i);
+  assert.match(html, /no paid brief/i);
+  assert.match(html, /no sample gig/i);
+  assert.match(html, /data-brief-desk=""/);
   assert.match(html, /data-bid-form=""/);
   assert.match(html, /name="buyer"/);
   assert.match(html, /name="budgetUsd"/);
@@ -165,6 +168,7 @@ test("empty week markup shows the form and no #1 brief", () => {
   assert.match(html, /name="briefUrl"/);
   assert.match(html, /name="amountUsd"/);
   assert.match(html, />Outbid</);
+  assert.match(html, /Claim #1 for/);
   assert.match(html, /2026-W34/);
   assert.doesNotMatch(html, /data-listing-card/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
@@ -175,6 +179,11 @@ test("empty week markup shows the form and no #1 brief", () => {
   assert.match(formSource, /name="briefUrl"/);
   assert.match(formSource, /name="amountUsd"/);
   assert.match(formSource, /Outbid/);
+  assert.match(formSource, /Claim #1 for/);
+  assert.match(formSource, /Who is buying/);
+  assert.match(formSource, /What it pays/);
+  assert.match(formSource, /When it’s due/);
+  assert.match(formSource, /How a winner is chosen/);
   assert.doesNotMatch(formSource, RATINGS_FORBIDDEN);
 });
 
@@ -197,6 +206,10 @@ test("cards show buyer, budget, deadline, $, clicks — not ratings", () => {
   assert.match(html, /data-rank="1"/);
   assert.match(html, /#1/);
   assert.match(html, /Acme Studio/);
+  assert.match(html, /Who is buying/);
+  assert.match(html, /What it pays/);
+  assert.match(html, /When it’s due/);
+  assert.match(html, /How a winner is chosen/);
   assert.match(html, /Budget \$3,200/);
   assert.match(html, /Deadline 2026-09-15/);
   assert.match(html, /Best portfolio by Friday/);
@@ -204,6 +217,7 @@ test("cards show buyer, budget, deadline, $, clicks — not ratings", () => {
   assert.match(html, /3 clicks/);
   assert.match(html, /Open brief/);
   assert.match(html, /https:\/\/example.com\/acme/);
+  assert.match(html, /class="[^"]*ticket/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
 });
 
@@ -240,8 +254,21 @@ test("ranked cards keep money order; older wins ties", () => {
   assert.ok(first < second && second < third);
   assert.match(html, /\$8/);
   assert.match(html, /\$5/);
+  assert.match(html, /data-brief-desk=""/);
+  assert.match(html, /Tickets on the desk/);
   assert.doesNotMatch(html, /data-empty-week/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("empty week is no paid brief, never a sample gig", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(html, /no paid brief/i);
+  assert.match(html, /no sample gig/i);
+  assert.match(html, /data-empty-week="true"/);
+  assert.doesNotMatch(html, /data-listing-card/);
+  assert.doesNotMatch(html, /data-buyer=/);
 });
 
 test("current week header uses UTC ISO week", () => {

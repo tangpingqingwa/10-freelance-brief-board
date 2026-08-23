@@ -123,12 +123,40 @@ grep -q 'name="winnerRule"' src/app/outbid-form.tsx || fail "form missing winner
 grep -q 'name="briefUrl"' src/app/outbid-form.tsx || fail "form missing brief URL"
 grep -q 'name="amountUsd"' src/app/outbid-form.tsx || fail "form missing amount"
 grep -q 'data-empty-week' src/app/board.tsx || fail "board missing honest empty week"
+grep -q 'No paid brief' src/app/board.tsx || fail "empty week must say no paid brief"
+grep -q 'no sample gig' src/app/board.tsx || fail "empty week must refuse a sample gig"
+grep -q 'data-brief-desk' src/app/board.tsx || fail "board must be a brief desk"
+grep -q 'card ticket' src/app/board.tsx || fail "paid listings must render as tickets"
+grep -q 'Who is buying' src/app/board.tsx || fail "ticket missing who is buying"
+grep -q 'What it pays' src/app/board.tsx || fail "ticket missing what it pays"
+grep -q 'When it’s due' src/app/board.tsx || fail "ticket missing when it’s due"
+grep -q 'How a winner is chosen' src/app/board.tsx || fail "ticket missing winner rule"
 grep -q 'data-bid' src/app/board.tsx || fail "cards must show the bid amount"
 grep -q 'data-clicks' src/app/board.tsx || fail "cards must show public clicks"
 grep -q 'data-budget' src/app/board.tsx || fail "cards must show budget"
 grep -q 'data-deadline' src/app/board.tsx || fail "cards must show deadline"
+grep -q 'data-winner-rule' src/app/board.tsx || fail "cards must show winner rule"
+grep -q 'Claim #1' src/app/outbid-form.tsx || fail "form missing Claim #1"
+grep -q 'amount-field' src/app/outbid-form.tsx || fail "form missing dashed amount field"
+grep -q 'className="step"' src/app/outbid-form.tsx || fail "form missing ± steppers"
+grep -q 'Who is buying' src/app/outbid-form.tsx || fail "ticket form missing who is buying"
+grep -q 'What it pays' src/app/outbid-form.tsx || fail "ticket form missing what it pays"
+grep -q 'When it’s due' src/app/outbid-form.tsx || fail "ticket form missing when it’s due"
+grep -q 'How a winner is chosen' src/app/outbid-form.tsx || fail "ticket form missing winner rule"
+grep -q 'ticket-stub' src/app/board.css || fail "CSS missing ticket stub"
+grep -q 'ticket-facts' src/app/board.css || fail "CSS missing ticket facts"
+grep -q 'desk-surface' src/app/board.css || fail "CSS missing brief-desk surface"
+grep -q 'empty-stamp' src/app/board.css || fail "CSS missing empty-week stamp"
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "do not ship a long generic two-column form"
+fi
+if grep -qiE 'proposal|portfolio gallery|chat inbox|message the buyer' src/app/board.tsx src/app/outbid-form.tsx; then
+  fail "product UI must not add proposals, chat, or portfolios"
+fi
 grep -q 'board.css' src/app/layout.tsx || fail "root layout must load board styles"
 grep -q 'older' tests/rank.test.ts || fail "rank tests missing older-wins-ties"
+grep -q 'no paid brief' tests/rank.test.ts || fail "rank tests missing no-paid-brief empty week"
+grep -q 'Who is buying' tests/rank.test.ts || fail "rank tests missing ticket labels"
 if grep -RInEi '★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating' \
   src/app src/core --exclude='honesty.ts' --exclude-dir=about --exclude-dir=rules >/dev/null
 then
@@ -334,6 +362,8 @@ if [[ -f package.json ]]; then
     || fail "about/rules copy test did not run"
   grep -q 'live-smoke.sh is executable' "$test_log" \
     || fail "live-smoke offline guard test did not run"
+  grep -q 'no paid brief' "$test_log" \
+    || fail "brief-desk empty-week test did not run"
 fi
 
 echo "OK: buildable and testable"

@@ -20,112 +20,122 @@ export function OutbidForm({ defaultAmount }: OutbidFormProps) {
   }
 
   return (
-    <section className="claim" id="claim">
+    <section className="claim ticket-blank" id="claim">
       <form
         className="outbid-form"
         method="post"
         action="/api/checkout"
         data-bid-form=""
+        data-ticket-form=""
       >
-        <h2>
-          <span>Claim #1 for</span>
-          <span className="amount-stepper">
-            <button
-              type="button"
-              className="step"
-              aria-label="Decrease bid by one dollar"
-              onClick={() => bump(-1)}
-            >
-              −
-            </button>
-            <label className="amount-field">
-              <span className="sr-only">Amount in whole US dollars</span>
-              $
+        <div className="ticket-write-stub" aria-hidden="true">
+          Write
+        </div>
+        <div className="ticket-write-face">
+          <p className="ticket-serial">New job ticket</p>
+          <h2>
+            <span>Claim #1 for</span>
+            <span className="amount-stepper">
+              <button
+                type="button"
+                className="step"
+                aria-label="Decrease bid by one dollar"
+                onClick={() => bump(-1)}
+              >
+                −
+              </button>
+              <label className="amount-field">
+                <span className="sr-only">Amount in whole US dollars</span>
+                $
+                <input
+                  name="amountUsd"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  min={MIN_BID_USD}
+                  step={1}
+                  value={amount}
+                  onChange={(event) => {
+                    const next = Number(event.target.value.replace(/[^\d]/g, ""));
+                    setAmount(clampAmount(next || MIN_BID_USD));
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="step"
+                aria-label="Increase bid by one dollar"
+                onClick={() => bump(1)}
+              >
+                +
+              </button>
+            </span>
+          </h2>
+          <p className="claim-note">
+            New tickets start at ${MIN_BID_USD}. Paying less than #1 still lists
+            at the rank that bid can take. Rank is the bid, not the project
+            budget.
+          </p>
+          <div className="ticket-fields">
+            <label className="ticket-row">
+              Who is buying
               <input
-                name="amountUsd"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                min={MIN_BID_USD}
-                step={1}
-                value={amount}
-                onChange={(event) => {
-                  const next = Number(event.target.value.replace(/[^\d]/g, ""));
-                  setAmount(clampAmount(next || MIN_BID_USD));
-                }}
+                name="buyer"
+                type="text"
+                required
+                maxLength={80}
+                autoComplete="organization"
+                placeholder="Company or person"
               />
             </label>
-            <button
-              type="button"
-              className="step"
-              aria-label="Increase bid by one dollar"
-              onClick={() => bump(1)}
-            >
-              +
+            <div className="ticket-pair">
+              <label>
+                What it pays
+                <input
+                  name="budgetUsd"
+                  type="number"
+                  required
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="Project budget, USD"
+                />
+              </label>
+              <label>
+                When it’s due
+                <input name="deadline" type="date" required />
+              </label>
+            </div>
+            <label className="ticket-row">
+              How a winner is chosen
+              <input
+                name="winnerRule"
+                type="text"
+                required
+                maxLength={280}
+                placeholder="First qualified, fixed price…"
+              />
+            </label>
+            <label className="ticket-row">
+              Brief URL
+              <input
+                name="briefUrl"
+                type="url"
+                required
+                placeholder="https://"
+                autoComplete="url"
+              />
+            </label>
+          </div>
+          <div className="bid-row">
+            <button type="submit" className="outbid">
+              Outbid
             </button>
-          </span>
-        </h2>
-        <p className="claim-note">
-          New briefs start at ${MIN_BID_USD}. Paying less than #1 still lists at
-          the rank that bid can take. Rank is the bid, not the project budget.
-        </p>
-        <div className="fields">
-          <label>
-            Buyer
-            <input
-              name="buyer"
-              type="text"
-              required
-              maxLength={80}
-              autoComplete="organization"
-              placeholder="Company or person"
-            />
-          </label>
-          <label>
-            Budget (USD)
-            <input
-              name="budgetUsd"
-              type="number"
-              required
-              min={1}
-              step={1}
-              inputMode="numeric"
-              placeholder="Project budget"
-            />
-          </label>
-          <label>
-            Deadline
-            <input name="deadline" type="date" required />
-          </label>
-          <label className="wide">
-            How the winner is chosen
-            <input
-              name="winnerRule"
-              type="text"
-              required
-              maxLength={280}
-              placeholder="Portfolio, first qualified, fixed price…"
-            />
-          </label>
-          <label className="wide">
-            Brief URL
-            <input
-              name="briefUrl"
-              type="url"
-              required
-              placeholder="https://"
-              autoComplete="url"
-            />
-          </label>
+          </div>
+          <p className="raise-hint">
+            Already on this week? Enter the same brief URL and raise. Raise pays
+            the difference only after checkout lands.
+          </p>
         </div>
-        <div className="bid-row">
-          <button type="submit" className="outbid">
-            Outbid
-          </button>
-        </div>
-        <p className="raise-hint">
-          Already on this week? Enter the same brief URL and raise. Raise pays
-          the difference only after checkout lands.
-        </p>
       </form>
     </section>
   );
