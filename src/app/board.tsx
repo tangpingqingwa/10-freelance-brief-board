@@ -150,6 +150,8 @@ export function ListingCard({
             data-brief-url={listing.briefUrl}
             data-open-brief={featured ? "lead" : undefined}
             data-first-click={featured ? "open" : undefined}
+            data-open-after-write-first={featured ? "" : undefined}
+            data-first-read={featured ? "open" : undefined}
           >
             {featured ? "Open this brief" : "Open brief"}
           </a>
