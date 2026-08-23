@@ -143,6 +143,17 @@ export function ListingCard({
             </dd>
           </div>
         </dl>
+        <p className={featured ? "ticket-open" : "meta"}>
+          <a
+            className={featured ? "brief-url open-this-brief" : "brief-url"}
+            href={briefClickPath(listing.id)}
+            data-brief-url={listing.briefUrl}
+            data-open-brief={featured ? "lead" : undefined}
+            data-first-click={featured ? "open" : undefined}
+          >
+            {featured ? "Open this brief" : "Open brief"}
+          </a>
+        </p>
         {featured ? (
           <p className="write-after-rule-wrap">
             <a
@@ -156,16 +167,6 @@ export function ListingCard({
             after the winner rule. Paying less than #1 still lists.
           </p>
         ) : null}
-        <p className={featured ? "ticket-open" : "meta"}>
-          <a
-            className={featured ? "brief-url open-this-brief" : "brief-url"}
-            href={briefClickPath(listing.id)}
-            data-brief-url={listing.briefUrl}
-            data-open-brief={featured ? "lead" : undefined}
-          >
-            {featured ? "Open this brief" : "Open brief"}
-          </a>
-        </p>
       </div>
     </article>
   );

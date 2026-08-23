@@ -723,9 +723,9 @@ test("occupied week makes writing a new ticket after the winner rule the buyer h
   assert.ok(writeAfterAt > leadStart && writeAfterAt < hopperStart);
   assert.ok(budgetAt > leadStart && budgetAt < deadlineAt);
   assert.ok(deadlineAt > budgetAt && deadlineAt < winnerAt);
-  assert.ok(winnerAt < writeAfterAt);
-  assert.ok(writeAfterAt < openLead);
-  assert.ok(openLead < claimAt);
+  assert.ok(winnerAt < openLead);
+  assert.ok(openLead < writeAfterAt);
+  assert.ok(writeAfterAt < claimAt);
   assert.ok(writeStampAt > claimAt);
   assert.ok(bidStub > leadStart && bidStub < writeAfterAt);
   assert.equal(html.includes('data-write-after-rule=""', hopperStart), false);
@@ -768,9 +768,85 @@ test("empty week does not stamp Write this ticket over No paid brief", () => {
   assert.doesNotMatch(html, /Write this ticket/);
   assert.doesNotMatch(html, /data-write-after-rule/);
   assert.doesNotMatch(html, /after the winner rule/);
+  assert.doesNotMatch(html, /data-first-click="open"/);
   const stampAt = html.indexOf("No paid brief");
   const claimAt = html.indexOf('id="claim"');
   assert.ok(stampAt >= 0 && claimAt > stampAt);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("occupied week lets opening the paid #1 brief win the first click after Write follows the winner rule", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(html, /data-desk-surface="occupied"/);
+  assert.match(html, /data-first-click="open"/);
+  assert.match(html, /data-open-brief="lead"/);
+  assert.match(html, /Open this brief/);
+  assert.match(html, /href="\/click\/lst_lead"/);
+  assert.match(html, /data-write-after-rule=""/);
+  assert.match(html, /after the winner rule/);
+  assert.match(html, /Write this ticket/);
+  assert.match(html, /Winner rule, not a score/);
+  assert.match(html, /Best portfolio by Friday/);
+  assert.match(html, /Project budget, not the bid/);
+  assert.match(html, /Due date, not a score/);
+  assert.match(html, /Claim #1 for/);
+  assert.match(html, />Outbid</);
+  assert.match(html, /\$12/);
+  assert.equal((html.match(/data-first-click="open"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-write-after-rule=""/g) ?? []).length, 1);
+
+  const leadStart = html.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
+  const claimAt = html.indexOf('id="claim"');
+  const budgetAt = html.indexOf('data-read-budget="lead"');
+  const deadlineAt = html.indexOf('data-read-deadline="lead"');
+  const winnerAt = html.indexOf('data-read-winner="lead"');
+  const firstClickAt = html.indexOf('data-first-click="open"');
+  const openLead = html.indexOf("Open this brief");
+  const writeAfterAt = html.indexOf('data-write-after-rule=""');
+  const writeStampAt = html.indexOf("data-write-ticket-stamp");
+  const bidStub = html.indexOf('data-bid="">$12<');
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(firstClickAt > leadStart && firstClickAt < hopperStart);
+  assert.ok(budgetAt > leadStart && budgetAt < deadlineAt);
+  assert.ok(deadlineAt > budgetAt && deadlineAt < winnerAt);
+  assert.ok(winnerAt < firstClickAt);
+  assert.ok(firstClickAt < openLead);
+  assert.ok(openLead < writeAfterAt);
+  assert.ok(writeAfterAt < claimAt);
+  assert.ok(writeStampAt > claimAt);
+  assert.ok(bidStub > leadStart && bidStub < firstClickAt);
+  assert.equal(html.includes('data-first-click="open"', hopperStart), false);
+  assert.doesNotMatch(html.slice(hopperStart), /Open this brief/);
+  assert.doesNotMatch(html.slice(hopperStart), /after the winner rule/);
+  assert.doesNotMatch(html.slice(hopperStart), /Write this ticket/);
+  assert.match(html.slice(hopperStart), /First qualified/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
 });
 

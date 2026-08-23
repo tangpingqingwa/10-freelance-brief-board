@@ -473,27 +473,6 @@ a:hover {
   color: var(--muted);
 }
 
-.ticket-featured .write-after-rule-wrap {
-  margin: 0.55rem 0 0;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-
-.ticket-featured .write-after-rule {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--stamp);
-  text-decoration: underline dashed;
-  text-underline-offset: 0.18em;
-}
-
-.ticket-featured .write-after-rule:hover {
-  color: var(--stamp);
-}
-
 #claim {
   scroll-margin-top: 1.5rem;
 }
@@ -543,6 +522,10 @@ a:hover {
   margin: 0.95rem 0 0;
 }
 
+.ticket-featured .ticket-open {
+  margin: 0.75rem 0 0;
+}
+
 .ticket-featured .open-this-brief {
   display: inline-flex;
   align-items: center;
@@ -560,6 +543,40 @@ a:hover {
 
 .ticket-featured .open-this-brief:hover {
   background: rgba(180, 35, 24, 0.06);
+  color: var(--stamp);
+}
+
+.ticket-featured .open-this-brief[data-first-click="open"] {
+  min-height: 3.05rem;
+  padding: 0 1.35rem;
+  font-size: 1.02rem;
+  letter-spacing: 0.1em;
+  box-shadow: 4px 4px 0 rgba(26, 22, 18, 0.22);
+}
+
+.ticket-featured .open-this-brief[data-first-click="open"]:hover {
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--stamp);
+}
+
+.ticket-featured .write-after-rule-wrap {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.ticket-featured .write-after-rule {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  text-decoration: underline dashed;
+  text-underline-offset: 0.18em;
+}
+
+.ticket-featured .write-after-rule:hover {
   color: var(--stamp);
 }
 

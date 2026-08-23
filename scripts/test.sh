@@ -141,6 +141,8 @@ grep -q 'reading the paid #1 winner rule the freelancer fact' tests/rank.test.ts
   || fail "rank tests missing occupied-week read-this-winner freelancer fact"
 grep -q 'writing a new ticket after the winner rule the buyer hop' tests/rank.test.ts \
   || fail "rank tests missing occupied-week write-after-rule buyer hop"
+grep -q 'win the first click after Write follows the winner rule' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week open-after-write first click"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -334,9 +336,23 @@ if ! awk '
   /ticket-featured \.ticket-read-winner/ { fact=NR }
   /ticket-featured \.write-after-rule/ { hop=NR }
   /ticket-featured \.open-this-brief/ { open=NR }
-  END { exit !(fact && hop && open && fact < hop && hop < open) }
+  END { exit !(fact && hop && open && fact < open && open < hop) }
 ' src/app/board.css; then
-  fail "featured CSS must paint write-after-rule between winner rule and Open this brief"
+  fail "featured CSS must paint Open this brief between winner rule and write-after-rule"
+fi
+grep -q 'data-first-click' src/app/board.tsx \
+  || fail "featured #1 Open this brief must mark the first click"
+grep -q '"open"' src/app/board.tsx \
+  || fail "featured #1 first click must be Open this brief"
+grep -q 'data-first-click="open"' src/app/board.css \
+  || fail "CSS must make Open this brief win the first click"
+if ! awk '
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /ticket-featured \.open-this-brief\[data-first-click="open"\]/ { first=NR }
+  /ticket-featured \.write-after-rule \{/ { hop=NR }
+  END { exit !(open && first && hop && open < first && first < hop) }
+' src/app/board.css; then
+  fail "featured CSS must paint first-click Open this brief louder than write-after-rule"
 fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
@@ -477,6 +493,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week read-this-winner freelancer test did not run"
   grep -q 'writing a new ticket after the winner rule' "$test_log" \
     || fail "occupied-week write-after-rule buyer test did not run"
+  grep -q 'win the first click after Write follows the winner rule' "$test_log" \
+    || fail "occupied-week open-after-write first-click test did not run"
 fi
 
 echo "OK: buildable and testable"
