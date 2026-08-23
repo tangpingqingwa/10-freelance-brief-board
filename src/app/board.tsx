@@ -119,10 +119,27 @@ export function ListingCard({
               )}
             </dd>
           </div>
-          <div className="ticket-rule">
+          <div
+            className={
+              featured ? "ticket-rule ticket-read-winner" : "ticket-rule"
+            }
+          >
             <dt>How a winner is chosen</dt>
-            <dd className="winner-rule" data-winner-rule="">
-              {listing.winnerRule}
+            <dd
+              className={featured ? "winner-rule read-this-winner" : "winner-rule"}
+              data-winner-rule=""
+              data-read-winner={featured ? "lead" : undefined}
+            >
+              {featured ? (
+                <>
+                  <span className="winner-rule-text">{listing.winnerRule}</span>
+                  <span className="winner-not-score">
+                    Winner rule, not a score
+                  </span>
+                </>
+              ) : (
+                listing.winnerRule
+              )}
             </dd>
           </div>
         </dl>
@@ -180,8 +197,8 @@ export function Board({ week, listings }: BoardProps) {
         <p className="kicker">This week’s #1 freelance brief</p>
         <h1>Brief desk</h1>
         <p className="period-meta" data-week-id={week.weekId}>
-          Week {week.weekId}. Next reset {week.endsAt}. Rank is the bid. Budget
-          and deadline are public facts, not scores.
+          Week {week.weekId}. Next reset {week.endsAt}. Rank is the bid. Budget,
+          deadline, and how a winner is chosen are public facts, not scores.
         </p>
       </header>
 
