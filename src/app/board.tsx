@@ -140,7 +140,7 @@ export function Board({ week, listings }: BoardProps) {
               <h2 id="spike-heading">This week’s #1</h2>
               <ListingCard listing={featured} featured />
             </section>
-            <OutbidForm defaultAmount={defaultAmount} />
+            <OutbidForm defaultAmount={defaultAmount} occupied />
           </>
         ) : (
           <>

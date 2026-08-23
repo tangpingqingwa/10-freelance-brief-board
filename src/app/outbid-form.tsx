@@ -5,6 +5,7 @@ import { MIN_BID_USD } from "../core/rank";
 
 type OutbidFormProps = {
   defaultAmount: number;
+  occupied?: boolean;
 };
 
 function clampAmount(value: number): number {
@@ -12,7 +13,10 @@ function clampAmount(value: number): number {
   return Math.max(MIN_BID_USD, Math.trunc(value));
 }
 
-export function OutbidForm({ defaultAmount }: OutbidFormProps) {
+export function OutbidForm({
+  defaultAmount,
+  occupied = false,
+}: OutbidFormProps) {
   const [amount, setAmount] = useState(() => clampAmount(defaultAmount));
 
   function bump(delta: number) {
@@ -20,7 +24,12 @@ export function OutbidForm({ defaultAmount }: OutbidFormProps) {
   }
 
   return (
-    <section className="claim ticket-blank" id="claim">
+    <section
+      className="claim ticket-blank"
+      id="claim"
+      data-write-ticket={occupied ? "buyer" : undefined}
+      aria-label={occupied ? "Write this ticket" : undefined}
+    >
       <form
         className="outbid-form"
         method="post"
@@ -33,6 +42,11 @@ export function OutbidForm({ defaultAmount }: OutbidFormProps) {
         </div>
         <div className="ticket-write-face">
           <p className="ticket-serial">New job ticket</p>
+          {occupied ? (
+            <p className="write-this-ticket" data-write-ticket-stamp="">
+              Write this ticket
+            </p>
+          ) : null}
           <h2>
             <span>Claim #1 for</span>
             <span className="amount-stepper">

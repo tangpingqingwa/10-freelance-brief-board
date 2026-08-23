@@ -381,6 +381,70 @@ test("occupied week makes opening the paid #1 brief the freelancer move", () => 
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
 });
 
+test("occupied week makes writing a new ticket the buyer move", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(html, /data-desk-surface="occupied"/);
+  assert.match(html, /data-write-ticket="buyer"/);
+  assert.match(html, /data-write-ticket-stamp=""/);
+  assert.match(html, /Write this ticket/);
+  assert.match(html, /Open this brief/);
+  assert.match(html, /Claim #1 for/);
+  assert.match(html, />Outbid</);
+  assert.match(html, /\$12/);
+  assert.match(html, /Budget \$/);
+  assert.match(html, /Rank is the bid, not the project/);
+
+  const leadStart = html.indexOf('data-listing-id="lst_lead"');
+  const openLead = html.indexOf("Open this brief");
+  const claimAt = html.indexOf('id="claim"');
+  const writeAt = html.indexOf("Write this ticket");
+  const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
+  assert.ok(leadStart >= 0 && openLead > leadStart);
+  assert.ok(openLead < claimAt);
+  assert.ok(writeAt > claimAt);
+  assert.ok(hopperStart > claimAt);
+  assert.equal(html.includes("Write this ticket", hopperStart), false);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("empty week does not stamp Write this ticket over No paid brief", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(html, /data-desk-surface="empty"/);
+  assert.match(html, /data-empty-week="true"/);
+  assert.match(html, /No paid brief/);
+  assert.match(html, /no sample gig/i);
+  assert.match(html, /Claim #1 for/);
+  assert.doesNotMatch(html, /data-write-ticket="buyer"/);
+  assert.doesNotMatch(html, /data-write-ticket-stamp/);
+  assert.doesNotMatch(html, /Write this ticket/);
+  const stampAt = html.indexOf("No paid brief");
+  const claimAt = html.indexOf('id="claim"');
+  assert.ok(stampAt >= 0 && claimAt > stampAt);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
 test("current week header uses UTC ISO week", () => {
   const week = currentWeekUtc(new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(week.weekId, "2026-W34");
