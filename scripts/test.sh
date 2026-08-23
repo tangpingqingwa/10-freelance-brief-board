@@ -143,6 +143,8 @@ grep -q 'writing a new ticket after the winner rule the buyer hop' tests/rank.te
   || fail "rank tests missing occupied-week write-after-rule buyer hop"
 grep -q 'win the first click after Write follows the winner rule' tests/rank.test.ts \
   || fail "rank tests missing occupied-week open-after-write first click"
+grep -q 'concentrates writing a new ticket after Open this brief wins the first click' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week write-after-open first-write hop"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -354,6 +356,21 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must paint first-click Open this brief louder than write-after-rule"
 fi
+grep -q 'data-write-after-open' src/app/board.tsx \
+  || fail "featured #1 Write this ticket must concentrate after Open this brief"
+grep -q 'data-write-after-open' src/app/board.css \
+  || fail "CSS must concentrate Write this ticket after Open this brief"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open'; then
+  fail "empty week must not concentrate Write this ticket after Open this brief"
+fi
+if ! awk '
+  /ticket-featured \.open-this-brief\[data-first-click="open"\]/ { first=NR }
+  /ticket-featured \.write-after-rule \{/ { hop=NR }
+  /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
+  END { exit !(first && hop && write && first < hop && hop < write) }
+' src/app/board.css; then
+  fail "featured CSS must concentrate Write this ticket after first-click Open this brief"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -495,6 +512,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week write-after-rule buyer test did not run"
   grep -q 'win the first click after Write follows the winner rule' "$test_log" \
     || fail "occupied-week open-after-write first-click test did not run"
+  grep -q 'concentrates writing a new ticket after Open this brief' "$test_log" \
+    || fail "occupied-week write-after-open first-write test did not run"
 fi
 
 echo "OK: buildable and testable"
