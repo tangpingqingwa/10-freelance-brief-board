@@ -470,6 +470,7 @@ test("occupied week makes reading the paid #1 budget the freelancer fact", () =>
   assert.match(html, />Outbid</);
   assert.match(html, /Best portfolio by Friday/);
   assert.match(html, /15 September 2026/);
+  assert.match(html, /Due date, not a score/);
 
   const leadStart = html.indexOf('data-listing-id="lst_lead"');
   const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
@@ -542,6 +543,7 @@ test("occupied week makes reading the paid #1 deadline the freelancer fact", () 
   assert.match(html, /data-read-deadline="lead"/);
   assert.match(html, /Due date, not a score/);
   assert.match(html, /15 September 2026/);
+  assert.match(html, /dateTime="2026-09-15"/);
   assert.match(html, /\$3,200/);
   assert.match(html, /\$12/);
   assert.match(html, /Open this brief/);

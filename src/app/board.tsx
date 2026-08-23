@@ -19,32 +19,6 @@ export function formatClicks(clicks: number): string {
 }
 
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
-/** Submitted YYYY-MM-DD as a calendar date. Never invents a day. */
-export function formatDeadline(isoDate: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) return isoDate;
-  const year = match[1];
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return isoDate;
-  return `${day} ${MONTHS[month - 1]} ${year}`;
-}
-
-const MONTHS = [
   "January",
   "February",
   "March",
@@ -59,6 +33,7 @@ const MONTHS = [
   "December",
 ] as const;
 
+/** Submitted YYYY-MM-DD as a calendar date. Never invents a day. */
 export function formatDeadline(isoDate: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
   if (!match) return isoDate;
@@ -132,9 +107,9 @@ export function ListingCard({
             >
               {featured ? (
                 <>
-                  <span className="deadline-date">
+                  <time className="deadline-date" dateTime={listing.deadline}>
                     {formatDeadline(listing.deadline)}
-                  </span>
+                  </time>
                   <span className="deadline-not-score">
                     Due date, not a score
                   </span>
