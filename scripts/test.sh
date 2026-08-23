@@ -137,6 +137,8 @@ grep -q 'reading the paid #1 budget the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-budget freelancer fact"
 grep -q 'reading the paid #1 deadline the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-deadline freelancer fact"
+grep -q 'reading the paid #1 winner rule the freelancer fact' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week read-this-winner freelancer fact"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -301,6 +303,23 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must paint due date between project budget and Open this brief"
 fi
+grep -q 'data-read-winner' src/app/board.tsx \
+  || fail "featured #1 ticket must mark the winner rule"
+grep -q 'Winner rule, not a score' src/app/board.tsx \
+  || fail "featured #1 ticket must say the winner rule is not a score"
+grep -q 'read-this-winner' src/app/board.css \
+  || fail "CSS missing featured winner-rule fact"
+grep -q 'winner-rule-text' src/app/board.tsx \
+  || fail "featured #1 ticket must name the submitted winner rule"
+if ! awk '
+  /ticket-featured \.ticket-read-budget/ { budget=NR }
+  /ticket-featured \.ticket-read-deadline/ { deadline=NR }
+  /ticket-featured \.ticket-read-winner/ { fact=NR }
+  /ticket-featured \.open-this-brief/ { open=NR }
+  END { exit !(budget && deadline && fact && open && budget < deadline && deadline < fact && fact < open) }
+' src/app/board.css; then
+  fail "featured CSS must paint winner rule between due date and Open this brief"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -436,6 +455,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week read-this-budget freelancer test did not run"
   grep -q 'reading the paid #1 deadline' "$test_log" \
     || fail "occupied-week read-this-deadline freelancer test did not run"
+  grep -q 'reading the paid #1 winner rule' "$test_log" \
+    || fail "occupied-week read-this-winner freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"
