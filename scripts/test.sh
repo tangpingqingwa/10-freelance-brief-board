@@ -125,6 +125,8 @@ grep -q 'name="amountUsd"' src/app/outbid-form.tsx || fail "form missing amount"
 grep -q 'data-empty-week' src/app/board.tsx || fail "board missing honest empty week"
 grep -q 'No paid brief' src/app/board.tsx || fail "empty week must say no paid brief"
 grep -q 'no sample gig' src/app/board.tsx || fail "empty week must refuse a sample gig"
+grep -q 'desk-surface-empty' src/app/board.tsx || fail "empty week must yield the desk to Claim #1"
+grep -q 'desk-surface-empty' src/app/board.css || fail "CSS missing empty-desk claim focus"
 grep -q 'data-brief-desk' src/app/board.tsx || fail "board must be a brief desk"
 grep -q 'card ticket' src/app/board.tsx || fail "paid listings must render as tickets"
 grep -q 'Who is buying' src/app/board.tsx || fail "ticket missing who is buying"
@@ -364,6 +366,8 @@ if [[ -f package.json ]]; then
     || fail "live-smoke offline guard test did not run"
   grep -q 'no paid brief' "$test_log" \
     || fail "brief-desk empty-week test did not run"
+  grep -q 'yields the desk to Claim #1' "$test_log" \
+    || fail "empty-week claim-first UX test did not run"
 fi
 
 echo "OK: buildable and testable"

@@ -111,6 +111,8 @@ export function Board({ week, listings }: BoardProps) {
   const topBid = featured?.bidUsd ?? 0;
   const defaultAmount = topBid > 0 ? topBid + 1 : MIN_BID_USD;
 
+  const empty = featured === undefined;
+
   return (
     <main
       className="board desk"
@@ -127,26 +129,36 @@ export function Board({ week, listings }: BoardProps) {
         </p>
       </header>
 
-      <div className="desk-surface">
-        <section className="spike" aria-labelledby="spike-heading">
-          <h2 id="spike-heading">This week’s #1</h2>
-          {featured ? (
-            <ListingCard listing={featured} featured />
-          ) : (
-            <div className="empty-week" data-empty-week="true">
-              <div className="empty-ticket">
-                <div className="spike-pin" aria-hidden="true" />
-                <p className="empty-stamp">No paid brief</p>
-                <p>
-                  This week’s board is empty. No buyer has paid to pin a ticket.
-                  There is no invented #1 brief and no invented ratings. There
-                  is no sample gig.
-                </p>
+      <div
+        className={empty ? "desk-surface desk-surface-empty" : "desk-surface"}
+        data-desk-surface={empty ? "empty" : "occupied"}
+      >
+        {featured ? (
+          <>
+            <section className="spike" aria-labelledby="spike-heading">
+              <h2 id="spike-heading">This week’s #1</h2>
+              <ListingCard listing={featured} featured />
+            </section>
+            <OutbidForm defaultAmount={defaultAmount} />
+          </>
+        ) : (
+          <>
+            <OutbidForm defaultAmount={defaultAmount} />
+            <section className="spike spike-quiet" aria-labelledby="spike-heading">
+              <h2 id="spike-heading">This week’s #1</h2>
+              <div className="empty-week" data-empty-week="true">
+                <div className="empty-ticket">
+                  <p className="empty-stamp">No paid brief</p>
+                  <p>
+                    This week’s board is empty. No buyer has paid to pin a
+                    ticket. There is no invented #1 brief and no invented
+                    ratings. There is no sample gig.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </section>
-        <OutbidForm defaultAmount={defaultAmount} />
+            </section>
+          </>
+        )}
       </div>
 
       {rest.length > 0 ? (
