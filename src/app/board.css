@@ -446,6 +446,22 @@ a:hover {
   color: var(--stamp);
 }
 
+.write-this-ticket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 0.55rem;
+  min-height: 2.15rem;
+  padding: 0 0.85rem;
+  border: 2px dashed var(--stamp);
+  color: var(--stamp);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .claim h2 {
   display: flex;
   flex-wrap: wrap;

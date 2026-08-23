@@ -131,6 +131,8 @@ grep -q 'tells a freelancer no one has paid before Claim #1' tests/rank.test.ts 
   || fail "rank tests missing freelancer empty-week honesty-first order"
 grep -q 'opening the paid #1 brief the freelancer move' tests/rank.test.ts \
   || fail "rank tests missing occupied-week open-this-brief freelancer move"
+grep -q 'writing a new ticket the buyer move' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week write-this-ticket buyer move"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -258,6 +260,12 @@ grep -q 'data-open-brief' src/app/board.tsx \
   || fail "featured #1 ticket must mark the open-brief hop"
 grep -q 'open-this-brief' src/app/board.css \
   || fail "CSS missing featured Open this brief stamp"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "occupied write ticket must say Write this ticket"
+grep -q 'data-write-ticket' src/app/outbid-form.tsx \
+  || fail "occupied write ticket must mark the buyer write hop"
+grep -q 'write-this-ticket' src/app/board.css \
+  || fail "CSS missing occupied Write this ticket stamp"
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -387,6 +395,8 @@ if [[ -f package.json ]]; then
     || fail "empty-week claim-first UX test did not run"
   grep -q 'opening the paid #1 brief' "$test_log" \
     || fail "occupied-week open-this-brief freelancer test did not run"
+  grep -q 'writing a new ticket' "$test_log" \
+    || fail "occupied-week write-this-ticket buyer test did not run"
 fi
 
 echo "OK: buildable and testable"
