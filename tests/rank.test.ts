@@ -332,6 +332,55 @@ test("occupied week keeps the paid ticket beside Claim #1", () => {
   assert.ok(ticketAt < claimAt);
 });
 
+test("occupied week makes opening the paid #1 brief the freelancer move", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(html, /data-desk-surface="occupied"/);
+  assert.doesNotMatch(html, /data-empty-week/);
+  assert.doesNotMatch(html, /no paid brief/i);
+  assert.match(html, /ticket-featured/);
+  assert.match(html, /data-open-brief="lead"/);
+  assert.match(html, /Open this brief/);
+  assert.match(html, /href="\/click\/lst_lead"/);
+  assert.match(html, /data-brief-url="https:\/\/example.com\/lead"/);
+  assert.match(html, /Budget \$/);
+  assert.match(html, /\$12/);
+  assert.match(html, /Claim #1 for/);
+  assert.match(html, />Outbid</);
+
+  const leadStart = html.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
+  const claimAt = html.indexOf('id="claim"');
+  const openLead = html.indexOf("Open this brief");
+  const openHop = html.indexOf(">Open brief<");
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(openLead > leadStart && openLead < hopperStart);
+  assert.ok(openLead < claimAt);
+  assert.ok(openHop > hopperStart);
+  assert.equal(html.includes('data-open-brief="lead"', hopperStart), false);
+  assert.doesNotMatch(html.slice(hopperStart), /Open this brief/);
+  assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
 test("current week header uses UTC ISO week", () => {
   const week = currentWeekUtc(new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(week.weekId, "2026-W34");
