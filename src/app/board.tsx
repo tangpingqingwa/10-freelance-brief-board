@@ -71,13 +71,14 @@ export function ListingCard({
             </dd>
           </div>
         </dl>
-        <p className="meta">
+        <p className={featured ? "ticket-open" : "meta"}>
           <a
-            className="brief-url"
+            className={featured ? "brief-url open-this-brief" : "brief-url"}
             href={briefClickPath(listing.id)}
             data-brief-url={listing.briefUrl}
+            data-open-brief={featured ? "lead" : undefined}
           >
-            Open brief
+            {featured ? "Open this brief" : "Open brief"}
           </a>
         </p>
       </div>

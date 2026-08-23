@@ -422,6 +422,30 @@ a:hover {
   text-underline-offset: 0.18em;
 }
 
+.ticket-open {
+  margin: 0.95rem 0 0;
+}
+
+.ticket-featured .open-this-brief {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.55rem;
+  padding: 0 1.15rem;
+  border: 2px dashed var(--stamp);
+  color: var(--stamp);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.ticket-featured .open-this-brief:hover {
+  background: rgba(180, 35, 24, 0.06);
+  color: var(--stamp);
+}
+
 .claim h2 {
   display: flex;
   flex-wrap: wrap;
