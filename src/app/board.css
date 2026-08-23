@@ -473,6 +473,31 @@ a:hover {
   color: var(--muted);
 }
 
+.ticket-featured .write-after-rule-wrap {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.ticket-featured .write-after-rule {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  text-decoration: underline dashed;
+  text-underline-offset: 0.18em;
+}
+
+.ticket-featured .write-after-rule:hover {
+  color: var(--stamp);
+}
+
+#claim {
+  scroll-margin-top: 1.5rem;
+}
+
 .ticket-facts dd,
 .budget,
 .deadline,

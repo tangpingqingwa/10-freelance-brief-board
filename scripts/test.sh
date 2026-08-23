@@ -139,6 +139,8 @@ grep -q 'reading the paid #1 deadline the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-deadline freelancer fact"
 grep -q 'reading the paid #1 winner rule the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-winner freelancer fact"
+grep -q 'writing a new ticket after the winner rule the buyer hop' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week write-after-rule buyer hop"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -320,6 +322,22 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must paint winner rule between due date and Open this brief"
 fi
+grep -q 'data-write-after-rule' src/app/board.tsx \
+  || fail "featured #1 ticket must mark write-after-rule"
+grep -q 'after the winner rule' src/app/board.tsx \
+  || fail "featured #1 ticket must say write sits after the winner rule"
+grep -q 'write-after-rule' src/app/board.css \
+  || fail "CSS missing featured write-after-rule hop"
+grep -q 'href="#claim"' src/app/board.tsx \
+  || fail "write-after-rule hop must jump to Claim #1"
+if ! awk '
+  /ticket-featured \.ticket-read-winner/ { fact=NR }
+  /ticket-featured \.write-after-rule/ { hop=NR }
+  /ticket-featured \.open-this-brief/ { open=NR }
+  END { exit !(fact && hop && open && fact < hop && hop < open) }
+' src/app/board.css; then
+  fail "featured CSS must paint write-after-rule between winner rule and Open this brief"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -457,6 +475,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week read-this-deadline freelancer test did not run"
   grep -q 'reading the paid #1 winner rule' "$test_log" \
     || fail "occupied-week read-this-winner freelancer test did not run"
+  grep -q 'writing a new ticket after the winner rule' "$test_log" \
+    || fail "occupied-week write-after-rule buyer test did not run"
 fi
 
 echo "OK: buildable and testable"
