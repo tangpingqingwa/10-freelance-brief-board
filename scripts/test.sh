@@ -155,6 +155,8 @@ grep -q 'concentrates writing a new ticket after Open this brief is re-concentra
   || fail "rank tests missing occupied-week write-after-open-three buyer hop"
 grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated again' tests/rank.test.ts \
   || fail "rank tests missing occupied-week open-after-write-three freelancer hop"
+grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a fourth time' tests/rank.test.ts \
+  || fail "rank tests missing occupied-week write-after-open-four buyer hop"
 if ! awk '
   /desk-surface-empty \.spike-quiet/ { spike=NR }
   /desk-surface-empty \.claim/ { claim=NR }
@@ -458,6 +460,21 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must concentrate Open this brief after Write this ticket is re-concentrated again"
 fi
+grep -q 'data-write-after-open-four' src/app/board.tsx \
+  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated a fourth time"
+grep -q 'data-write-after-open-four' src/app/board.css \
+  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated a fourth time"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-four'; then
+  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated a fourth time"
+fi
+if ! awk '
+  /ticket-featured \.write-after-rule\[data-write-after-open-three\]/ { write=NR }
+  /ticket-featured \.open-this-brief\[data-open-after-write-three\]/ { open=NR }
+  /ticket-featured \.write-after-rule\[data-write-after-open-four\]/ { four=NR }
+  END { exit !(write && open && four && write < open && open < four) }
+' src/app/board.css; then
+  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated a fourth time"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -611,6 +628,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week write-after-open-three buyer test did not run"
   grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated again' "$test_log" \
     || fail "occupied-week open-after-write-three freelancer test did not run"
+  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a fourth time' "$test_log" \
+    || fail "occupied-week write-after-open-four buyer test did not run"
 fi
 
 echo "OK: buildable and testable"
