@@ -153,6 +153,7 @@ export function ListingCard({
             data-open-after-write-first={featured ? "" : undefined}
             data-first-read={featured ? "open" : undefined}
             data-open-after-write-two={featured ? "" : undefined}
+            data-open-after-write-three={featured ? "" : undefined}
           >
             {featured ? "Open this brief" : "Open brief"}
           </a>
