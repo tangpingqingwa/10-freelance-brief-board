@@ -779,6 +779,107 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must recede Write after first-click Open this brief"
 fi
+
+echo "== UX: empty week stays Claim #1 — Open / Write cannot leak =="
+grep -q 'board desk week-empty' src/app/board.tsx \
+  || fail "empty week must wrap in week-empty so occupied Open / Write cannot leak"
+grep -q 'board desk week-occupied' src/app/board.tsx \
+  || fail "occupied week must wrap in week-occupied so Open / Write CSS stay scoped"
+grep -q 'data-week-empty' src/app/board.tsx \
+  || fail "empty week must stamp data-week-empty"
+grep -q 'data-week-occupied' src/app/board.tsx \
+  || fail "occupied week must stamp data-week-occupied"
+grep -q 'empty week stays Claim #1 — Open / Write cannot leak' tests/rank.test.ts \
+  || fail "rank tests must cover empty week isolation so Open / Write cannot leak"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Open this brief'; then
+  fail "empty week must not invent Open this brief"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Write this ticket'; then
+  fail "empty week must not invent Write this ticket"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
+  fail "empty week must not stamp prize before price"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-later-quiet'; then
+  fail "empty week must not recede Write this ticket"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "empty isolation must not add another numbered hop stamp"
+fi
+grep -q 'data-empty-ticket' src/app/board.tsx \
+  || fail "empty isolation must keep Claim #1 + No paid brief"
+grep -q 'data-empty-ticket' src/app/outbid-form.tsx \
+  || fail "empty isolation must keep empty Claim #1 stamped"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "empty isolation must keep No paid brief"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "empty isolation must leave Claim #1 on the form"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "empty isolation must keep occupied Open this brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "empty isolation must keep occupied Write this ticket"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "empty isolation must keep occupied Open this brief the first click"
+grep -q 'data-write-later-quiet' src/app/board.tsx \
+  || fail "empty isolation must keep occupied Write receded"
+grep -q 'data-prize-before-price' src/app/board.tsx \
+  || fail "empty isolation must keep occupied prize before price"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "empty isolation must keep occupied rank as the bid"
+grep -q 'data-budget-later' src/app/board.tsx \
+  || fail "empty isolation must keep occupied project budget as a later fact"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "empty isolation must not rebuild the ticket desk"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "empty isolation must keep the dashed amount"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "empty isolation must keep Outbid"
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "empty isolation must not rebuild the ticket desk into a long form"
+fi
+grep -Fq '.week-empty[data-empty-ticket] .open-this-brief' src/app/board.css \
+  || fail "empty week shell must hide leaked Open this brief"
+grep -Fq '.week-empty[data-empty-ticket] p.write-this-ticket' src/app/board.css \
+  || fail "empty week shell must hide leaked Write this ticket"
+grep -Fq '.week-empty[data-empty-ticket] [data-prize]' src/app/board.css \
+  || fail "empty week shell must hide leaked prize chrome"
+grep -Fq '.week-empty[data-empty-ticket] [data-write-later-quiet]' src/app/board.css \
+  || fail "empty week shell must hide leaked quieter Write"
+grep -Fq '.week-empty .open-this-brief' src/app/board.css \
+  || fail "empty week shell must hide leaked Open pills"
+grep -Fq '.week-empty .write-after-rule' src/app/board.css \
+  || fail "empty week shell must hide leaked Write hops"
+grep -Fq '.week-occupied .empty-week' src/app/board.css \
+  || fail "occupied week shell must hide empty-week chrome"
+grep -Fq '.week-occupied .ticket-featured .open-this-brief {' src/app/board.css \
+  || fail "Open this brief CSS must be scoped to week-occupied"
+grep -Fq '.week-occupied .ticket-featured a.write-after-rule[data-write-later-quiet]' src/app/board.css \
+  || fail "quieter Write CSS must be scoped to week-occupied"
+grep -Fq '.week-occupied .write-this-ticket[data-write-later-quiet]' src/app/board.css \
+  || fail "occupied Write stamp CSS must be scoped to week-occupied"
+grep -Fq '.week-occupied .ticket-featured .prize-before-price .winner-rule-text' src/app/board.css \
+  || fail "prize CSS must be scoped to week-occupied"
+grep -Fq '.week-occupied .ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid' src/app/board.css \
+  || fail "rank-is-bid CSS must be scoped to week-occupied"
+if grep -E '^\.ticket-featured' src/app/board.css; then
+  fail "featured Open / prize CSS must not apply outside week-occupied"
+fi
+if grep -E '^\.write-this-ticket' src/app/board.css; then
+  fail "Write this ticket CSS must not apply outside week-occupied"
+fi
+empty_no_open_rule="$(awk '/^\.board\[data-empty-ticket\] \.ticket-featured,/,/^\}/' src/app/board.css)"
+echo "$empty_no_open_rule" | grep -q 'display: none' \
+  || fail "empty week CSS must hide occupied Open / Write / prize"
+echo "$empty_no_open_rule" | grep -q 'week-empty\[data-empty-ticket\] \.open-this-brief' \
+  || fail "empty week CSS must hide leaked Open on the week-empty shell"
+echo "$empty_no_open_rule" | grep -q 'week-empty \.write-after-rule' \
+  || fail "empty week CSS must hide leaked Write on the week-empty shell"
+if echo "$empty_no_open_rule" | grep -q 'background:'; then
+  fail "empty isolation must hide occupied chrome, not recolor the desk"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "empty isolation must not rebuild the ticket desk into a stacked layout"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -950,6 +1051,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week rank-is-bid freelancer test did not run"
   grep -q 'Open this brief stays the first freelancer click' "$test_log" \
     || fail "occupied-week open-brief-first freelancer test did not run"
+  grep -q 'empty week stays Claim #1 — Open / Write cannot leak' "$test_log" \
+    || fail "empty-week Open / Write isolation test did not run"
 fi
 
 echo "OK: buildable and testable"

@@ -235,10 +235,12 @@ export function Board({ week, listings }: BoardProps) {
 
   return (
     <main
-      className="board desk"
+      className={empty ? "board desk week-empty" : "board desk week-occupied"}
       data-board=""
       data-brief-desk=""
       data-week={week.weekId}
+      data-week-empty={empty ? "true" : undefined}
+      data-week-occupied={empty ? undefined : "true"}
       data-empty-ticket={empty ? "" : undefined}
     >
       <header className="desk-mast">
