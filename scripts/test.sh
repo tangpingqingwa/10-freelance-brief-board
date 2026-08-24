@@ -599,6 +599,61 @@ if ! awk '
   fail "featured CSS must paint the winner-rule prize before quieter \$bid and Open this brief"
 fi
 
+echo "== UX: occupied rank is the bid; budget stays a later fact =="
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "featured #1 ticket must stamp rank is the bid"
+grep -q 'data-rank-bid' src/app/board.tsx \
+  || fail "featured #1 $bid must mark the paid bid as rank"
+grep -q 'rank-is-bid' src/app/board.tsx \
+  || fail "featured #1 $bid must use the rank-is-bid class"
+grep -q 'data-budget-later' src/app/board.tsx \
+  || fail "featured #1 ticket must keep project budget as a later fact"
+grep -q 'Project budget, not the bid' src/app/board.tsx \
+  || fail "featured #1 ticket must say project budget is not the bid"
+grep -Fq 'ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid' src/app/board.css \
+  || fail "CSS must make #1 rank the paid bid after the prize"
+grep -Fq 'ticket-featured[data-rank-is-bid] [data-budget-later] .budget-amount' src/app/board.css \
+  || fail "CSS must keep #1 project budget quieter than rank"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-rank-is-bid'; then
+  fail "empty week must not stamp rank is the bid"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-budget-later'; then
+  fail "empty week must not stamp a later project budget"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css; then
+  fail "rank is the bid must not add another numbered hop stamp"
+fi
+python3 - src/app/board.css <<'PY' || fail "#1 rank bid must be larger than project budget"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+rank = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
+budget = size(r"\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem")
+if not (prize > rank and rank > budget):
+    raise SystemExit(1)
+PY
+grep -q 'rank is the bid; project budget stays a later fact' tests/rank.test.ts \
+  || fail "rank tests must cover occupied #1 rank is the bid"
+grep -q 'data-rank-is-bid' tests/rank.test.ts \
+  || fail "rank tests must stamp occupied #1 rank is the bid"
+if ! awk '
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount/ { budget=NR }
+  /ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid/ { rank=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  END { exit !(prize && budget && rank && open && prize < rank && budget < rank && rank < open) }
+' src/app/board.css; then
+  fail "featured CSS must paint quieter project budget before rank \$bid after the prize"
+fi
+
 echo "== UX: empty week stays Claim #1 + No paid brief =="
 grep -q 'data-empty-ticket' src/app/board.tsx \
   || fail "empty week must stamp Claim #1 + No paid brief so occupied chrome cannot leak"
@@ -611,6 +666,10 @@ echo "$empty_ticket_rule" | grep -q 'display: none' \
   || fail "empty-ticket CSS must hide occupied prize / Write / Open"
 echo "$empty_ticket_rule" | grep -q 'prize-before-price' \
   || fail "empty-ticket CSS must hide prize-before-price"
+echo "$empty_ticket_rule" | grep -q 'data-rank-is-bid' \
+  || fail "empty-ticket CSS must hide rank-is-bid"
+echo "$empty_ticket_rule" | grep -q 'data-budget-later' \
+  || fail "empty-ticket CSS must hide later project budget"
 echo "$empty_ticket_rule" | grep -q 'open-this-brief' \
   || fail "empty-ticket CSS must hide Open this brief"
 echo "$empty_ticket_rule" | grep -q 'p.write-this-ticket' \
@@ -814,6 +873,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week prize-before-price freelancer test did not run"
   grep -q 'empty week stays Claim #1 + No paid brief without prize' "$test_log" \
     || fail "empty-week Claim #1 + No paid brief isolation test did not run"
+  grep -q 'rank is the bid; project budget stays a later fact' "$test_log" \
+    || fail "occupied-week rank-is-bid freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"

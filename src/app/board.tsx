@@ -60,6 +60,7 @@ export function ListingCard({
       data-buyer={listing.buyer}
       data-bid={listing.bidUsd}
       data-prize-before-price={featured ? "" : undefined}
+      data-rank-is-bid={featured ? "" : undefined}
     >
       <div className="ticket-stub">
         <span className="rank">#{listing.rank}</span>
@@ -88,6 +89,7 @@ export function ListingCard({
               className={featured ? "budget read-this-budget" : "budget"}
               data-budget=""
               data-read-budget={featured ? "lead" : undefined}
+              data-budget-later={featured ? "" : undefined}
             >
               {featured ? (
                 <>
@@ -153,7 +155,7 @@ export function ListingCard({
         </dl>
         {featured ? (
           <p className="ticket-bid-later">
-            <span className="bid" data-bid="">
+            <span className="bid rank-is-bid" data-rank-bid="" data-bid="">
               {formatUsd(listing.bidUsd)}
             </span>
             <span className="clicks" data-clicks="">
