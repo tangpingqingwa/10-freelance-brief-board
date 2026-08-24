@@ -236,6 +236,9 @@ test("cards show buyer, budget, deadline, $, clicks — not ratings", () => {
   assert.doesNotMatch(html, /Winner rule, not a score/);
   assert.doesNotMatch(html, /data-prize-before-price/);
   assert.doesNotMatch(html, /data-prize=/);
+  assert.doesNotMatch(html, /data-rank-is-bid/);
+  assert.doesNotMatch(html, /data-rank-bid/);
+  assert.doesNotMatch(html, /data-budget-later/);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
 });
 
@@ -2755,6 +2758,9 @@ test("empty week stays Claim #1 + No paid brief without prize / Write / Open", (
   assert.doesNotMatch(empty, /data-prize=/);
   assert.doesNotMatch(empty, /data-prize-before-price/);
   assert.doesNotMatch(empty, /prize-before-price/);
+  assert.doesNotMatch(empty, /data-rank-is-bid/);
+  assert.doesNotMatch(empty, /data-rank-bid/);
+  assert.doesNotMatch(empty, /data-budget-later/);
   assert.doesNotMatch(empty, /ticket-featured/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /data-open-brief/);
@@ -2772,6 +2778,9 @@ test("empty week stays Claim #1 + No paid brief without prize / Write / Open", (
   assert.doesNotMatch(occupied, /data-empty-week/);
   assert.match(occupied, /data-prize-before-price=""/);
   assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /data-rank-is-bid=""/);
+  assert.match(occupied, /data-rank-bid=""/);
+  assert.match(occupied, /data-budget-later=""/);
   assert.match(occupied, /Open this brief/);
   assert.match(occupied, /Write this ticket/);
   assert.match(occupied, /Claim #1 for/);
@@ -2792,6 +2801,9 @@ test("empty week stays Claim #1 + No paid brief without prize / Write / Open", (
     cssSource,
     /\.board\[data-empty-ticket\] \[data-prize-before-price\]/,
   );
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \[data-rank-is-bid\]/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \[data-rank-bid\]/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \[data-budget-later\]/);
   assert.match(cssSource, /\.board\[data-empty-ticket\] \[data-open-brief\]/);
   assert.match(
     cssSource,
@@ -2893,6 +2905,107 @@ test("occupied #1 winner rule is the prize before $bid + clicks", () => {
   assert.match(hopper, /2 clicks/);
   assert.equal((occupied.match(/data-prize=""/g) ?? []).length, 1);
   assert.equal((occupied.match(/data-prize-before-price=""/g) ?? []).length, 1);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+});
+
+test("occupied #1 rank is the bid; project budget stays a later fact", () => {
+  const css = readFileSync(join(process.cwd(), "src", "app", "board.css"), "utf8");
+  const rankSize = css.match(
+    /\.ticket-featured\[data-rank-is-bid\] \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const budgetSize = css.match(
+    /\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const laterBidSize = css.match(
+    /\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  assert.ok(rankSize);
+  assert.ok(budgetSize);
+  assert.ok(laterBidSize);
+  assert.ok(Number(rankSize[1]) > Number(budgetSize[1]));
+  assert.ok(Number(rankSize[1]) > Number(laterBidSize[1]));
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.doesNotMatch(empty, /data-rank-is-bid/);
+  assert.doesNotMatch(empty, /data-rank-bid/);
+  assert.doesNotMatch(empty, /data-budget-later/);
+  assert.doesNotMatch(empty, /data-listing-card/);
+  assert.doesNotMatch(empty, /data-write-after-open-seven/);
+  assert.doesNotMatch(empty, /data-open-after-write-six/);
+
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+          clicks: 4,
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+          clicks: 2,
+        }),
+      ]),
+    }),
+  );
+  const leadStart = occupied.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = occupied.indexOf('data-listing-id="lst_hopper"');
+  const lead = occupied.slice(leadStart, hopperStart);
+  const hopper = occupied.slice(hopperStart);
+  const rankStamp = lead.indexOf('data-rank-is-bid=""');
+  const rankBid = lead.indexOf('data-rank-bid=""');
+  const rankBidAmount = lead.indexOf("$12", rankBid);
+  const budgetLater = lead.indexOf('data-budget-later=""');
+  const budgetCopy = lead.indexOf("Project budget, not the bid");
+  const laterBid = lead.indexOf('data-bid="">$12<');
+  const openLead = lead.indexOf("Open this brief");
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(rankStamp >= 0 && rankBid > rankStamp);
+  assert.ok(rankBidAmount > rankBid);
+  assert.ok(budgetLater > rankBidAmount);
+  assert.ok(budgetCopy > budgetLater);
+  assert.ok(laterBid > budgetCopy);
+  assert.ok(openLead > laterBid);
+  assert.match(lead, /data-rank-is-bid=""/);
+  assert.match(lead, /data-rank-bid=""/);
+  assert.match(lead, /data-budget-later=""/);
+  assert.match(lead, /Project budget, not the bid/);
+  assert.match(lead, /\$12/);
+  assert.match(lead, /\$3,200/);
+  assert.match(lead, /4 clicks/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, />Outbid</);
+  assert.match(occupied, /Rank is the bid, not the project/);
+  assert.doesNotMatch(hopper, /data-rank-is-bid/);
+  assert.doesNotMatch(hopper, /data-rank-bid/);
+  assert.doesNotMatch(hopper, /data-budget-later/);
+  assert.doesNotMatch(hopper, /Project budget, not the bid/);
+  assert.match(hopper, /Budget \$800/);
+  assert.match(hopper, /\$6/);
+  assert.equal((occupied.match(/data-rank-is-bid=""/g) ?? []).length, 1);
+  assert.equal((occupied.match(/data-rank-bid=""/g) ?? []).length, 1);
+  assert.equal((occupied.match(/data-budget-later=""/g) ?? []).length, 1);
   assert.doesNotMatch(occupied, /data-write-after-open-seven/);
   assert.doesNotMatch(occupied, /data-open-after-write-six/);
   assert.doesNotMatch(empty, RATINGS_FORBIDDEN);

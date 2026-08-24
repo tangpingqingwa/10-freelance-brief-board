@@ -199,6 +199,9 @@ a:hover {
 .board[data-empty-ticket] .write-after-rule,
 .board[data-empty-ticket] [data-prize],
 .board[data-empty-ticket] [data-prize-before-price],
+.board[data-empty-ticket] [data-rank-is-bid],
+.board[data-empty-ticket] [data-rank-bid],
+.board[data-empty-ticket] [data-budget-later],
 .board[data-empty-ticket] [data-open-brief],
 .board[data-empty-ticket] [data-write-after-rule],
 .board[data-empty-ticket] [data-first-click="open"] {
@@ -414,10 +417,23 @@ a:hover {
 
 .ticket-featured .budget-amount {
   font-family: "Source Serif 4", "Times New Roman", serif;
-  font-size: 1.7rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+}
+
+.ticket-featured[data-rank-is-bid] .rank-is-bid {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.ticket-featured[data-rank-is-bid] [data-budget-later] .budget-amount {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .ticket-featured .budget-not-bid {
@@ -486,6 +502,10 @@ a:hover {
 
 .ticket-featured[data-prize-before-price] .ticket-stub {
   justify-content: flex-start;
+}
+
+.ticket-featured[data-rank-is-bid] .ticket-stub {
+  justify-content: space-between;
 }
 
 .ticket-featured[data-prize-before-price] .ticket-bid-later {
