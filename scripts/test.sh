@@ -982,6 +982,153 @@ grep -q 'occupied later Write this ticket stays quieter than Open this brief' te
   || fail "rank tests must cover later Write quieter than Open this brief"
 grep -q 'desk-surface-empty' src/app/board.tsx \
   || fail "later Write cut must not rebuild the empty ticket desk"
+
+echo "== UX: empty week Claim #1 is the first click — brief URL is a later write =="
+grep -q 'empty-claim-first' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 must use the empty-claim-first class"
+grep -q 'data-empty-claim-first' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 must stamp data-empty-claim-first"
+grep -q 'data-first-click="claim"' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 Outbid must win the first click"
+grep -q 'data-later-write' src/app/outbid-form.tsx \
+  || fail "empty week must stamp the brief URL as a later write"
+grep -q 'data-ticket-identity' src/app/outbid-form.tsx \
+  || fail "empty week must wrap ticket fields as listing identity"
+grep -q 'Then the brief URL' src/app/outbid-form.tsx \
+  || fail "empty week must name the brief URL as a later write"
+grep -q 'EmptyClaimFirstWrite' src/app/outbid-form.tsx \
+  || fail "empty week must compose Claim #1 before the brief URL"
+grep -q 'OccupiedTicketWrite' src/app/outbid-form.tsx \
+  || fail "occupied claim must keep ticket fields on the rail with Outbid"
+grep -q 'Empty week: Brief URL is a later write after Claim #1 / Outbid' src/app/board.css \
+  || fail "empty CSS must name the brief URL as a later write after Claim #1"
+grep -Fq '.week-empty .claim.empty-claim-first[data-empty-claim-first] .ticket-identity[data-later-write]' src/app/board.css \
+  || fail "empty CSS must compose later-write identity off the claim rail"
+grep -Fq '.week-empty .claim.empty-claim-first[data-empty-claim-first] .later-write-label' src/app/board.css \
+  || fail "empty CSS must label the later brief URL write"
+grep -Fq '.week-empty .claim.empty-claim-first[data-empty-claim-first] .outbid[data-first-click="claim"]' src/app/board.css \
+  || fail "empty CSS must make Claim #1 Outbid the first click"
+grep -Fq '.week-occupied .claim .ticket-identity[data-later-write]' src/app/board.css \
+  || fail "occupied week must hide empty later-write identity"
+grep -Fq '.week-occupied .claim [data-first-click="claim"]' src/app/board.css \
+  || fail "occupied week must hide empty Claim #1 first-click"
+grep -q 'empty week Claim #1 is the first click — brief URL is a later write' tests/rank.test.ts \
+  || fail "rank tests must cover empty-week Claim #1 then later brief URL"
+grep -q 'Then the brief URL' tests/rank.test.ts \
+  || fail "rank tests must name the later brief URL write"
+grep -q 'data-first-click="claim"' tests/rank.test.ts \
+  || fail "rank tests must stamp empty Claim #1 as the first click"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "empty later-write cut must keep No paid brief"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "empty later-write cut must keep occupied Open this brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep occupied Write this ticket"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "empty later-write cut must keep occupied Open this brief the first click"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "empty later-write cut must keep the winner rule as the prize"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "empty later-write cut must keep rank as the bid"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep Outbid"
+grep -q 'name="buyer"' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep Who is buying"
+grep -q 'name="budgetUsd"' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep What it pays"
+grep -q 'name="deadline"' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep When it’s due"
+grep -q 'name="winnerRule"' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep How a winner is chosen"
+grep -q 'name="briefUrl"' src/app/outbid-form.tsx \
+  || fail "empty later-write cut must keep Brief URL"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "empty later-write cut must not rebuild the ticket desk"
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "empty later-write must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "empty later-write must not rebuild the ticket desk into a long form"
+fi
+if awk '/function OccupiedTicketWrite/,/function EmptyClaimFirstWrite/' src/app/outbid-form.tsx | grep -q 'data-first-click="claim"'; then
+  fail "occupied claim must not stamp empty Claim #1 as the first click"
+fi
+if awk '/function OccupiedTicketWrite/,/function EmptyClaimFirstWrite/' src/app/outbid-form.tsx | grep -q 'Then the brief URL'; then
+  fail "occupied claim must not name a later brief URL write"
+fi
+if awk '/function OccupiedTicketWrite/,/function EmptyClaimFirstWrite/' src/app/outbid-form.tsx | grep -q 'data-later-write'; then
+  fail "occupied ticket fields must stay on the claim rail with Outbid"
+fi
+if ! awk '
+  /function EmptyClaimFirstWrite/ { empty=NR }
+  empty && /data-first-click="claim"/ { click=NR }
+  empty && /Then the brief URL/ { label=NR }
+  empty && /TicketIdentityFields/ { ident=NR }
+  END { exit !(empty && click && label && ident && empty < click && click < label && label < ident) }
+' src/app/outbid-form.tsx; then
+  fail "empty Claim #1 / Outbid must precede the later brief URL write"
+fi
+if ! awk '
+  /function OccupiedTicketWrite/ { occ=NR }
+  occ && /className="ticket-fields"/ && !fields { fields=NR }
+  occ && /className="bid-row"/ && !row { row=NR }
+  /function EmptyClaimFirstWrite/ { empty=NR }
+  END { exit !(occ && fields && row && empty && occ < fields && fields < row && row < empty) }
+' src/app/outbid-form.tsx; then
+  fail "occupied claim must keep ticket fields before Outbid"
+fi
+python3 - src/app/board.css src/app/outbid-form.tsx <<'PY' || fail "empty later-write must recede after Claim #1 / Outbid without recolor or a new hop"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+form = open(sys.argv[2], encoding="utf-8").read()
+marker = "Empty week: Brief URL is a later write after Claim #1 / Outbid"
+if marker not in css:
+    raise SystemExit(1)
+later = css.split(marker, 1)[1].split("End empty-week later-write", 1)[0]
+if ".ticket-identity[data-later-write]" not in later:
+    raise SystemExit(1)
+if "border-top: 1px dashed var(--rule)" not in later:
+    raise SystemExit(1)
+if "background:" in later or "var(--stamp)" in later:
+    raise SystemExit(1)
+if "data-write-after-open-seven" in later or "data-open-after-write-six" in later:
+    raise SystemExit(1)
+click = re.search(
+    r"\.week-empty \.claim\.empty-claim-first\[data-empty-claim-first\] \.outbid\[data-first-click=\"claim\"\]\s*\{[^}]*\}",
+    css,
+    re.S,
+)
+if not click or "min-height: 2.75rem" not in click.group(0):
+    raise SystemExit(1)
+if "background:" in click.group(0):
+    raise SystemExit(1)
+empty = form.split("function EmptyClaimFirstWrite", 1)[-1].split("export function OutbidForm", 1)[0]
+occupied = form.split("function OccupiedTicketWrite", 1)[-1].split("function EmptyClaimFirstWrite", 1)[0]
+if empty.find("Outbid") < 0 or empty.find("data-later-write") < empty.find("Outbid"):
+    raise SystemExit(1)
+if empty.find("TicketIdentityFields") < empty.find("Then the brief URL"):
+    raise SystemExit(1)
+if occupied.find("ticket-fields") < 0 or occupied.find("Outbid") < occupied.find("ticket-fields"):
+    raise SystemExit(1)
+if 'data-first-click="claim"' in occupied or "Then the brief URL" in occupied:
+    raise SystemExit(1)
+PY
+if ! awk '
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /ticket-featured \.ticket-write-later \{/ { foot=NR }
+  /Empty week: Brief URL is a later write after Claim #1 \/ Outbid/ { later=NR }
+  END { exit !(prize && open && foot && later && prize < open && open < foot && foot < later) }
+' src/app/board.css; then
+  fail "empty later-write CSS must sit after occupied prize / Open / later Write"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -1157,6 +1304,8 @@ if [[ -f package.json ]]; then
     || fail "empty-week Open / Write isolation test did not run"
   grep -q 'occupied later Write this ticket stays quieter than Open this brief' "$test_log" \
     || fail "occupied-week later Write quieter-than-Open test did not run"
+  grep -q 'empty week Claim #1 is the first click — brief URL is a later write' "$test_log" \
+    || fail "empty-week Claim #1 then later brief URL test did not run"
 fi
 
 echo "OK: buildable and testable"
