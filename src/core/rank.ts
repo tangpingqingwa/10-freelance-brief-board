@@ -23,11 +23,26 @@ export type RankedListing = Listing & {
 };
 
 /**
- * Display order: bidUsd DESC, firstPaidAt ASC (older wins ties), id ASC.
- * Does not read budget, deadline, winner rule, or clicks.
+ * Polar has reported a completed payment. Unpaid / abandoned checkout
+ * is not a listing and must not paint #1 winner-rule chrome.
+ */
+export function isPolarPaidListing(
+  listing: Pick<Listing, "firstPaidAt">,
+): boolean {
+  const paidAt = listing.firstPaidAt;
+  if (typeof paidAt !== "string" || paidAt.trim() === "") return false;
+  const ms = Date.parse(paidAt);
+  return Number.isFinite(ms);
+}
+
+/**
+ * Display order among Polar-paid rows only: bidUsd DESC, firstPaidAt ASC
+ * (older wins ties), id ASC. Does not read budget, deadline, winner rule,
+ * or clicks. Unpaid drafts never rank.
  */
 export function rankListings(listings: readonly Listing[]): RankedListing[] {
   return listings
+    .filter(isPolarPaidListing)
     .slice()
     .sort((a, b) => {
       if (a.bidUsd !== b.bidUsd) return b.bidUsd - a.bidUsd;
@@ -40,7 +55,7 @@ export function rankListings(listings: readonly Listing[]): RankedListing[] {
     .map((listing, index) => ({ ...listing, rank: index + 1 }));
 }
 
-/** Live board has no paid rows until checkout lands. Never invent a #1 brief. */
+/** Live board has no paid rows until Polar reports paid. Never invent a #1 brief. */
 export function getBoardListings(weekId: string): Listing[] {
-  return listPaid(weekId);
+  return listPaid(weekId).filter(isPolarPaidListing);
 }

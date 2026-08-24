@@ -6,6 +6,7 @@ import { MIN_BID_USD } from "../core/rank";
 type OutbidFormProps = {
   defaultAmount: number;
   occupied?: boolean;
+  unpaidOff?: boolean;
 };
 
 function clampAmount(value: number): number {
@@ -107,6 +108,7 @@ function EmptyClaimFirstWrite() {
 export function OutbidForm({
   defaultAmount,
   occupied = false,
+  unpaidOff = false,
 }: OutbidFormProps) {
   const [amount, setAmount] = useState(() => clampAmount(defaultAmount));
 
@@ -186,10 +188,13 @@ export function OutbidForm({
               </button>
             </span>
           </h2>
-          <p className="claim-note">
+          <p
+            className="claim-note"
+            data-unpaid-off={unpaidOff ? "" : undefined}
+          >
             New tickets start at ${MIN_BID_USD}. Paying less than #1 still lists
             at the rank that bid can take. Rank is the bid, not the project
-            budget.
+            budget. Unpaid Polar checkout stays off this desk until Polar reports paid. An abandoned ticket is not #1.
           </p>
           {occupied ? <OccupiedTicketWrite /> : <EmptyClaimFirstWrite />}
           <p className="raise-hint">

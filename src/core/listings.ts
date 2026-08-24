@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { PaidEvent } from "../billing/port";
+import type { ListingDraft, PaidEvent } from "../billing/port";
 import {
   ListingError,
   canonicalBriefUrl,
@@ -7,22 +7,69 @@ import {
   quoteBid,
   sameListingIdentity,
 } from "./listing";
-import type { Listing } from "./rank";
+import { isPolarPaidListing, type Listing } from "./rank";
 
 type StoredListing = Listing;
 
+/** Open Polar checkout. Never a ranked ticket until Polar reports paid. */
+export type UnpaidTicket = {
+  sessionId: string;
+  weekId: string;
+  buyer: string;
+  winnerRule: string;
+  briefUrl: string;
+  bidUsd: number;
+};
+
 const listings: StoredListing[] = [];
+const unpaidTickets: UnpaidTicket[] = [];
 const appliedSessions = new Set<string>();
 
 export function resetListings(): void {
   listings.length = 0;
+  unpaidTickets.length = 0;
   appliedSessions.clear();
 }
 
 export function listPaid(weekId: string): Listing[] {
   return listings
+    .filter((row) => row.weekId === weekId && isPolarPaidListing(row))
+    .map((row) => ({ ...row }));
+}
+
+/** Abandoned / open Polar checkout. Stays off the ticket desk. */
+export function listUnpaid(weekId: string): UnpaidTicket[] {
+  return unpaidTickets
     .filter((row) => row.weekId === weekId)
     .map((row) => ({ ...row }));
+}
+
+export function rememberUnpaidCheckout(input: {
+  sessionId: string;
+  listingDraft: ListingDraft;
+}): void {
+  if (appliedSessions.has(input.sessionId)) return;
+  const existing = unpaidTickets.findIndex(
+    (row) => row.sessionId === input.sessionId,
+  );
+  const ticket: UnpaidTicket = {
+    sessionId: input.sessionId,
+    weekId: input.listingDraft.weekId,
+    buyer: input.listingDraft.buyer,
+    winnerRule: input.listingDraft.winnerRule,
+    briefUrl: canonicalBriefUrl(input.listingDraft.briefUrl),
+    bidUsd: input.listingDraft.bidUsd,
+  };
+  if (existing >= 0) {
+    unpaidTickets[existing] = ticket;
+    return;
+  }
+  unpaidTickets.push(ticket);
+}
+
+export function forgetUnpaidCheckout(sessionId: string): void {
+  const index = unpaidTickets.findIndex((row) => row.sessionId === sessionId);
+  if (index >= 0) unpaidTickets.splice(index, 1);
 }
 
 export function findPaidByIdentity(
@@ -30,24 +77,32 @@ export function findPaidByIdentity(
   briefUrl: string,
 ): Listing | undefined {
   const key = listingIdentity({ weekId, briefUrl });
-  const row = listings.find((listing) => sameListingIdentity(listing, key));
+  const row = listings.find(
+    (listing) =>
+      isPolarPaidListing(listing) && sameListingIdentity(listing, key),
+  );
   return row ? { ...row } : undefined;
 }
 
 export function getListingById(id: string): Listing | undefined {
-  const row = listings.find((listing) => listing.id === id);
+  const row = listings.find(
+    (listing) => listing.id === id && isPolarPaidListing(listing),
+  );
   return row ? { ...row } : undefined;
 }
 
 /** Public brief-URL hops. Never a rating. */
 export function incrementListingClicks(id: string): Listing | undefined {
-  const row = listings.find((listing) => listing.id === id);
+  const row = listings.find(
+    (listing) => listing.id === id && isPolarPaidListing(listing),
+  );
   if (!row) return undefined;
   row.clicks += 1;
   return { ...row };
 }
 
 export function applyPaidEvent(event: PaidEvent): Listing | null {
+  forgetUnpaidCheckout(event.sessionId);
   if (appliedSessions.has(event.sessionId)) {
     return listings.find((row) => matchingDraft(row, event)) ?? null;
   }

@@ -8,6 +8,7 @@ import { Board, ListingCard, formatDeadline } from "../src/app/board";
 import { resetListings } from "../src/core/listings";
 import {
   getBoardListings,
+  isPolarPaidListing,
   rankListings,
   type Listing,
 } from "../src/core/rank";
@@ -61,6 +62,28 @@ function listing(
 test("empty week stays empty and the live loader invents no briefs", () => {
   assert.deepEqual(rankListings([]), []);
   assert.deepEqual(getBoardListings(WEEK), []);
+});
+
+test("unpaid Polar checkout never ranks as #1", () => {
+  const unpaid = listing({
+    id: "lst_unpaid",
+    buyer: "Ghost Studio",
+    winnerRule: "Best portfolio by Friday",
+    bidUsd: 99,
+    firstPaidAt: "",
+  });
+  assert.equal(isPolarPaidListing(unpaid), false);
+  assert.deepEqual(rankListings([unpaid]), []);
+  assert.equal(
+    isPolarPaidListing(
+      listing({
+        id: "lst_paid",
+        bidUsd: 5,
+        firstPaidAt: "2026-08-17T00:00:00.000Z",
+      }),
+    ),
+    true,
+  );
 });
 
 test("higher bid is above; a bid below #1 still lists", () => {
@@ -3910,6 +3933,196 @@ test("occupied later-rank tickets stay quieter than #1 — winner rule stays the
   assert.match(formSource, /className="amount-field"/);
   assert.match(formSource, /className="step"/);
   assert.match(formSource, /Outbid/);
+});
+
+test("unpaid stays off the ticket desk — No paid brief until Polar reports paid", () => {
+  assert.match(boardSource, /isPolarPaidListing/);
+  assert.match(boardSource, /data-unpaid-off=\{empty && leftoverUnpaid \? "" : undefined\}/);
+  assert.match(boardSource, /An unpaid Polar checkout stays off this desk until Polar reports paid/);
+  assert.match(formSource, /data-unpaid-off=\{unpaidOff \? "" : undefined\}/);
+  assert.match(formSource, /Unpaid Polar checkout stays off this desk until Polar reports paid/);
+  assert.match(formSource, /An abandoned ticket is not #1/);
+  assert.match(cssSource, /\.claim-note\[data-unpaid-off\]/);
+  assert.match(cssSource, /\.board\[data-unpaid-off\] \.ticket-featured/);
+  assert.match(cssSource, /\.board\[data-unpaid-off\] \[data-prize\]/);
+  assert.match(cssSource, /\.board\[data-unpaid-off\] \.open-this-brief/);
+  assert.match(cssSource, /\.week-empty\[data-unpaid-off\] \[data-prize\]/);
+  assert.match(cssSource, /\.week-empty\[data-unpaid-off\] \.later-pack/);
+  const unpaidHide =
+    cssSource.match(/\.board\[data-unpaid-off\] \.ticket-featured,[\s\S]*?display: none;/)?.[0] ??
+    "";
+  assert.match(unpaidHide, /display:\s*none/);
+  assert.doesNotMatch(unpaidHide, /background:/);
+  assert.doesNotMatch(cssSource, /data-write-after-open-seven|data-open-after-write-six/);
+  assert.doesNotMatch(boardSource, /data-write-after-open-seven|data-open-after-write-six/);
+  assert.doesNotMatch(formSource, /data-write-after-open-seven|data-open-after-write-six/);
+  assert.match(boardSource, /data-prize=/);
+  assert.match(boardSource, /Open this brief/);
+  assert.match(formSource, /Write this ticket/);
+  assert.match(formSource, /Claim #1 for/);
+  assert.match(formSource, /empty-claim-first/);
+  assert.match(boardSource, /function LaterRankTicket/);
+  assert.match(boardSource, /desk-surface-empty/);
+  assert.match(formSource, /className="amount-field"/);
+  assert.match(formSource, /className="step"/);
+  assert.match(formSource, /Outbid/);
+
+  const unpaidDraft = listing({
+    id: "lst_ghost",
+    buyer: "Ghost Studio",
+    winnerRule: "Best portfolio by Friday",
+    briefUrl: "https://example.com/ghost",
+    bidUsd: 99,
+    firstPaidAt: "",
+  });
+  const rankedUnpaid = rankListings([unpaidDraft]);
+  assert.deepEqual(rankedUnpaid, []);
+  const unpaidCard = renderToStaticMarkup(
+    createElement(ListingCard, {
+      listing: { ...unpaidDraft, rank: 1 },
+      featured: true,
+    }),
+  );
+  assert.equal(unpaidCard, "");
+
+  const leftover = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankedUnpaid,
+      unpaid: [
+        {
+          sessionId: "fix_abandoned",
+          weekId: WEEK,
+          buyer: "Ghost Studio",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/ghost",
+          bidUsd: 99,
+        },
+      ],
+    }),
+  );
+  const paidStamp = leftover.indexOf("No paid brief");
+  const claimAt = leftover.indexOf('id="claim"');
+  const unpaidNote = leftover.indexOf("Unpaid Polar checkout stays off this desk");
+  const abandonedNote = leftover.indexOf("An abandoned ticket is not #1");
+  const firstClickClaim = leftover.indexOf('data-first-click="claim"');
+  const laterUrl = leftover.indexOf("Then the brief URL");
+  const outbidAt = leftover.indexOf(">Outbid<");
+  assert.ok(paidStamp >= 0 && claimAt > paidStamp);
+  assert.ok(unpaidNote > claimAt && abandonedNote > unpaidNote);
+  assert.ok(firstClickClaim > claimAt && firstClickClaim < laterUrl);
+  assert.ok(outbidAt > firstClickClaim && laterUrl > outbidAt);
+  assert.match(leftover, /class="board desk week-empty"/);
+  assert.match(leftover, /data-empty-ticket=""/);
+  assert.match(leftover, /data-unpaid-off=""/);
+  assert.match(leftover, /data-empty-week="true"/);
+  assert.match(leftover, /data-desk-surface="empty"/);
+  assert.match(leftover, /desk-surface-empty/);
+  assert.match(leftover, /No paid brief/);
+  assert.match(leftover, /until Polar reports paid/);
+  assert.match(leftover, /Claim #1 for/);
+  assert.match(leftover, /data-first-click="claim"/);
+  assert.match(leftover, /Then the brief URL/);
+  assert.match(leftover, />Outbid</);
+  assert.match(leftover, /class="amount-field"/);
+  assert.match(leftover, /class="step"/);
+  assert.doesNotMatch(leftover, /data-listing-card/);
+  assert.doesNotMatch(leftover, /Ghost Studio/);
+  assert.doesNotMatch(leftover, /Best portfolio by Friday/);
+  assert.doesNotMatch(leftover, /\$99/);
+  assert.doesNotMatch(leftover, /ticket-featured/);
+  assert.doesNotMatch(leftover, /data-prize=/);
+  assert.doesNotMatch(leftover, /prize-before-price/);
+  assert.doesNotMatch(leftover, /Open this brief/);
+  assert.doesNotMatch(leftover, /Write this ticket/);
+  assert.doesNotMatch(leftover, /data-first-click="open"/);
+  assert.doesNotMatch(leftover, /data-later-rank/);
+  assert.doesNotMatch(leftover, /data-later-pack/);
+  assert.doesNotMatch(leftover, /These tickets are not this week’s #1 prize/);
+  assert.doesNotMatch(leftover, /data-write-after-open-seven/);
+  assert.doesNotMatch(leftover, /data-open-after-write-six/);
+  assert.doesNotMatch(leftover, RATINGS_FORBIDDEN);
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, /data-first-click="claim"/);
+  assert.match(empty, /Then the brief URL/);
+  assert.doesNotMatch(empty, /data-unpaid-off=/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-prize=/);
+  assert.doesNotMatch(empty, /data-later-pack/);
+
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+          clicks: 4,
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+          clicks: 2,
+        }),
+      ]),
+    }),
+  );
+  const leadStart = occupied.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = occupied.indexOf('data-listing-id="lst_hopper"');
+  const occupiedClaim = occupied.indexOf('id="claim"');
+  const occupiedOpen = occupied.indexOf("Open this brief");
+  const occupiedPrize = occupied.indexOf('data-prize=""');
+  const occupiedUnpaid = occupied.indexOf("Unpaid Polar checkout stays off this desk");
+  const lead = occupied.slice(leadStart, hopperStart);
+  const hopper = occupied.slice(hopperStart);
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(occupiedPrize > leadStart && occupiedOpen > occupiedPrize);
+  assert.ok(occupiedOpen < occupiedClaim);
+  assert.ok(occupiedUnpaid > occupiedClaim);
+  assert.match(occupied, /class="board desk week-occupied"/);
+  assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /data-rank-is-bid/);
+  assert.match(occupied, /Write this ticket/);
+  assert.match(occupied, /ticket-write-later/);
+  assert.match(occupied, /data-later-rank=""/);
+  assert.match(occupied, /These tickets are not this week’s #1 prize/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, />Outbid</);
+  assert.match(occupied, /Unpaid Polar checkout stays off this desk/);
+  assert.match(occupied, /data-unpaid-off=""/);
+  assert.match(lead, /Best portfolio by Friday/);
+  assert.match(lead, /Open this brief/);
+  assert.doesNotMatch(occupied, /data-empty-week/);
+  assert.doesNotMatch(occupied, /data-empty-ticket/);
+  assert.doesNotMatch(occupied, /data-first-click="claim"/);
+  assert.doesNotMatch(occupied, /Then the brief URL/);
+  assert.doesNotMatch(hopper, /Open this brief/);
+  assert.doesNotMatch(hopper, /data-prize=/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+  assert.equal((occupied.match(/data-first-click="open"/g) ?? []).length, 1);
+  assert.equal((occupied.match(/data-prize=""/g) ?? []).length, 1);
 });
 
 test("current week header uses UTC ISO week", () => {
