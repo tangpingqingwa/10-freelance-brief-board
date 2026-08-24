@@ -13,6 +13,62 @@ function clampAmount(value: number): number {
   return Math.max(MIN_BID_USD, Math.trunc(value));
 }
 
+function TicketIdentityFields() {
+  return (
+    <div className="ticket-fields">
+      <label className="ticket-row">
+        Who is buying
+        <input
+          name="buyer"
+          type="text"
+          required
+          maxLength={80}
+          autoComplete="organization"
+          placeholder="Company or person"
+        />
+      </label>
+      <div className="ticket-pair">
+        <label>
+          What it pays
+          <input
+            name="budgetUsd"
+            type="number"
+            required
+            min={1}
+            step={1}
+            inputMode="numeric"
+            placeholder="Project budget, USD"
+          />
+        </label>
+        <label>
+          When it’s due
+          <input name="deadline" type="date" required />
+        </label>
+      </div>
+      <label className="ticket-row">
+        How a winner is chosen
+        <input
+          name="winnerRule"
+          type="text"
+          required
+          maxLength={280}
+          placeholder="First qualified, fixed price…"
+        />
+      </label>
+      <label className="ticket-row">
+        Brief URL
+        <input
+          name="briefUrl"
+          type="url"
+          required
+          placeholder="https://"
+          autoComplete="url"
+        />
+      </label>
+    </div>
+  );
+}
+
 export function OutbidForm({
   defaultAmount,
   occupied = false,
@@ -23,13 +79,75 @@ export function OutbidForm({
     setAmount((current) => clampAmount(current + delta));
   }
 
+  const claimHeading = (
+    <h2>
+      <span>Claim #1 for</span>
+      <span className="amount-stepper">
+        <button
+          type="button"
+          className="step"
+          aria-label="Decrease bid by one dollar"
+          onClick={() => bump(-1)}
+        >
+          −
+        </button>
+        <label className="amount-field">
+          <span className="sr-only">Amount in whole US dollars</span>
+          $
+          <input
+            name="amountUsd"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            min={MIN_BID_USD}
+            step={1}
+            value={amount}
+            onChange={(event) => {
+              const next = Number(event.target.value.replace(/[^\d]/g, ""));
+              setAmount(clampAmount(next || MIN_BID_USD));
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          className="step"
+          aria-label="Increase bid by one dollar"
+          onClick={() => bump(1)}
+        >
+          +
+        </button>
+      </span>
+    </h2>
+  );
+
+  const claimNote = (
+    <p className="claim-note">
+      New tickets start at ${MIN_BID_USD}. Paying less than #1 still lists at
+      the rank that bid can take. Rank is the bid, not the project budget.
+    </p>
+  );
+
+  const outbidButton = (
+    <div className="bid-row">
+      <button type="submit" className="outbid">
+        Outbid
+      </button>
+    </div>
+  );
+
+  const raiseHint = (
+    <p className="raise-hint">
+      Already on this week? Enter the same brief URL and raise. Raise pays the
+      difference only after checkout lands.
+    </p>
+  );
+
   return (
     <section
       className="claim ticket-blank"
       id="claim"
       data-write-ticket={occupied ? "buyer" : undefined}
       data-empty-ticket={occupied ? undefined : ""}
-      aria-label={occupied ? "Write this ticket" : undefined}
+      aria-label={occupied ? "Write this ticket" : "Claim #1"}
     >
       <form
         className="outbid-form"
@@ -37,6 +155,16 @@ export function OutbidForm({
         action="/api/checkout"
         data-bid-form=""
         data-ticket-form=""
+        onInvalidCapture={
+          occupied
+            ? undefined
+            : (event) => {
+                const details = event.currentTarget.querySelector(
+                  "details.ticket-identity-later",
+                );
+                if (details instanceof HTMLDetailsElement) details.open = true;
+              }
+        }
       >
         <div className="ticket-write-stub" aria-hidden="true">
           Write
@@ -52,108 +180,34 @@ export function OutbidForm({
               Write this ticket
             </p>
           ) : null}
-          <h2>
-            <span>Claim #1 for</span>
-            <span className="amount-stepper">
-              <button
-                type="button"
-                className="step"
-                aria-label="Decrease bid by one dollar"
-                onClick={() => bump(-1)}
+          {occupied ? (
+            <>
+              {claimHeading}
+              {claimNote}
+              <TicketIdentityFields />
+              {outbidButton}
+              {raiseHint}
+            </>
+          ) : (
+            <>
+              <div
+                className="claim-first-click"
+                data-first-click="claim"
+                data-empty-claim-first=""
               >
-                −
-              </button>
-              <label className="amount-field">
-                <span className="sr-only">Amount in whole US dollars</span>
-                $
-                <input
-                  name="amountUsd"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min={MIN_BID_USD}
-                  step={1}
-                  value={amount}
-                  onChange={(event) => {
-                    const next = Number(event.target.value.replace(/[^\d]/g, ""));
-                    setAmount(clampAmount(next || MIN_BID_USD));
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                className="step"
-                aria-label="Increase bid by one dollar"
-                onClick={() => bump(1)}
-              >
-                +
-              </button>
-            </span>
-          </h2>
-          <p className="claim-note">
-            New tickets start at ${MIN_BID_USD}. Paying less than #1 still lists
-            at the rank that bid can take. Rank is the bid, not the project
-            budget.
-          </p>
-          <div className="ticket-fields">
-            <label className="ticket-row">
-              Who is buying
-              <input
-                name="buyer"
-                type="text"
-                required
-                maxLength={80}
-                autoComplete="organization"
-                placeholder="Company or person"
-              />
-            </label>
-            <div className="ticket-pair">
-              <label>
-                What it pays
-                <input
-                  name="budgetUsd"
-                  type="number"
-                  required
-                  min={1}
-                  step={1}
-                  inputMode="numeric"
-                  placeholder="Project budget, USD"
-                />
-              </label>
-              <label>
-                When it’s due
-                <input name="deadline" type="date" required />
-              </label>
-            </div>
-            <label className="ticket-row">
-              How a winner is chosen
-              <input
-                name="winnerRule"
-                type="text"
-                required
-                maxLength={280}
-                placeholder="First qualified, fixed price…"
-              />
-            </label>
-            <label className="ticket-row">
-              Brief URL
-              <input
-                name="briefUrl"
-                type="url"
-                required
-                placeholder="https://"
-                autoComplete="url"
-              />
-            </label>
-          </div>
-          <div className="bid-row">
-            <button type="submit" className="outbid">
-              Outbid
-            </button>
-          </div>
-          <p className="raise-hint">
-            Already on this week? Enter the same brief URL and raise. Raise pays
-            the difference only after checkout lands.
-          </p>
+                {claimHeading}
+                {claimNote}
+                {outbidButton}
+              </div>
+              <details className="ticket-identity-later" data-identity-later="">
+                <summary className="identity-later-write">
+                  Then write the brief identity
+                </summary>
+                <TicketIdentityFields />
+                {raiseHint}
+              </details>
+            </>
+          )}
         </div>
       </form>
     </section>

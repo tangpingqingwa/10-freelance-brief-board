@@ -3149,6 +3149,166 @@ test("occupied Open this brief stays the first freelancer click; Write this tick
   assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
 });
 
+test("empty week has one first click: Claim #1, then the brief identity", () => {
+  const css = readFileSync(join(process.cwd(), "src", "app", "board.css"), "utf8");
+  const outbidSize = css.match(
+    /\.claim\[data-empty-ticket\] \.claim-first-click\[data-first-click="claim"\] \.outbid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const identitySize = css.match(
+    /\.claim\[data-empty-ticket\] \.identity-later-write\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const occupiedOpenSize = css.match(
+    /\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const prizeSize = css.match(
+    /\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  assert.ok(outbidSize);
+  assert.ok(identitySize);
+  assert.ok(occupiedOpenSize);
+  assert.ok(prizeSize);
+  assert.ok(Number(outbidSize[1]) > Number(identitySize[1]));
+  assert.ok(Number(occupiedOpenSize[1]) > Number(identitySize[1]));
+  assert.ok(Number(prizeSize[1]) > Number(identitySize[1]));
+  assert.match(
+    css,
+    /\.claim\[data-empty-ticket\] \.identity-later-write\s*\{[^}]*color:\s*var\(--muted\)/,
+  );
+  assert.match(
+    css,
+    /\.board:not\(\[data-empty-ticket\]\) \[data-identity-later\]/,
+  );
+  assert.match(
+    css,
+    /\.board:not\(\[data-empty-ticket\]\) \[data-first-click="claim"\]/,
+  );
+  assert.doesNotMatch(css, /data-write-after-open-seven|data-open-after-write-six/);
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /data-desk-surface="empty"/);
+  assert.match(empty, /data-empty-week="true"/);
+  assert.match(empty, /data-empty-ticket=""/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /no sample gig/i);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, />Outbid</);
+  assert.match(empty, /data-first-click="claim"/);
+  assert.match(empty, /data-empty-claim-first=""/);
+  assert.match(empty, /class="claim-first-click"/);
+  assert.match(empty, /data-identity-later=""/);
+  assert.match(empty, /Then write the brief identity/);
+  assert.match(empty, /name="buyer"/);
+  assert.match(empty, /name="budgetUsd"/);
+  assert.match(empty, /name="deadline"/);
+  assert.match(empty, /name="winnerRule"/);
+  assert.match(empty, /name="briefUrl"/);
+  assert.match(empty, /name="amountUsd"/);
+  assert.match(empty, /Who is buying/);
+  assert.match(empty, /What it pays/);
+  assert.match(empty, /When it’s due/);
+  assert.match(empty, /How a winner is chosen/);
+  assert.match(empty, /Brief URL/);
+  assert.equal((empty.match(/data-first-click="claim"/g) ?? []).length, 1);
+  assert.equal((empty.match(/data-identity-later=""/g) ?? []).length, 1);
+  assert.equal((empty.match(/data-empty-claim-first=""/g) ?? []).length, 1);
+  assert.doesNotMatch(empty, /data-first-click="open"/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-write-ticket="buyer"/);
+  assert.doesNotMatch(empty, /data-prize=/);
+  assert.doesNotMatch(empty, /data-rank-is-bid/);
+  assert.doesNotMatch(empty, /data-write-after-open-seven/);
+  assert.doesNotMatch(empty, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, /data-listing-card/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+
+  const paidStamp = empty.indexOf("No paid brief");
+  const claimAt = empty.indexOf('id="claim"');
+  const firstClick = empty.indexOf('data-first-click="claim"');
+  const claimCopy = empty.indexOf("Claim #1 for");
+  const outbidAt = empty.indexOf(">Outbid<");
+  const identityAt = empty.indexOf('data-identity-later=""');
+  const identityCopy = empty.indexOf("Then write the brief identity");
+  const buyerAt = empty.indexOf("Who is buying");
+  const budgetAt = empty.indexOf("What it pays");
+  const urlAt = empty.indexOf("Brief URL");
+  assert.ok(paidStamp >= 0 && claimAt > paidStamp);
+  assert.ok(firstClick > claimAt);
+  assert.ok(claimCopy > firstClick);
+  assert.ok(outbidAt > claimCopy);
+  assert.ok(identityAt > outbidAt);
+  assert.ok(identityCopy > identityAt);
+  assert.ok(buyerAt > identityCopy);
+  assert.ok(budgetAt > buyerAt);
+  assert.ok(urlAt > budgetAt);
+
+  assert.match(formSource, /data-first-click="claim"/);
+  assert.match(formSource, /data-empty-claim-first/);
+  assert.match(formSource, /data-identity-later/);
+  assert.match(formSource, /Then write the brief identity/);
+  assert.match(formSource, /className="claim-first-click"/);
+  assert.doesNotMatch(formSource, /data-write-after-open-seven/);
+  assert.doesNotMatch(formSource, /data-open-after-write-six/);
+
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  const leadStart = occupied.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = occupied.indexOf('data-listing-id="lst_hopper"');
+  const occupiedClaim = occupied.indexOf('id="claim"');
+  const occupiedOutbid = occupied.indexOf(">Outbid<");
+  const occupiedBuyer = occupied.indexOf("Who is buying", occupiedClaim);
+  const occupiedOpen = occupied.indexOf("Open this brief");
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(occupiedOpen > leadStart && occupiedOpen < occupiedClaim);
+  assert.ok(occupiedBuyer > occupiedClaim && occupiedBuyer < occupiedOutbid);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /Write this ticket/);
+  assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /data-rank-is-bid=""/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, />Outbid</);
+  assert.match(occupied, /name="buyer"/);
+  assert.doesNotMatch(occupied, /data-empty-ticket/);
+  assert.doesNotMatch(occupied, /data-first-click="claim"/);
+  assert.doesNotMatch(occupied, /data-empty-claim-first/);
+  assert.doesNotMatch(occupied, /class="claim-first-click"/);
+  assert.doesNotMatch(occupied, /data-identity-later/);
+  assert.doesNotMatch(occupied, /Then write the brief identity/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+  assert.equal((occupied.match(/data-first-click="open"/g) ?? []).length, 1);
+  assert.equal((occupied.match(/data-first-click="claim"/g) ?? []).length, 0);
+});
+
 test("current week header uses UTC ISO week", () => {
   const week = currentWeekUtc(new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(week.weekId, "2026-W34");

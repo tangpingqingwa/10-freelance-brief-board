@@ -779,6 +779,103 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must recede Write after first-click Open this brief"
 fi
+
+echo "== UX: empty week has one first click — Claim #1, then the brief identity =="
+grep -q 'data-first-click="claim"' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 must stamp the first click"
+grep -q 'data-empty-claim-first' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 must stamp empty-claim-first"
+grep -q 'className="claim-first-click"' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 must use the claim-first-click class"
+grep -q 'data-identity-later' src/app/outbid-form.tsx \
+  || fail "empty week must keep brief identity as a later write"
+grep -q 'Then write the brief identity' src/app/outbid-form.tsx \
+  || fail "empty week must say then write the brief identity"
+grep -q 'ticket-identity-later' src/app/outbid-form.tsx \
+  || fail "empty week must keep identity behind later details"
+grep -q 'name="buyer"' src/app/outbid-form.tsx \
+  || fail "empty identity later write must still collect buyer"
+grep -q 'name="budgetUsd"' src/app/outbid-form.tsx \
+  || fail "empty identity later write must still collect budget"
+grep -q 'name="deadline"' src/app/outbid-form.tsx \
+  || fail "empty identity later write must still collect deadline"
+grep -q 'name="winnerRule"' src/app/outbid-form.tsx \
+  || fail "empty identity later write must still collect winner rule"
+grep -q 'name="briefUrl"' src/app/outbid-form.tsx \
+  || fail "empty identity later write must still collect brief URL"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "empty first click must keep Outbid"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "empty first click must keep Claim #1"
+grep -Fq '.claim[data-empty-ticket] .claim-first-click[data-first-click="claim"]' src/app/board.css \
+  || fail "CSS must make empty Claim #1 the first click"
+grep -Fq '.claim[data-empty-ticket] .identity-later-write' src/app/board.css \
+  || fail "CSS must recede later brief identity"
+grep -Fq '.board:not([data-empty-ticket]) [data-identity-later]' src/app/board.css \
+  || fail "occupied week must hide later brief identity"
+grep -Fq '.board:not([data-empty-ticket]) [data-first-click="claim"]' src/app/board.css \
+  || fail "occupied week must hide empty Claim #1 first click"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-first-click="claim"'; then
+  fail "empty week honesty stamp must not carry Claim #1 first click"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-identity-later'; then
+  fail "empty week honesty stamp must not carry later identity"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "empty claim-first must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "empty claim-first must not rebuild the ticket desk into a long form"
+fi
+python3 - src/app/board.css <<'PY' || fail "empty Outbid must stay larger than later brief identity"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+outbid = size(r'\.claim\[data-empty-ticket\] \.claim-first-click\[data-first-click="claim"\] \.outbid\s*\{[^}]*font-size:\s*([\d.]+)rem')
+identity = size(r'\.claim\[data-empty-ticket\] \.identity-later-write\s*\{[^}]*font-size:\s*([\d.]+)rem')
+open_sz = size(r'\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem')
+prize = size(r'\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem')
+if not (outbid > identity and open_sz > identity and prize > identity):
+    raise SystemExit(1)
+identity_block = re.search(
+    r'\.claim\[data-empty-ticket\] \.identity-later-write\s*\{[^}]*\}',
+    css,
+    re.S,
+)
+if not identity_block or "var(--muted)" not in identity_block.group(0):
+    raise SystemExit(1)
+if "background:" in identity_block.group(0):
+    raise SystemExit(1)
+if "var(--stamp)" in identity_block.group(0):
+    raise SystemExit(1)
+PY
+if ! awk '
+  /claim\[data-empty-ticket\] \.claim-first-click\[data-first-click="claim"\] \.outbid/ { outbid=NR }
+  /claim\[data-empty-ticket\] \.identity-later-write \{/ { identity=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  END { exit !(outbid && identity && open && outbid < identity) }
+' src/app/board.css; then
+  fail "empty CSS must paint Claim #1 / Outbid before later brief identity"
+fi
+grep -q 'empty week has one first click: Claim #1, then the brief identity' tests/rank.test.ts \
+  || fail "rank tests must cover empty Claim #1 first click then brief identity"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "empty claim-first cut must keep occupied Open this brief first"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "empty claim-first cut must keep occupied prize"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "empty claim-first cut must keep occupied rank is the bid"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "empty claim-first cut must keep occupied Write this ticket"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "empty claim-first cut must not rebuild the ticket desk"
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -950,6 +1047,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week rank-is-bid freelancer test did not run"
   grep -q 'Open this brief stays the first freelancer click' "$test_log" \
     || fail "occupied-week open-brief-first freelancer test did not run"
+  grep -q 'empty week has one first click: Claim #1, then the brief identity' "$test_log" \
+    || fail "empty-week Claim #1 first-click then identity test did not run"
 fi
 
 echo "OK: buildable and testable"

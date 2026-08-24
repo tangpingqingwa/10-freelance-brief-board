@@ -209,6 +209,69 @@ a:hover {
   display: none;
 }
 
+/* Empty week: Claim #1 / Outbid is the first click. Brief identity is a later write. */
+.claim[data-empty-ticket] .claim-first-click[data-first-click="claim"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.claim[data-empty-ticket] .claim-first-click[data-first-click="claim"] .bid-row {
+  margin-top: 0.35rem;
+}
+
+.claim[data-empty-ticket] .claim-first-click[data-first-click="claim"] .outbid {
+  min-height: 3.05rem;
+  padding: 0 1.35rem;
+  font-size: 1.02rem;
+  letter-spacing: 0.1em;
+  box-shadow: 4px 4px 0 rgba(26, 22, 18, 0.22);
+}
+
+.claim[data-empty-ticket] .ticket-identity-later {
+  margin: 0.85rem 0 0;
+}
+
+.claim[data-empty-ticket] .identity-later-write {
+  cursor: pointer;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.18em;
+  list-style: none;
+}
+
+.claim[data-empty-ticket] .identity-later-write::-webkit-details-marker,
+.claim[data-empty-ticket] .identity-later-write::marker {
+  display: none;
+  content: "";
+}
+
+.claim[data-empty-ticket] .ticket-identity-later[open] .identity-later-write {
+  color: var(--ink);
+}
+
+.claim[data-empty-ticket] .ticket-identity-later .ticket-fields {
+  margin-top: 0.65rem;
+}
+
+.claim[data-empty-ticket] .ticket-identity-later .raise-hint {
+  margin-top: 0.55rem;
+}
+
+/* Occupied week keeps Open this brief first. Empty Claim #1 / later identity cannot leak. */
+.board:not([data-empty-ticket]) .claim-first-click,
+.board:not([data-empty-ticket]) [data-empty-claim-first],
+.board:not([data-empty-ticket]) [data-identity-later],
+.board:not([data-empty-ticket]) [data-first-click="claim"] {
+  display: none;
+}
+
 .empty-week {
   margin: 0;
 }
