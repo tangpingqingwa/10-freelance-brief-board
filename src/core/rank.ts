@@ -1,4 +1,5 @@
-import { listPaid } from "./listings";
+import { listPaidRolling } from "./listings";
+import { bidInRollingWeek } from "./week";
 
 /** Rank is the bid. Budget and deadline are public facts; they do not sort. */
 
@@ -37,12 +38,19 @@ export function isPolarPaidListing(
 
 /**
  * Display order among Polar-paid rows only: bidUsd DESC, firstPaidAt ASC
- * (older wins ties), id ASC. Does not read budget, deadline, winner rule,
- * or clicks. Unpaid drafts never rank.
+ * (older wins ties), id ASC. When `now` is passed, only lastPaidAt inside
+ * the rolling last-7-days window ranks. Does not read budget, deadline,
+ * winner rule, or clicks. Unpaid drafts never rank.
  */
-export function rankListings(listings: readonly Listing[]): RankedListing[] {
-  return listings
-    .filter(isPolarPaidListing)
+export function rankListings(
+  listings: readonly Listing[],
+  now?: Date,
+): RankedListing[] {
+  const live = listings.filter((row) => {
+    if (!isPolarPaidListing(row)) return false;
+    return now ? bidInRollingWeek(row.lastPaidAt, now) : true;
+  });
+  return live
     .slice()
     .sort((a, b) => {
       if (a.bidUsd !== b.bidUsd) return b.bidUsd - a.bidUsd;
@@ -56,6 +64,6 @@ export function rankListings(listings: readonly Listing[]): RankedListing[] {
 }
 
 /** Live board has no paid rows until Polar reports paid. Never invent a #1 brief. */
-export function getBoardListings(weekId: string): Listing[] {
-  return listPaid(weekId).filter(isPolarPaidListing);
+export function getBoardListings(now: Date = new Date()): Listing[] {
+  return listPaidRolling(now).filter(isPolarPaidListing);
 }

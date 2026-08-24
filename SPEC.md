@@ -36,7 +36,7 @@ One-line pitch: **Bid USD. Own the #1 brief this week. Freelancers see you first
 - Same listing can raise; **raise pays difference** only.
 - Listing is **buyer + budget + deadline + brief URL**.
 - Budget, deadline, and how the winner is chosen are public on the card.
-- **Weekly reset UTC.** Bids do not carry into next week.
+- **Weekly reset UTC.** Live rank is the rolling last 7 days, not Monday 00:00 UTC. Bids older than 7 days do not carry.
 - **No invented ratings.** Do not scrape or display stars, review scores, “top rated”, hire rates, or freelancer reputation.
 - Strip tracking and affiliate query strings from the brief URL.
 - Reject chat / invite links and NSFW.
@@ -75,11 +75,11 @@ There is no logged-in member. Payment is the only write path.
 
 ## 4. The slot
 
-Each UTC week has one open **#1 freelance brief** slot on a single global English board.
+Each rolling last-7-days window has one open **#1 freelance brief** slot on a single global English board.
 
 - #1 this week is the brief freelancers see first.
 - Paying less than #1 still lists on the public board, at the rank that bid can take.
-- After the weekly reset, last week’s bids are gone from the live board. Want next week’s #1? Pay again.
+- After a payment ages out of the rolling last 7 days, it is gone from the live board. Want #1 again? Pay again. Monday 00:00 UTC is **not** the drop.
 - An empty week is valid. There is **no** invented brief. Do not seed fake demand.
 
 v1 is one public board. Do not fork ranking per craft (design / dev / edit). A later craft lane must reuse the same rank function.
@@ -95,7 +95,7 @@ A listing is **buyer + budget + deadline + brief URL**.
 ```ts
 type Listing = {
   id: string
-  weekId: string            // ISO week in UTC, e.g. "2026-W34"
+  weekId: string            // ISO week label in UTC, e.g. "2026-W34"; rank uses lastPaidAt, not this label
   buyer: string             // 1–80 chars, trimmed; company or person
   budgetUsd: number         // whole USD project budget, public; not a rating
   deadline: string          // ISO calendar date (YYYY-MM-DD), public
@@ -110,7 +110,7 @@ type Listing = {
 
 **Required to place:** `buyer`, `budgetUsd`, `deadline`, `winnerRule`, `briefUrl`, `bidUsd`.
 
-**Identity for raise:** canonical `briefUrl` + `weekId`. Same key → raise. Different key → new listing that must pay the full bid.
+**Identity for raise:** canonical `briefUrl` still inside the rolling last-7-days window. Same live listing → raise. Outside the window → new listing that must pay the full bid. `weekId` is a Polar/audit label.
 
 `budgetUsd` is the buyer’s stated project budget for the freelance work. It does **not** affect rank. `bidUsd` is the pay-to-rank amount. Do not conflate them on the card.
 
@@ -136,11 +136,11 @@ Clone of outbid.lol. Rank is the bid. Nothing else.
 | Rank | Descending `bidUsd`. **rank = bid** |
 | Below #1 | Still lists, at the rank that amount can take |
 | Ties | **Older wins ties.** Compare `firstPaidAt` ascending, then listing id |
-| Raise | Same `(briefUrl, weekId)` may raise. Charge **new − current** only |
+| Raise | Same canonical `briefUrl` still inside the rolling last 7 days may raise. Charge **new − current** only |
 | Steal | A *different* listing that wants that rank must pay the **full** target amount, not the incumbent’s difference |
 | Floor after raise | New amount must be a whole dollar ≥ current + $1 and ≥ $5 |
 | Claim | A **completed payment** claims the rank. Unpaid checkout does not |
-| Period | Rankings are computed only among listings in the **current** UTC week |
+| Period | Rankings are computed only among listings whose `lastPaidAt` is in the **rolling last 7 days**. Not Monday 00:00 UTC. Not a 24h lock on #1. |
 
 Display order: `bidUsd DESC`, then `firstPaidAt ASC` (older wins ties), then `id ASC`.
 
@@ -161,16 +161,16 @@ Worked examples, same week:
 | Field | Value |
 |---|---|
 | Period | 7 days |
-| Boundary | Monday 00:00:00.000 **UTC** |
-| `weekId` | ISO week in UTC, `YYYY-Www` (e.g. `2026-W34`) |
-| What resets | Live rank, bids, and click counters for the new week |
-| What does not carry | Previous week bid amounts. Want the next #1? Pay again. |
-| History | Prior-week rows may stay readable as archive. They are not the live #1 brief. |
+| Boundary | Rolling last 7 days from `now` (`now − 7d` inclusive). **Not** Monday 00:00:00.000 UTC |
+| `weekId` | ISO week label in UTC, `YYYY-Www` (e.g. `2026-W34`). Rank does not expire on this label. |
+| What resets | Live rank, bids, and click counters as payments age out of the rolling window |
+| What does not carry | Payments older than 7 days. Want the next #1? Pay again. |
+| History | Aged-out rows may stay readable as archive. They are not the live #1 brief. |
 | Empty week | Valid. No invented brief. |
 
-The board header shows the current `weekId` and the UTC instant of the next reset.
+The board header shows the current `weekId` label and the rolling last-7-days window.
 
-Do not carry bids across the reset. Submitting last week’s brief URL this week is a **new** listing and pays a full bid ≥ $5.
+Do not carry bids after they age out of the rolling window. Submitting a brief URL whose last payment is older than 7 days is a **new** listing and pays a full bid ≥ $5.
 
 ---
 
@@ -232,13 +232,13 @@ Rank updates **only** after a successful paid event. Abandoned checkout does not
 ## 11. Pages
 
 ```
-GET  /                         public board for the current UTC week + bid form
+GET  /                         public board for the rolling last-7-days window + bid form
 POST /checkout                 { buyer, budgetUsd, deadline, winnerRule, briefUrl, amountUsd }
                                → PaymentPort.createCheckout (create or raise)
 GET  /return                   checkout return; show paid / pending, never trust query alone
 GET  /click/:id                302 briefUrl; increment public clicks
 GET  /about                    what this is; rank is money; no invented ratings
-GET  /rules                    min $5, ties, raise = difference, weekly UTC, no NSFW, no ratings
+GET  /rules                    min $5, ties, raise = difference, rolling last 7 days, no NSFW, no ratings
 GET  /healthz                  { ok: true }
 ```
 
@@ -261,7 +261,7 @@ Board UI (clone outbid.lol, not a redesign):
 | `deadline_invalid` | 400 | missing or unparseable deadline |
 | `url_insecure` | 400 | not https |
 | `url_forbidden` | 400 | chat / NSFW / shortener / unusable host |
-| `week_closed` | 400 | bid outside the current UTC week |
+| `week_closed` | 400 | bid outside the rolling last-7-days window |
 | `rating_forbidden` | 400 | submit tried to attach stars / review / hire-rate |
 | `payment_incomplete` | 402 | checkout abandoned; board unchanged |
 | `polar_unavailable` | 503 | live Polar down; fixture never invents a paid event |
@@ -284,7 +284,7 @@ Zero invented listings on any error. Zero invented ratings.
 | 8 | NSFW brief URL | `url_forbidden`; no listing |
 | 9 | Click brief CTA | 302 to stripped URL; public clicks +1 |
 | 10 | Rating field / star copy | `rating_forbidden` or not rendered; no invented ratings |
-| 11 | After Monday 00:00 UTC | board is a new empty week; old bids gone |
+| 11 | After a payment ages past 7 days | board drops that rank; Monday 00:00 UTC does not drop a bid still inside the window |
 | 12 | `POLAR_LIVE` unset | fixture / fail-closed; no Polar network |
 
 ---
@@ -297,8 +297,8 @@ Local process, `POLAR_LIVE=1` if Polar secrets exist, else record `BLOCKED-SECRE
 
 | Flow | Pass |
 |---|---|
-| Board | 200, current UTC week, listing shape buyer + budget + deadline + brief URL, no invented ratings |
-| About / rules | 200, state min $5, older wins ties, raise pays difference, weekly UTC, no invented ratings |
+| Board | 200, rolling last-7-days window, listing shape buyer + budget + deadline + brief URL, no invented ratings |
+| About / rules | 200, state min $5, older wins ties, raise pays difference, rolling last 7 days (not Monday 00:00 UTC), no invented ratings |
 | Create checkout | Polar session for a real https brief URL **or** `BLOCKED-SECRET` (`POLAR_ACCESS_TOKEN`) |
 | Click | 302, click count increments (fixture listing allowed if live pay is blocked) |
 | Honesty | no stars, no review scores, no invented #1 brief |

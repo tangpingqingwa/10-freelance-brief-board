@@ -3,11 +3,11 @@ import type { ListingDraft, PaidEvent } from "../billing/port";
 import {
   ListingError,
   canonicalBriefUrl,
-  listingIdentity,
   quoteBid,
   sameListingIdentity,
 } from "./listing";
 import { isPolarPaidListing, type Listing } from "./rank";
+import { bidInRollingWeek } from "./week";
 
 type StoredListing = Listing;
 
@@ -37,10 +37,20 @@ export function listPaid(weekId: string): Listing[] {
     .map((row) => ({ ...row }));
 }
 
+/** Live board: Polar-paid rows whose last payment is still inside the rolling last 7 days. */
+export function listPaidRolling(now: Date = new Date()): Listing[] {
+  return listings
+    .filter(
+      (row) =>
+        isPolarPaidListing(row) && bidInRollingWeek(row.lastPaidAt, now),
+    )
+    .map((row) => ({ ...row }));
+}
+
 /** Abandoned / open Polar checkout. Stays off the ticket desk. */
-export function listUnpaid(weekId: string): UnpaidTicket[] {
+export function listUnpaid(weekId?: string): UnpaidTicket[] {
   return unpaidTickets
-    .filter((row) => row.weekId === weekId)
+    .filter((row) => (weekId === undefined ? true : row.weekId === weekId))
     .map((row) => ({ ...row }));
 }
 
@@ -73,15 +83,17 @@ export function forgetUnpaidCheckout(sessionId: string): void {
 }
 
 export function findPaidByIdentity(
-  weekId: string,
   briefUrl: string,
+  now: Date = new Date(),
 ): Listing | undefined {
-  const key = listingIdentity({ weekId, briefUrl });
-  const row = listings.find(
+  const canonical = canonicalBriefUrl(briefUrl);
+  const live = listings.find(
     (listing) =>
-      isPolarPaidListing(listing) && sameListingIdentity(listing, key),
+      isPolarPaidListing(listing) &&
+      listing.briefUrl === canonical &&
+      bidInRollingWeek(listing.lastPaidAt, now),
   );
-  return row ? { ...row } : undefined;
+  return live ? { ...live } : undefined;
 }
 
 export function getListingById(id: string): Listing | undefined {
@@ -104,11 +116,15 @@ export function incrementListingClicks(id: string): Listing | undefined {
 export function applyPaidEvent(event: PaidEvent): Listing | null {
   forgetUnpaidCheckout(event.sessionId);
   if (appliedSessions.has(event.sessionId)) {
-    return listings.find((row) => matchingDraft(row, event)) ?? null;
+    return (
+      listings.find((row) => matchingLive(row, event)) ??
+      listings.find((row) => matchingDraft(row, event)) ??
+      null
+    );
   }
 
   const draft = event.listingDraft;
-  const existing = listings.find((row) => matchingDraft(row, event));
+  const existing = listings.find((row) => matchingLive(row, event));
   const quote = quoteBid(existing, draft.bidUsd);
   if (event.amountUsd !== quote.chargeUsd) {
     throw new ListingError(
@@ -146,4 +162,13 @@ export function applyPaidEvent(event: PaidEvent): Listing | null {
 
 function matchingDraft(row: StoredListing, event: PaidEvent): boolean {
   return sameListingIdentity(row, event.listingDraft);
+}
+
+function matchingLive(row: StoredListing, event: PaidEvent): boolean {
+  return (
+    isPolarPaidListing(row) &&
+    canonicalBriefUrl(row.briefUrl) ===
+      canonicalBriefUrl(event.listingDraft.briefUrl) &&
+    bidInRollingWeek(row.lastPaidAt, new Date(event.paidAt))
+  );
 }

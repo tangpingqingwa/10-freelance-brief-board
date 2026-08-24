@@ -117,8 +117,10 @@ export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckou
   if (targetBidUsd === undefined) {
     throw new CheckoutError("bid_not_whole", 400);
   }
-  const weekId = readTrimmed(body.weekId) || currentWeekUtc().weekId;
-  const existing = findPaidByIdentity(weekId, briefUrl);
+  const requestedWeekId = readTrimmed(body.weekId);
+  const existing = findPaidByIdentity(briefUrl);
+  const weekId =
+    existing?.weekId || requestedWeekId || currentWeekUtc().weekId;
   const quote = planQuote(existing, targetBidUsd);
 
   return {

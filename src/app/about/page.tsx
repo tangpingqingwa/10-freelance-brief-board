@@ -4,7 +4,7 @@ import React from "react";
 export const metadata: Metadata = {
   title: "About · Freelance Brief Board",
   description:
-    "Weekly public auction for the #1 freelance brief. Rank is the bid. No invented ratings.",
+    "Weekly public auction for the #1 freelance brief. Rank is the bid in a rolling last-7-days window. No invented ratings.",
 };
 
 export default function AboutPage() {
@@ -15,7 +15,8 @@ export default function AboutPage() {
         Freelance Brief Board is a weekly public auction for the{" "}
         <strong>#1 freelance brief</strong> so designers, developers, and
         editors see the demand first. Buyers in the US and EU pay whole US
-        dollars. Freelancers anywhere can read the board.
+        dollars. Freelancers anywhere can read the board. Rank lives in a{" "}
+        <strong>rolling last 7 days</strong> window, not Monday 00:00 UTC.
       </p>
       <p>
         <strong>Rank is the bid.</strong> Rank is money. Nothing else. Paying
@@ -47,7 +48,8 @@ export default function AboutPage() {
       </p>
       <p>
         <a href="/rules">Read the rules</a> for the $5 minimum, older-wins ties,
-        raise-pays-difference, weekly UTC reset, and banned chat / NSFW URLs.
+        raise-pays-difference, rolling last-7-days weekly reset, and banned chat
+        / NSFW URLs.
       </p>
     </main>
   );

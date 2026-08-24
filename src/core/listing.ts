@@ -1,7 +1,7 @@
 import { MIN_BID_USD, type Listing } from "./rank";
 import { canonicalizeBriefUrl, UrlError } from "./url";
 
-/** Identity for raise: canonical brief URL + UTC weekId. */
+/** Identity for raise: canonical brief URL still inside the rolling last-7-days window. `weekId` is a Polar/audit label. */
 
 export class ListingError extends Error {
   constructor(
