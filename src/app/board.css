@@ -704,6 +704,20 @@ a:hover {
   color: var(--stamp);
 }
 
+.ticket-featured .open-this-brief[data-open-after-write-five] {
+  min-width: 18.5rem;
+  min-height: 6.15rem;
+  padding: 0 2.35rem;
+  font-size: 1.52rem;
+  letter-spacing: 0.2em;
+  box-shadow: 14px 14px 0 rgba(26, 22, 18, 0.44);
+}
+
+.ticket-featured .open-this-brief[data-open-after-write-five]:hover {
+  background: rgba(180, 35, 24, 0.1);
+  color: var(--stamp);
+}
+
 .write-this-ticket {
   display: inline-flex;
   align-items: center;
