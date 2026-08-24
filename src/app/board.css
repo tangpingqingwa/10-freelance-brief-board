@@ -149,11 +149,11 @@ a:hover {
   font-size: 0.92rem;
 }
 
-.spike .ticket-featured {
+.week-occupied .spike .ticket-featured {
   transform: rotate(-1.2deg);
 }
 
-.spike .ticket-featured::before {
+.week-occupied .spike .ticket-featured::before {
   content: "";
   position: absolute;
   top: -0.45rem;
@@ -205,8 +205,42 @@ a:hover {
 .board[data-empty-ticket] [data-open-brief],
 .board[data-empty-ticket] [data-write-after-rule],
 .board[data-empty-ticket] [data-write-later-quiet],
-.board[data-empty-ticket] [data-first-click="open"] {
+.board[data-empty-ticket] [data-first-click="open"],
+.week-empty[data-empty-ticket] .ticket-featured,
+.week-empty[data-empty-ticket] .prize-before-price,
+.week-empty[data-empty-ticket] .open-this-brief,
+.week-empty[data-empty-ticket] p.write-this-ticket,
+.week-empty[data-empty-ticket] .write-after-rule,
+.week-empty[data-empty-ticket] [data-prize],
+.week-empty[data-empty-ticket] [data-prize-before-price],
+.week-empty[data-empty-ticket] [data-rank-is-bid],
+.week-empty[data-empty-ticket] [data-rank-bid],
+.week-empty[data-empty-ticket] [data-budget-later],
+.week-empty[data-empty-ticket] [data-open-brief],
+.week-empty[data-empty-ticket] [data-write-after-rule],
+.week-empty[data-empty-ticket] [data-write-later-quiet],
+.week-empty[data-empty-ticket] [data-first-click="open"],
+.week-empty .ticket-featured,
+.week-empty .prize-before-price,
+.week-empty .open-this-brief,
+.week-empty p.write-this-ticket,
+.week-empty .write-after-rule,
+.week-empty [data-prize],
+.week-empty [data-prize-before-price],
+.week-empty [data-rank-is-bid],
+.week-empty [data-rank-bid],
+.week-empty [data-budget-later],
+.week-empty [data-open-brief],
+.week-empty [data-write-after-rule],
+.week-empty [data-write-later-quiet],
+.week-empty [data-first-click="open"],
+.week-occupied .empty-week,
+.week-occupied [data-empty-week] {
   display: none;
+}
+
+.week-empty .empty-week {
+  display: block;
 }
 
 .empty-week {
@@ -342,14 +376,14 @@ a:hover {
   color: var(--ink);
 }
 
-.ticket-featured .rank {
+.week-occupied .ticket-featured .rank {
   color: var(--stamp-ink);
   background: var(--stamp);
   border-radius: 0;
   padding: 0.15rem 0.2rem;
 }
 
-.ticket-featured .bid {
+.week-occupied .ticket-featured .bid {
   color: var(--stamp);
 }
 
@@ -399,24 +433,24 @@ a:hover {
   grid-column: 1 / -1;
 }
 
-.ticket-featured .ticket-facts {
+.week-occupied .ticket-featured .ticket-facts {
   grid-template-columns: 1fr;
 }
 
-.ticket-featured .ticket-read-budget {
+.week-occupied .ticket-featured .ticket-read-budget {
   grid-column: 1 / -1;
   padding-bottom: 0.35rem;
   border-bottom: 1px dashed var(--rule);
 }
 
-.ticket-featured .read-this-budget {
+.week-occupied .ticket-featured .read-this-budget {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.12rem;
 }
 
-.ticket-featured .budget-amount {
+.week-occupied .ticket-featured .budget-amount {
   font-family: "Source Serif 4", "Times New Roman", serif;
   font-size: 0.95rem;
   font-weight: 600;
@@ -424,13 +458,13 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.ticket-featured[data-rank-is-bid] [data-budget-later] .budget-amount {
+.week-occupied .ticket-featured[data-rank-is-bid] [data-budget-later] .budget-amount {
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--muted);
 }
 
-.ticket-featured .budget-not-bid {
+.week-occupied .ticket-featured .budget-not-bid {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.66rem;
   font-weight: 600;
@@ -439,27 +473,27 @@ a:hover {
   color: var(--muted);
 }
 
-.ticket-featured .ticket-read-deadline {
+.week-occupied .ticket-featured .ticket-read-deadline {
   grid-column: 1 / -1;
   padding-bottom: 0.35rem;
   border-bottom: 1px dashed var(--rule);
 }
 
-.ticket-featured .read-this-deadline {
+.week-occupied .ticket-featured .read-this-deadline {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.12rem;
 }
 
-.ticket-featured .deadline-date {
+.week-occupied .ticket-featured .deadline-date {
   font-family: "Source Serif 4", "Times New Roman", serif;
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.ticket-featured .deadline-not-score {
+.week-occupied .ticket-featured .deadline-not-score {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.66rem;
   font-weight: 600;
@@ -468,37 +502,37 @@ a:hover {
   color: var(--muted);
 }
 
-.ticket-featured .ticket-read-winner {
+.week-occupied .ticket-featured .ticket-read-winner {
   grid-column: 1 / -1;
   padding-bottom: 0.35rem;
   border-bottom: 1px dashed var(--rule);
 }
 
-.ticket-featured .read-this-winner {
+.week-occupied .ticket-featured .read-this-winner {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.12rem;
 }
 
-.ticket-featured .winner-rule-text {
+.week-occupied .ticket-featured .winner-rule-text {
   font-family: "Source Serif 4", "Times New Roman", serif;
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.ticket-featured .prize-before-price .winner-rule-text {
+.week-occupied .ticket-featured .prize-before-price .winner-rule-text {
   font-size: 1.85rem;
   letter-spacing: -0.03em;
   line-height: 1.12;
 }
 
-.ticket-featured[data-prize-before-price] .ticket-stub {
+.week-occupied .ticket-featured[data-prize-before-price] .ticket-stub {
   justify-content: flex-start;
 }
 
-.ticket-featured[data-prize-before-price] .ticket-bid-later {
+.week-occupied .ticket-featured[data-prize-before-price] .ticket-bid-later {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -506,24 +540,24 @@ a:hover {
   margin: 0.55rem 0 0;
 }
 
-.ticket-featured[data-prize-before-price] .ticket-bid-later .bid {
+.week-occupied .ticket-featured[data-prize-before-price] .ticket-bid-later .bid {
   font-size: 0.92rem;
   font-weight: 600;
 }
 
-.ticket-featured[data-prize-before-price] .ticket-bid-later .clicks {
+.week-occupied .ticket-featured[data-prize-before-price] .ticket-bid-later .clicks {
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--muted);
 }
 
 /* Rank is the paid bid after the prize. Project budget stays quieter. */
-.ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid {
+.week-occupied .ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid {
   font-size: 0.92rem;
   font-weight: 600;
 }
 
-.ticket-featured .winner-not-score {
+.week-occupied .ticket-featured .winner-not-score {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.66rem;
   font-weight: 600;
@@ -581,11 +615,11 @@ a:hover {
   margin: 0.95rem 0 0;
 }
 
-.ticket-featured .ticket-open {
+.week-occupied .ticket-featured .ticket-open {
   margin: 0.75rem 0 0;
 }
 
-.ticket-featured .open-this-brief {
+.week-occupied .ticket-featured .open-this-brief {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -600,12 +634,12 @@ a:hover {
   text-decoration: none;
 }
 
-.ticket-featured .open-this-brief:hover {
+.week-occupied .ticket-featured .open-this-brief:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
-.ticket-featured .open-this-brief[data-first-click="open"] {
+.week-occupied .ticket-featured .open-this-brief[data-first-click="open"] {
   min-height: 3.05rem;
   padding: 0 1.35rem;
   font-size: 1.02rem;
@@ -613,12 +647,12 @@ a:hover {
   box-shadow: 4px 4px 0 rgba(26, 22, 18, 0.22);
 }
 
-.ticket-featured .open-this-brief[data-first-click="open"]:hover {
+.week-occupied .ticket-featured .open-this-brief[data-first-click="open"]:hover {
   background: rgba(180, 35, 24, 0.08);
   color: var(--stamp);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-first] {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-first] {
   min-height: 3.45rem;
   padding: 0 1.55rem;
   font-size: 1.12rem;
@@ -626,18 +660,18 @@ a:hover {
   box-shadow: 6px 6px 0 rgba(26, 22, 18, 0.28);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-first]:hover {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-first]:hover {
   background: rgba(180, 35, 24, 0.1);
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule-wrap {
+.week-occupied .ticket-featured .write-after-rule-wrap {
   margin: 0.55rem 0 0;
   font-size: 0.82rem;
   color: var(--muted);
 }
 
-.ticket-featured .write-after-rule {
+.week-occupied .ticket-featured .write-after-rule {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.66rem;
   font-weight: 700;
@@ -648,7 +682,7 @@ a:hover {
   text-underline-offset: 0.18em;
 }
 
-.ticket-featured .write-after-rule[data-write-after-open] {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -660,16 +694,16 @@ a:hover {
   text-decoration: none;
 }
 
-.ticket-featured .write-after-rule:hover {
+.week-occupied .ticket-featured .write-after-rule:hover {
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule[data-write-after-open]:hover {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open]:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-two] {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-two] {
   min-width: 10.5rem;
   min-height: 2.85rem;
   padding: 0 1.15rem;
@@ -677,12 +711,12 @@ a:hover {
   letter-spacing: 0.1em;
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-two]:hover {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-two]:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-two] {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-two] {
   min-width: 12.5rem;
   min-height: 3.85rem;
   padding: 0 1.75rem;
@@ -691,12 +725,12 @@ a:hover {
   box-shadow: 8px 8px 0 rgba(26, 22, 18, 0.32);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-two]:hover {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-two]:hover {
   background: rgba(180, 35, 24, 0.1);
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-three] {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-three] {
   min-width: 13.5rem;
   min-height: 4.15rem;
   padding: 0 1.65rem;
@@ -704,12 +738,12 @@ a:hover {
   letter-spacing: 0.12em;
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-three]:hover {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-three]:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-three] {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-three] {
   min-width: 14.5rem;
   min-height: 4.55rem;
   padding: 0 1.95rem;
@@ -718,12 +752,12 @@ a:hover {
   box-shadow: 10px 10px 0 rgba(26, 22, 18, 0.36);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-three]:hover {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-three]:hover {
   background: rgba(180, 35, 24, 0.1);
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-four] {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-four] {
   min-width: 15.5rem;
   min-height: 4.95rem;
   padding: 0 2.05rem;
@@ -731,12 +765,12 @@ a:hover {
   letter-spacing: 0.14em;
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-four]:hover {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-four]:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-four] {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-four] {
   min-width: 16.5rem;
   min-height: 5.35rem;
   padding: 0 2.15rem;
@@ -745,12 +779,12 @@ a:hover {
   box-shadow: 12px 12px 0 rgba(26, 22, 18, 0.4);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-four]:hover {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-four]:hover {
   background: rgba(180, 35, 24, 0.1);
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-five] {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-five] {
   min-width: 17.5rem;
   min-height: 5.75rem;
   padding: 0 2.25rem;
@@ -758,12 +792,12 @@ a:hover {
   letter-spacing: 0.16em;
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-five]:hover {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-five]:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-five] {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-five] {
   min-width: 18.5rem;
   min-height: 6.15rem;
   padding: 0 2.35rem;
@@ -772,12 +806,12 @@ a:hover {
   box-shadow: 14px 14px 0 rgba(26, 22, 18, 0.44);
 }
 
-.ticket-featured .open-this-brief[data-open-after-write-five]:hover {
+.week-occupied .ticket-featured .open-this-brief[data-open-after-write-five]:hover {
   background: rgba(180, 35, 24, 0.1);
   color: var(--stamp);
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-six] {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-six] {
   min-width: 19.5rem;
   min-height: 6.55rem;
   padding: 0 2.45rem;
@@ -785,13 +819,13 @@ a:hover {
   letter-spacing: 0.18em;
 }
 
-.ticket-featured .write-after-rule[data-write-after-open-six]:hover {
+.week-occupied .ticket-featured .write-after-rule[data-write-after-open-six]:hover {
   background: rgba(180, 35, 24, 0.06);
   color: var(--stamp);
 }
 
 /* Occupied Write recedes. Open this brief stays the first freelancer click. */
-.ticket-featured a.write-after-rule[data-write-later-quiet] {
+.week-occupied .ticket-featured a.write-after-rule[data-write-later-quiet] {
   display: inline;
   min-width: 0;
   min-height: 0;
@@ -806,12 +840,12 @@ a:hover {
   box-shadow: none;
 }
 
-.ticket-featured a.write-after-rule[data-write-later-quiet]:hover {
+.week-occupied .ticket-featured a.write-after-rule[data-write-later-quiet]:hover {
   background: transparent;
   color: var(--ink);
 }
 
-.write-this-ticket {
+.week-occupied .write-this-ticket {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -827,7 +861,7 @@ a:hover {
   text-transform: uppercase;
 }
 
-.write-this-ticket[data-write-later-quiet] {
+.week-occupied .write-this-ticket[data-write-later-quiet] {
   display: inline;
   min-height: 0;
   margin: 0 0 0.45rem;
