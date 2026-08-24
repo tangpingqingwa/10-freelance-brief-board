@@ -171,6 +171,7 @@ export function ListingCard({
               data-write-after-open-three=""
               data-write-after-open-four=""
               data-write-after-open-five=""
+              data-write-after-open-six=""
               aria-label="Write this ticket after the winner rule"
             >
               Write this ticket
