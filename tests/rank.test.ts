@@ -2913,20 +2913,20 @@ test("occupied #1 winner rule is the prize before $bid + clicks", () => {
 
 test("occupied #1 rank is the bid; project budget stays a later fact", () => {
   const css = readFileSync(join(process.cwd(), "src", "app", "board.css"), "utf8");
+  const prizeSize = css.match(
+    /\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
   const rankSize = css.match(
-    /\.ticket-featured\[data-rank-is-bid\] \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+    /\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
   );
   const budgetSize = css.match(
     /\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem/,
   );
-  const laterBidSize = css.match(
-    /\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
-  );
+  assert.ok(prizeSize);
   assert.ok(rankSize);
   assert.ok(budgetSize);
-  assert.ok(laterBidSize);
+  assert.ok(Number(prizeSize[1]) > Number(rankSize[1]));
   assert.ok(Number(rankSize[1]) > Number(budgetSize[1]));
-  assert.ok(Number(rankSize[1]) > Number(laterBidSize[1]));
 
   const empty = renderToStaticMarkup(
     createElement(Board, { week: WEEK_META, listings: [] }),
@@ -2974,19 +2974,22 @@ test("occupied #1 rank is the bid; project budget stays a later fact", () => {
   const lead = occupied.slice(leadStart, hopperStart);
   const hopper = occupied.slice(hopperStart);
   const rankStamp = lead.indexOf('data-rank-is-bid=""');
-  const rankBid = lead.indexOf('data-rank-bid=""');
-  const rankBidAmount = lead.indexOf("$12", rankBid);
+  const prize = lead.indexOf('data-prize=""');
+  const winnerText = lead.indexOf("Best portfolio by Friday");
   const budgetLater = lead.indexOf('data-budget-later=""');
   const budgetCopy = lead.indexOf("Project budget, not the bid");
+  const rankBid = lead.indexOf('data-rank-bid=""');
   const laterBid = lead.indexOf('data-bid="">$12<');
   const openLead = lead.indexOf("Open this brief");
   assert.ok(leadStart >= 0 && hopperStart > leadStart);
-  assert.ok(rankStamp >= 0 && rankBid > rankStamp);
-  assert.ok(rankBidAmount > rankBid);
-  assert.ok(budgetLater > rankBidAmount);
-  assert.ok(budgetCopy > budgetLater);
-  assert.ok(laterBid > budgetCopy);
-  assert.ok(openLead > laterBid);
+  assert.ok(rankStamp >= 0 && prize > rankStamp);
+  assert.ok(budgetLater > rankStamp && budgetLater < prize);
+  assert.ok(budgetCopy > budgetLater && budgetCopy < prize);
+  assert.ok(winnerText > prize);
+  assert.ok(rankBid > winnerText);
+  assert.ok(laterBid > winnerText);
+  assert.ok(Math.abs(laterBid - rankBid) < 80);
+  assert.ok(openLead > laterBid && openLead > rankBid);
   assert.match(lead, /data-rank-is-bid=""/);
   assert.match(lead, /data-rank-bid=""/);
   assert.match(lead, /data-budget-later=""/);

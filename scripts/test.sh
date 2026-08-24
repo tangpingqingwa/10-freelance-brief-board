@@ -603,15 +603,15 @@ echo "== UX: occupied rank is the bid; budget stays a later fact =="
 grep -q 'data-rank-is-bid' src/app/board.tsx \
   || fail "featured #1 ticket must stamp rank is the bid"
 grep -q 'data-rank-bid' src/app/board.tsx \
-  || fail "featured #1 stub must mark the bid as rank"
+  || fail "featured #1 $bid must mark the paid bid as rank"
 grep -q 'rank-is-bid' src/app/board.tsx \
-  || fail "featured #1 stub must use the rank-is-bid class"
+  || fail "featured #1 $bid must use the rank-is-bid class"
 grep -q 'data-budget-later' src/app/board.tsx \
   || fail "featured #1 ticket must keep project budget as a later fact"
 grep -q 'Project budget, not the bid' src/app/board.tsx \
   || fail "featured #1 ticket must say project budget is not the bid"
-grep -Fq 'ticket-featured[data-rank-is-bid] .rank-is-bid' src/app/board.css \
-  || fail "CSS must make #1 rank the bid"
+grep -Fq 'ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid' src/app/board.css \
+  || fail "CSS must make #1 rank the paid bid after the prize"
 grep -Fq 'ticket-featured[data-rank-is-bid] [data-budget-later] .budget-amount' src/app/board.css \
   || fail "CSS must keep #1 project budget quieter than rank"
 if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-rank-is-bid'; then
@@ -634,10 +634,10 @@ def size(pattern):
         raise SystemExit(1)
     return float(match.group(1))
 
-rank = size(r"\.ticket-featured\[data-rank-is-bid\] \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
+prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+rank = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
 budget = size(r"\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem")
-later = size(r"\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
-if not (rank > budget and rank > later):
+if not (prize > rank and rank > budget):
     raise SystemExit(1)
 PY
 grep -q 'rank is the bid; project budget stays a later fact' tests/rank.test.ts \
@@ -645,13 +645,13 @@ grep -q 'rank is the bid; project budget stays a later fact' tests/rank.test.ts 
 grep -q 'data-rank-is-bid' tests/rank.test.ts \
   || fail "rank tests must stamp occupied #1 rank is the bid"
 if ! awk '
-  /ticket-featured\[data-rank-is-bid\] \.rank-is-bid/ { rank=NR }
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
   /ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount/ { budget=NR }
-  /ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid/ { later=NR }
+  /ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid/ { rank=NR }
   /ticket-featured \.open-this-brief \{/ { open=NR }
-  END { exit !(rank && budget && later && open && rank < budget && budget < later && later < open) }
+  END { exit !(prize && budget && rank && open && prize < rank && budget < rank && rank < open) }
 ' src/app/board.css; then
-  fail "featured CSS must paint rank as the bid before quieter project budget"
+  fail "featured CSS must paint quieter project budget before rank \$bid after the prize"
 fi
 
 echo "== UX: empty week stays Claim #1 + No paid brief =="

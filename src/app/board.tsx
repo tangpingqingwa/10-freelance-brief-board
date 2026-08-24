@@ -64,11 +64,7 @@ export function ListingCard({
     >
       <div className="ticket-stub">
         <span className="rank">#{listing.rank}</span>
-        {featured ? (
-          <p className="bid rank-is-bid" data-rank-bid="">
-            {formatUsd(listing.bidUsd)}
-          </p>
-        ) : (
+        {featured ? null : (
           <>
             <p className="bid" data-bid="">
               {formatUsd(listing.bidUsd)}
@@ -159,7 +155,7 @@ export function ListingCard({
         </dl>
         {featured ? (
           <p className="ticket-bid-later">
-            <span className="bid" data-bid="">
+            <span className="bid rank-is-bid" data-rank-bid="" data-bid="">
               {formatUsd(listing.bidUsd)}
             </span>
             <span className="clicks" data-clicks="">
