@@ -676,6 +676,8 @@ echo "$empty_ticket_rule" | grep -q 'p.write-this-ticket' \
   || fail "empty-ticket CSS must hide Write this ticket"
 echo "$empty_ticket_rule" | grep -q 'write-after-rule' \
   || fail "empty-ticket CSS must hide write-after-rule"
+echo "$empty_ticket_rule" | grep -q 'data-write-later-quiet' \
+  || fail "empty-ticket CSS must hide quieter occupied Write"
 if echo "$empty_ticket_rule" | grep -q 'background:'; then
   fail "empty-ticket must hide occupied chrome, not recolor the desk"
 fi
@@ -705,6 +707,77 @@ grep -q 'desk-surface-empty' src/app/board.tsx \
   || fail "empty ticket cut must not rebuild the ticket desk"
 if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
   fail "empty ticket cut must not rebuild the ticket desk into a long form"
+fi
+
+echo "== UX: occupied Open this brief stays the first freelancer click =="
+grep -q 'data-write-later-quiet' src/app/board.tsx \
+  || fail "featured Write this ticket must recede so Open this brief stays first"
+grep -q 'data-write-later-quiet' src/app/outbid-form.tsx \
+  || fail "occupied Write this ticket stamp must recede so Open this brief stays first"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "featured #1 first click must stay Open this brief"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "featured #1 winner rule must stay the prize"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "featured #1 rank must stay the bid"
+grep -q 'data-budget-later' src/app/board.tsx \
+  || fail "featured #1 project budget must stay a later fact"
+grep -Fq '.ticket-featured a.write-after-rule[data-write-later-quiet]' src/app/board.css \
+  || fail "CSS must recede Write this ticket after Open this brief"
+grep -Fq '.write-this-ticket[data-write-later-quiet]' src/app/board.css \
+  || fail "CSS must recede the occupied Write this ticket stamp"
+grep -Fq '.board[data-empty-ticket] [data-write-later-quiet]' src/app/board.css \
+  || fail "empty-ticket CSS must hide quieter Write"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-later-quiet'; then
+  fail "empty week must not recede Write this ticket"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "open-brief-first must not add another numbered hop stamp"
+fi
+if grep -n 'data-first-click' -A 12 src/app/board.tsx | grep -q 'data-write-later-quiet'; then
+  fail "Open this brief must not stamp quieter Write"
+fi
+python3 - src/app/board.css <<'PY' || fail "Open this brief must stay larger than quieter Write, \$bid, and budget"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+write_sz = size(r"\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+bid_sz = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
+budget_sz = size(r"\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem")
+prize_sz = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+if not (open_sz > write_sz and open_sz > bid_sz and open_sz > budget_sz and prize_sz > bid_sz):
+    raise SystemExit(1)
+write_block = re.search(
+    r"\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*\}",
+    css,
+    re.S,
+)
+if not write_block or "var(--muted)" not in write_block.group(0):
+    raise SystemExit(1)
+if write_block and "var(--stamp)" in write_block.group(0):
+    raise SystemExit(1)
+if "background:" in write_block.group(0):
+    raise SystemExit(1)
+PY
+grep -q 'Open this brief stays the first freelancer click; Write this ticket recedes' tests/rank.test.ts \
+  || fail "rank tests must keep occupied Open this brief the first freelancer click"
+if ! awk '
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount/ { budget=NR }
+  /ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid/ { rank=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /ticket-featured a\.write-after-rule\[data-write-later-quiet\]/ { write=NR }
+  END { exit !(prize && budget && rank && open && write && prize < rank && budget < rank && rank < open && open < write) }
+' src/app/board.css; then
+  fail "featured CSS must recede Write after first-click Open this brief"
 fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
@@ -875,6 +948,8 @@ if [[ -f package.json ]]; then
     || fail "empty-week Claim #1 + No paid brief isolation test did not run"
   grep -q 'rank is the bid; project budget stays a later fact' "$test_log" \
     || fail "occupied-week rank-is-bid freelancer test did not run"
+  grep -q 'Open this brief stays the first freelancer click' "$test_log" \
+    || fail "occupied-week open-brief-first freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"

@@ -44,7 +44,11 @@ export function OutbidForm({
         <div className="ticket-write-face">
           <p className="ticket-serial">New job ticket</p>
           {occupied ? (
-            <p className="write-this-ticket" data-write-ticket-stamp="">
+            <p
+              className="write-this-ticket"
+              data-write-ticket-stamp=""
+              data-write-later-quiet=""
+            >
               Write this ticket
             </p>
           ) : null}

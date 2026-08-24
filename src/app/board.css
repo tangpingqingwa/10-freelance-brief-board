@@ -204,6 +204,7 @@ a:hover {
 .board[data-empty-ticket] [data-budget-later],
 .board[data-empty-ticket] [data-open-brief],
 .board[data-empty-ticket] [data-write-after-rule],
+.board[data-empty-ticket] [data-write-later-quiet],
 .board[data-empty-ticket] [data-first-click="open"] {
   display: none;
 }
@@ -789,6 +790,27 @@ a:hover {
   color: var(--stamp);
 }
 
+/* Occupied Write recedes. Open this brief stays the first freelancer click. */
+.ticket-featured a.write-after-rule[data-write-later-quiet] {
+  display: inline;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.18em;
+  box-shadow: none;
+}
+
+.ticket-featured a.write-after-rule[data-write-later-quiet]:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
 .write-this-ticket {
   display: inline-flex;
   align-items: center;
@@ -803,6 +825,18 @@ a:hover {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.write-this-ticket[data-write-later-quiet] {
+  display: inline;
+  min-height: 0;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  border: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .claim h2 {

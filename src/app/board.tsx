@@ -192,6 +192,7 @@ export function ListingCard({
               data-write-after-open-four=""
               data-write-after-open-five=""
               data-write-after-open-six=""
+              data-write-later-quiet=""
               aria-label="Write this ticket after the winner rule"
             >
               Write this ticket
