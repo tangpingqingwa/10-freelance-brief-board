@@ -59,15 +59,20 @@ export function ListingCard({
       data-listing-id={listing.id}
       data-buyer={listing.buyer}
       data-bid={listing.bidUsd}
+      data-prize-before-price={featured ? "" : undefined}
     >
       <div className="ticket-stub">
         <span className="rank">#{listing.rank}</span>
-        <p className="bid" data-bid="">
-          {formatUsd(listing.bidUsd)}
-        </p>
-        <span className="clicks" data-clicks="">
-          {formatClicks(listing.clicks)}
-        </span>
+        {featured ? null : (
+          <>
+            <p className="bid" data-bid="">
+              {formatUsd(listing.bidUsd)}
+            </p>
+            <span className="clicks" data-clicks="">
+              {formatClicks(listing.clicks)}
+            </span>
+          </>
+        )}
       </div>
       <div className="card-body ticket-face">
         <div className="card-top">
@@ -121,7 +126,9 @@ export function ListingCard({
           </div>
           <div
             className={
-              featured ? "ticket-rule ticket-read-winner" : "ticket-rule"
+              featured
+                ? "ticket-rule ticket-read-winner prize-before-price"
+                : "ticket-rule"
             }
           >
             <dt>How a winner is chosen</dt>
@@ -129,6 +136,7 @@ export function ListingCard({
               className={featured ? "winner-rule read-this-winner" : "winner-rule"}
               data-winner-rule=""
               data-read-winner={featured ? "lead" : undefined}
+              data-prize={featured ? "" : undefined}
             >
               {featured ? (
                 <>
@@ -143,6 +151,16 @@ export function ListingCard({
             </dd>
           </div>
         </dl>
+        {featured ? (
+          <p className="ticket-bid-later">
+            <span className="bid" data-bid="">
+              {formatUsd(listing.bidUsd)}
+            </span>
+            <span className="clicks" data-clicks="">
+              {formatClicks(listing.clicks)}
+            </span>
+          </p>
+        ) : null}
         <p className={featured ? "ticket-open" : "meta"}>
           <a
             className={featured ? "brief-url open-this-brief" : "brief-url"}

@@ -543,6 +543,61 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated a sixth time"
 fi
+grep -q 'data-prize-before-price' src/app/board.tsx \
+  || fail "featured #1 ticket must stamp prize before price"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "featured #1 ticket must mark the winner rule as the prize"
+grep -q 'prize-before-price' src/app/board.tsx \
+  || fail "featured #1 winner rule must use the prize-before-price class"
+grep -q 'ticket-bid-later' src/app/board.tsx \
+  || fail "featured #1 ticket must keep \$bid + clicks as a later fact"
+grep -q 'ticket-featured .prize-before-price .winner-rule-text' src/app/board.css \
+  || fail "CSS must enlarge #1 winner rule over \$bid"
+grep -Fq 'ticket-featured[data-prize-before-price] .ticket-bid-later .bid' src/app/board.css \
+  || fail "CSS must keep #1 \$bid quieter than the winner rule"
+grep -Fq 'ticket-featured[data-prize-before-price] .ticket-bid-later .clicks' src/app/board.css \
+  || fail "CSS must keep #1 clicks quieter than the winner rule"
+grep -q '.hopper .bid' src/app/board.css \
+  || fail "CSS must keep hopper ranks quieter than featured #1"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
+  fail "empty week must not stamp prize before price"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-prize'; then
+  fail "empty week must not mark a prize"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css; then
+  fail "prize before price must not add another numbered hop stamp"
+fi
+python3 - src/app/board.css <<'PY' || fail "#1 winner rule must be larger than \$bid and clicks"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+bid = size(r"\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
+clicks = size(r"\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.clicks\s*\{[^}]*font-size:\s*([\d.]+)rem")
+if not (prize > bid and prize > clicks):
+    raise SystemExit(1)
+PY
+grep -q 'winner rule is the prize before' tests/rank.test.ts \
+  || fail "rank tests must cover prize-before-price on occupied #1"
+grep -q 'data-prize-before-price' tests/rank.test.ts \
+  || fail "rank tests must stamp the occupied #1 prize"
+if ! awk '
+  /ticket-featured \.ticket-read-winner/ { winner=NR }
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid/ { bid=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  END { exit !(winner && prize && bid && open && winner < prize && prize < bid && bid < open) }
+' src/app/board.css; then
+  fail "featured CSS must paint the winner-rule prize before quieter \$bid and Open this brief"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -706,6 +761,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week open-after-write-five freelancer test did not run"
   grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a sixth time' "$test_log" \
     || fail "occupied-week write-after-open-six buyer test did not run"
+  grep -q 'winner rule is the prize before' "$test_log" \
+    || fail "occupied-week prize-before-price freelancer test did not run"
 fi
 
 echo "OK: buildable and testable"

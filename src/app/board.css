@@ -464,6 +464,35 @@ a:hover {
   letter-spacing: -0.02em;
 }
 
+.ticket-featured .prize-before-price .winner-rule-text {
+  font-size: 1.85rem;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+
+.ticket-featured[data-prize-before-price] .ticket-stub {
+  justify-content: flex-start;
+}
+
+.ticket-featured[data-prize-before-price] .ticket-bid-later {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0.55rem 0 0;
+}
+
+.ticket-featured[data-prize-before-price] .ticket-bid-later .bid {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.ticket-featured[data-prize-before-price] .ticket-bid-later .clicks {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .ticket-featured .winner-not-score {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.66rem;
@@ -880,6 +909,24 @@ a:hover {
   margin: -0.25rem 0 0.85rem;
   color: rgba(243, 230, 200, 0.62);
   font-size: 0.88rem;
+}
+
+.hopper .ticket {
+  box-shadow: 0 8px 18px rgba(12, 9, 6, 0.16);
+}
+
+.hopper .buyer {
+  font-size: 1.05rem;
+}
+
+.hopper .bid {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.hopper .clicks {
+  font-size: 0.66rem;
+  color: var(--muted);
 }
 
 .leaderboard {
