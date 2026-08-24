@@ -598,6 +598,55 @@ if ! awk '
 ' src/app/board.css; then
   fail "featured CSS must paint the winner-rule prize before quieter \$bid and Open this brief"
 fi
+
+echo "== UX: empty week stays Claim #1 + No paid brief =="
+grep -q 'data-empty-ticket' src/app/board.tsx \
+  || fail "empty week must stamp Claim #1 + No paid brief so occupied chrome cannot leak"
+grep -q 'data-empty-ticket' src/app/outbid-form.tsx \
+  || fail "empty Claim #1 must stamp so occupied Write cannot leak"
+grep -Fq '.board[data-empty-ticket]' src/app/board.css \
+  || fail "empty-ticket CSS must hide occupied prize / Write / Open on an empty week"
+empty_ticket_rule="$(awk '/^\.board\[data-empty-ticket\] \.ticket-featured,/,/^\}/' src/app/board.css)"
+echo "$empty_ticket_rule" | grep -q 'display: none' \
+  || fail "empty-ticket CSS must hide occupied prize / Write / Open"
+echo "$empty_ticket_rule" | grep -q 'prize-before-price' \
+  || fail "empty-ticket CSS must hide prize-before-price"
+echo "$empty_ticket_rule" | grep -q 'open-this-brief' \
+  || fail "empty-ticket CSS must hide Open this brief"
+echo "$empty_ticket_rule" | grep -q 'p.write-this-ticket' \
+  || fail "empty-ticket CSS must hide Write this ticket"
+echo "$empty_ticket_rule" | grep -q 'write-after-rule' \
+  || fail "empty-ticket CSS must hide write-after-rule"
+if echo "$empty_ticket_rule" | grep -q 'background:'; then
+  fail "empty-ticket must hide occupied chrome, not recolor the desk"
+fi
+grep -q 'empty week stays Claim #1 + No paid brief without prize' tests/rank.test.ts \
+  || fail "rank tests must cover empty week staying Claim #1 + No paid brief"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
+  fail "empty week must not stamp prize before price"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Open this brief'; then
+  fail "empty week must not invent Open this brief"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Write this ticket'; then
+  fail "empty week must not invent Write this ticket"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "empty ticket must not add another numbered hop stamp"
+fi
+grep -q 'data-prize-before-price' src/app/board.tsx \
+  || fail "empty ticket cut must keep occupied prize before price"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "empty ticket cut must keep occupied Open this brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "empty ticket cut must keep occupied Write this ticket"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "empty ticket cut must leave Claim #1 on the form"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "empty ticket cut must not rebuild the ticket desk"
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "empty ticket cut must not rebuild the ticket desk into a long form"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -763,6 +812,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week write-after-open-six buyer test did not run"
   grep -q 'winner rule is the prize before' "$test_log" \
     || fail "occupied-week prize-before-price freelancer test did not run"
+  grep -q 'empty week stays Claim #1 + No paid brief without prize' "$test_log" \
+    || fail "empty-week Claim #1 + No paid brief isolation test did not run"
 fi
 
 echo "OK: buildable and testable"

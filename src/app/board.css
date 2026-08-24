@@ -191,6 +191,20 @@ a:hover {
   order: 1;
 }
 
+/* Empty week stays Claim #1 + No paid brief. Occupied prize / Write / Open stay off this week. */
+.board[data-empty-ticket] .ticket-featured,
+.board[data-empty-ticket] .prize-before-price,
+.board[data-empty-ticket] .open-this-brief,
+.board[data-empty-ticket] p.write-this-ticket,
+.board[data-empty-ticket] .write-after-rule,
+.board[data-empty-ticket] [data-prize],
+.board[data-empty-ticket] [data-prize-before-price],
+.board[data-empty-ticket] [data-open-brief],
+.board[data-empty-ticket] [data-write-after-rule],
+.board[data-empty-ticket] [data-first-click="open"] {
+  display: none;
+}
+
 .empty-week {
   margin: 0;
 }

@@ -25,6 +25,16 @@ const formSource = readFileSync(
   "utf8",
 );
 
+const boardSource = readFileSync(
+  join(process.cwd(), "src", "app", "board.tsx"),
+  "utf8",
+);
+
+const cssSource = readFileSync(
+  join(process.cwd(), "src", "app", "board.css"),
+  "utf8",
+);
+
 const RATINGS_FORBIDDEN =
   /★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating/i;
 
@@ -2702,6 +2712,101 @@ test("empty week does not concentrate Write this ticket after Open this brief is
   const claimAt = html.indexOf('id="claim"');
   assert.ok(stampAt >= 0 && claimAt > stampAt);
   assert.doesNotMatch(html, RATINGS_FORBIDDEN);
+});
+
+test("empty week stays Claim #1 + No paid brief without prize / Write / Open", () => {
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+
+  const boardStamp = empty.indexOf('data-empty-ticket=""');
+  const claimStamp = empty.indexOf('data-empty-ticket=""', boardStamp + 1);
+  const claimAt = empty.indexOf('id="claim"');
+  const paidStamp = empty.indexOf("No paid brief");
+  const claimCopy = empty.indexOf("Claim #1 for");
+  assert.ok(boardStamp >= 0 && claimStamp > boardStamp);
+  assert.ok(paidStamp > boardStamp && paidStamp < claimAt);
+  assert.ok(claimAt <= claimStamp);
+  assert.ok(claimCopy > claimAt);
+  assert.equal((empty.match(/data-empty-ticket=""/g) ?? []).length, 2);
+  assert.match(empty, /data-desk-surface="empty"/);
+  assert.match(empty, /data-empty-week="true"/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /no sample gig/i);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, />Outbid</);
+  assert.match(empty, /Rank is the bid, not the project/);
+  assert.doesNotMatch(empty, /data-listing-card/);
+  assert.doesNotMatch(empty, /data-prize=/);
+  assert.doesNotMatch(empty, /data-prize-before-price/);
+  assert.doesNotMatch(empty, /prize-before-price/);
+  assert.doesNotMatch(empty, /ticket-featured/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /data-open-brief/);
+  assert.doesNotMatch(empty, /data-first-click="open"/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-write-ticket="buyer"/);
+  assert.doesNotMatch(empty, /data-write-after-rule/);
+  assert.doesNotMatch(empty, /data-write-after-open/);
+  assert.doesNotMatch(empty, /data-open-after-write-first/);
+  assert.doesNotMatch(empty, /data-write-after-open-seven/);
+  assert.doesNotMatch(empty, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+
+  assert.doesNotMatch(occupied, /data-empty-ticket/);
+  assert.doesNotMatch(occupied, /data-empty-week/);
+  assert.match(occupied, /data-prize-before-price=""/);
+  assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /Write this ticket/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, /\$12/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+
+  assert.match(boardSource, /data-empty-ticket=\{empty \? "" : undefined\}/);
+  assert.match(formSource, /data-empty-ticket=\{occupied \? undefined : ""\}/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \.ticket-featured/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \.prize-before-price/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \.open-this-brief/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] p\.write-this-ticket/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \.write-after-rule/);
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \[data-prize\]/);
+  assert.match(
+    cssSource,
+    /\.board\[data-empty-ticket\] \[data-prize-before-price\]/,
+  );
+  assert.match(cssSource, /\.board\[data-empty-ticket\] \[data-open-brief\]/);
+  assert.match(
+    cssSource,
+    /\.board\[data-empty-ticket\] \[data-write-after-rule\]/,
+  );
+  assert.match(
+    cssSource,
+    /\.board\[data-empty-ticket\] \[data-first-click="open"\]/,
+  );
+  const emptyRule =
+    cssSource.match(/\.board\[data-empty-ticket\][\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(emptyRule, /display:\s*none/);
+  assert.doesNotMatch(emptyRule, /background:/);
+  assert.doesNotMatch(emptyRule, /data-write-after-open-seven/);
+  assert.doesNotMatch(emptyRule, /data-open-after-write-six/);
 });
 
 test("occupied #1 winner rule is the prize before $bid + clicks", () => {
