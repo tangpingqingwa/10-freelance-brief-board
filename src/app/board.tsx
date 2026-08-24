@@ -236,6 +236,7 @@ export function Board({ week, listings }: BoardProps) {
       data-board=""
       data-brief-desk=""
       data-week={week.weekId}
+      data-empty-ticket={empty ? "" : undefined}
     >
       <header className="desk-mast">
         <p className="kicker">This week’s #1 freelance brief</p>
