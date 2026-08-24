@@ -1,6 +1,6 @@
 import React from "react";
 import { getPaymentPort } from "../../billing/select";
-import { listPaid } from "../../core/listings";
+import { listPaidRolling } from "../../core/listings";
 
 export const dynamic = "force-dynamic";
 
@@ -92,7 +92,7 @@ function resolveReturn(params: {
     return { status: "pending" };
   }
 
-  const listing = listPaid(session.listingDraft.weekId).find(
+  const listing = listPaidRolling().find(
     (row) => row.briefUrl === session.listingDraft.briefUrl,
   );
   if (!listing) {

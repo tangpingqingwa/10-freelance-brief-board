@@ -508,11 +508,13 @@ if [[ "$about_code" == "200" && "$rules_code" == "200" ]] \
   && html_has "$rules_body" '\$5' \
   && html_has "$rules_body" 'Older wins ties' \
   && html_has "$rules_body" 'Raise pays difference' \
-  && html_has "$rules_body" 'Monday 00:00:00.000 UTC' \
+  && html_has "$rules_body" 'Not Monday 00:00:00.000 UTC' \
+  && html_has "$rules_body" 'rolling last 7 days' \
+  && html_has "$about_body" 'rolling last 7 days' \
   && html_has "$rules_body" 'No invented ratings' \
   && ! invented_ratings "$about_body" \
   && ! invented_ratings "$rules_body"; then
-  record "about-rules" "PASS" "GET /about and /rules 200; min \$5, older wins, raise difference, weekly UTC, no invented ratings"
+  record "about-rules" "PASS" "GET /about and /rules 200; min \$5, older wins, raise difference, rolling last 7 days, no invented ratings"
 else
   record "about-rules" "FAIL" "about HTTP ${about_code} rules HTTP ${rules_code}"
 fi

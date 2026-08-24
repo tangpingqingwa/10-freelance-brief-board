@@ -4,7 +4,7 @@ import React from "react";
 export const metadata: Metadata = {
   title: "Rules · Freelance Brief Board",
   description:
-    "Min $5. Older wins ties. Raise pays the difference. Weekly UTC reset. No invented ratings.",
+    "Min $5. Older wins ties. Raise pays the difference. Rolling last 7 days, not Monday 00:00 UTC. No invented ratings.",
 };
 
 export default function RulesPage() {
@@ -33,7 +33,8 @@ export default function RulesPage() {
           <tr>
             <th>Minimum</th>
             <td>
-              First bid for a listing this week must be <strong>$5</strong>.
+              First bid for a listing in the rolling last 7 days must be{" "}
+              <strong>$5</strong>.
             </td>
           </tr>
           <tr>
@@ -53,7 +54,8 @@ export default function RulesPage() {
           <tr>
             <th>Raise</th>
             <td>
-              Same canonical brief URL in the same UTC week raises.{" "}
+              Same canonical brief URL still inside the rolling last 7 days
+              raises.{" "}
               <strong>Raise pays difference</strong> only (
               <code>new − current</code>). New amount must be a whole dollar ≥
               current + $1.
@@ -77,17 +79,22 @@ export default function RulesPage() {
         </tbody>
       </table>
 
-      <h2>Weekly UTC reset</h2>
+      <h2>Rolling last 7 days</h2>
       <table>
         <tbody>
           <tr>
             <th>Period</th>
-            <td>7 days. Live rank is this UTC week only.</td>
+            <td>
+              Rolling last 7 days. Live rank is paid bids still inside that
+              window. Not a 24h lock on #1.
+            </td>
           </tr>
           <tr>
             <th>Boundary</th>
             <td>
-              <strong>Monday 00:00:00.000 UTC</strong>
+              <code>now − 7d</code> inclusive through <code>now</code>.{" "}
+              <strong>Not Monday 00:00:00.000 UTC</strong>. A buyer outside
+              that civil midnight does not lose the ticket on a timezone tax.
             </td>
           </tr>
           <tr>
@@ -96,17 +103,22 @@ export default function RulesPage() {
             </th>
             <td>
               ISO week in UTC, <code>YYYY-Www</code> (e.g. <code>2026-W34</code>
-              ).
+              ). Label only. Rank expires from <code>lastPaidAt</code>, not
+              Monday midnight.
             </td>
           </tr>
           <tr>
             <th>What resets</th>
-            <td>Live rank, bids, and click counters for the new week.</td>
+            <td>
+              Live rank, bids, and click counters as payments age out of the
+              rolling window.
+            </td>
           </tr>
           <tr>
             <th>What does not carry</th>
             <td>
-              Previous week bid amounts. Want next week’s #1? Pay again.
+              Payments older than 7 days. Want #1 again? Pay again. Unpaid
+              checkout stays off the board.
             </td>
           </tr>
         </tbody>

@@ -61,7 +61,7 @@ function listing(
 
 test("empty week stays empty and the live loader invents no briefs", () => {
   assert.deepEqual(rankListings([]), []);
-  assert.deepEqual(getBoardListings(WEEK), []);
+  assert.deepEqual(getBoardListings(new Date("2026-08-17T12:00:00.000Z")), []);
 });
 
 test("unpaid Polar checkout never ranks as #1", () => {
@@ -4128,4 +4128,100 @@ test("unpaid stays off the ticket desk — No paid brief until Polar reports pai
 test("current week header uses UTC ISO week", () => {
   const week = currentWeekUtc(new Date("2026-08-17T00:00:00.000Z"));
   assert.equal(week.weekId, "2026-W34");
+  assert.equal(week.startsAt, "2026-08-10T00:00:00.000Z");
+  assert.equal(week.endsAt, "2026-08-17T00:00:00.000Z");
+});
+
+test("rankListings uses only the rolling last-7-days lastPaidAt window", () => {
+  const now = new Date("2026-08-24T00:00:00.000Z");
+  const ranked = rankListings(
+    [
+      listing({
+        id: "lst_then",
+        weekId: "2026-W33",
+        bidUsd: 99,
+        firstPaidAt: "2026-08-16T23:59:59.000Z",
+        lastPaidAt: "2026-08-16T23:59:59.000Z",
+      }),
+      listing({
+        id: "lst_now",
+        weekId: "2026-W34",
+        bidUsd: 5,
+        firstPaidAt: "2026-08-17T00:00:00.000Z",
+        lastPaidAt: "2026-08-17T00:00:00.000Z",
+      }),
+    ],
+    now,
+  );
+  assert.deepEqual(
+    ranked.map((row) => ({ id: row.id, rank: row.rank, bidUsd: row.bidUsd })),
+    [{ id: "lst_now", rank: 1, bidUsd: 5 }],
+  );
+});
+
+test("occupied week window is rolling last-7-days — not Monday 00:00 UTC", () => {
+  const sundayPay = listing({
+    id: "lst_lead",
+    buyer: "Lead Studio",
+    weekId: "2026-W33",
+    bidUsd: 12,
+    firstPaidAt: "2026-08-16T12:00:00.000Z",
+    lastPaidAt: "2026-08-16T12:00:00.000Z",
+    winnerRule: "Best portfolio by Friday",
+    briefUrl: "https://example.com/lead",
+  });
+  const hopper = listing({
+    id: "lst_hopper",
+    buyer: "Hopper Studio",
+    weekId: "2026-W33",
+    bidUsd: 6,
+    firstPaidAt: "2026-08-16T13:00:00.000Z",
+    lastPaidAt: "2026-08-16T13:00:00.000Z",
+    winnerRule: "First qualified",
+    briefUrl: "https://example.com/hopper",
+  });
+  const monday = new Date("2026-08-17T00:00:00.000Z");
+  const week = currentWeekUtc(monday);
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week,
+      listings: rankListings([sundayPay, hopper], monday),
+    }),
+  );
+  assert.match(occupied, /data-desk-surface="occupied"/);
+  assert.match(occupied, /data-rolling-week="true"/);
+  assert.match(occupied, /Rolling last 7 days\. Not Monday 00:00 UTC\./);
+  assert.match(occupied, /Window since 2026-08-10T00:00:00.000Z/);
+  assert.match(occupied, /data-listing-id="lst_lead"/);
+  assert.match(occupied, /data-listing-id="lst_hopper"/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /Winner rule, not a score/);
+  assert.match(occupied, /Best portfolio by Friday/);
+  assert.match(occupied, /\$12/);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /data-prize=""/);
+  assert.doesNotMatch(occupied, /data-empty-week/);
+  assert.doesNotMatch(occupied, /24h lock/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+
+  const expired = new Date("2026-08-23T13:00:01.000Z");
+  const empty = renderToStaticMarkup(
+    createElement(Board, {
+      week: currentWeekUtc(expired),
+      listings: rankListings([sundayPay, hopper], expired),
+    }),
+  );
+  assert.match(empty, /data-desk-surface="empty"/);
+  assert.match(empty, /data-empty-week="true"/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, /data-rolling-week="true"/);
+  assert.match(empty, /Rolling last 7 days\. Not Monday 00:00 UTC\./);
+  assert.doesNotMatch(empty, /data-listing-card/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-prize=/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
 });

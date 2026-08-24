@@ -110,8 +110,8 @@ test("about and rules state min $5, older wins ties, raise pays difference, week
   assert.match(rules, /\$5/);
   assert.match(rules, /Older wins ties/);
   assert.match(rules, /Raise pays difference/);
-  assert.match(rules, /Monday 00:00:00.000 UTC/);
-  assert.match(rules, /weekly UTC reset/i);
+  assert.match(rules, /Not Monday 00:00:00.000 UTC/);
+  assert.match(rules, /rolling last 7 days/i);
   assert.match(rules, /No invented ratings/);
   assert.match(rules, /utm_\*/);
   assert.match(rules, /url_forbidden/);
