@@ -924,7 +924,7 @@ grep -Fq '.week-occupied .desk-surface {' src/app/board.css \
   || fail "occupied desk must stack Open this brief before later Write"
 grep -Fq '.week-occupied .ticket-featured .ticket-write-later' src/app/board.css \
   || fail "CSS must compose later Write as a ticket foot"
-grep -Fq '.week-occupied .desk-surface .claim.write-later[data-write-later]' src/app/board.css \
+grep -Fq '.week-occupied .claim-after-ticket[data-claim-after-ticket] .claim.write-later[data-write-later]' src/app/board.css \
   || fail "CSS must stack later Write claim after Open this brief"
 grep -Fq '.week-occupied .ticket-featured .ticket-write-later a.write-after-rule[data-write-later-quiet]' src/app/board.css \
   || fail "CSS must keep later Write an unboxed hop after Open"
@@ -1477,6 +1477,135 @@ if echo "$(awk '/^\.week-occupied\[data-rolling-week\] \.week-window\[data-rolli
   fail "rolling week must compose the window, not recolor the desk"
 fi
 
+echo "== UX: occupied ticket desk keeps one first click — Open this brief, Claim stays after =="
+grep -q 'claim-after-ticket' src/app/board.tsx \
+  || fail "occupied Claim #1 must wrap as claim-after-ticket after the ticket"
+grep -q 'data-claim-after-ticket' src/app/board.tsx \
+  || fail "occupied Claim #1 must stamp data-claim-after-ticket after the ticket"
+grep -Fq 'className="claim-after-ticket"' src/app/board.tsx \
+  || fail "occupied Claim #1 must wrap as claim-after-ticket, not a same-weight rail"
+python3 - src/app/board.tsx <<'PY' || fail "occupied / must not mount Claim / Outbid beside the #1 prize"
+import sys
+board = open(sys.argv[1], encoding="utf-8").read()
+start = board.find("{featured ? (")
+end = board.find(") : (", start)
+if start < 0 or end < 0:
+    raise SystemExit(1)
+prize = board[start:end]
+if "OutbidForm" in prize or "claim-after-ticket" in prize:
+    raise SystemExit(1)
+surface = board.split('data-desk-surface={empty ? "empty" : "occupied"}', 1)[-1]
+surface = surface.split("{rest.length > 0", 1)[0]
+if "occupied unpaidOff" in surface or "claim-after-ticket" in surface:
+    raise SystemExit(1)
+if "data-claim-after-ticket" not in board.split("{rest.length > 0", 1)[-1]:
+    raise SystemExit(1)
+PY
+grep -Fq '.week-occupied .claim-after-ticket[data-claim-after-ticket]' src/app/board.css \
+  || fail "occupied Claim after the ticket must be quieter than Open this brief"
+grep -Fq '.week-occupied .claim-after-ticket[data-claim-after-ticket] .outbid' src/app/board.css \
+  || fail "occupied Outbid after the ticket must recede under Open this brief"
+grep -Fq '.board[data-empty-ticket] .claim-after-ticket' src/app/board.css \
+  || fail "empty-ticket CSS must hide leaked Claim-after-ticket"
+grep -Fq '.week-empty .claim-after-ticket' src/app/board.css \
+  || fail "empty week shell must hide leaked Claim-after-ticket"
+if grep -E '^\.claim-after-ticket' src/app/board.css; then
+  fail "Claim-after-ticket CSS must stay scoped to week-occupied"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'claim-after-ticket'; then
+  fail "empty week must not wrap Claim after the ticket"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "Claim after the ticket must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "Claim after the ticket must not rebuild the ticket desk into a long form"
+fi
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "Claim after the ticket must keep Open this brief the first occupied click"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "Claim after the ticket must keep the winner rule as the prize"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "Claim after the ticket must keep rank as the bid"
+grep -q 'ticket-write-later' src/app/board.tsx \
+  || fail "Claim after the ticket must keep Write as a later foot"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "Claim after the ticket must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "Claim after the ticket must keep empty No paid brief"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "Claim after the ticket must keep Open this brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "Claim after the ticket must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "Claim after the ticket must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "Claim after the ticket must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "Claim after the ticket must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "Claim after the ticket must not rebuild the empty ticket desk"
+grep -q 'data-unpaid-off' src/app/board.tsx \
+  || fail "Claim after the ticket must keep unpaid Polar leftover off the desk"
+grep -q 'data-rolling-week="true"' src/app/board.tsx \
+  || fail "Claim after the ticket must keep the rolling last-7-days window"
+grep -q 'occupied ticket desk keeps one first click' tests/rank.test.ts \
+  || fail "rank tests must cover occupied Open this brief before Claim"
+grep -q 'Claim stays after' tests/rank.test.ts \
+  || fail "rank tests must keep Claim #1 after the occupied ticket"
+python3 - src/app/board.css src/app/board.tsx src/app/outbid-form.tsx <<'PY' || fail "occupied Claim after the ticket must recede under Open this brief without recolor or a new hop"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+board = open(sys.argv[2], encoding="utf-8").read()
+form = open(sys.argv[3], encoding="utf-8").read()
+marker = "Occupied: Open this brief is the only first click. Claim #1 / Outbid stay after the ticket."
+if marker not in css:
+    raise SystemExit(1)
+later = css.split(marker, 1)[1].split("End occupied Claim-after-ticket", 1)[0]
+if ".claim-after-ticket[data-claim-after-ticket]" not in later:
+    raise SystemExit(1)
+if "border-top: 1px dashed" not in later:
+    raise SystemExit(1)
+if "background:" in later:
+    raise SystemExit(1)
+if "data-write-after-open-seven" in later or "data-open-after-write-six" in later:
+    raise SystemExit(1)
+if "empty-claim-first" in later or "data-later-write" in later or "data-unpaid-off" in later:
+    raise SystemExit(1)
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+outbid_h = size(r"\.claim-after-ticket\[data-claim-after-ticket\] \.outbid\s*\{[^}]*height:\s*([\d.]+)rem")
+prize_sz = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+empty_h = size(r"\.week-empty \.claim\.empty-claim-first\[data-empty-claim-first\] \.outbid\[data-first-click=\"claim\"\]\s*\{[^}]*min-height:\s*([\d.]+)rem")
+if not (outbid_h < open_sz and outbid_h < empty_h and prize_sz > outbid_h and outbid_h < prize_sz):
+    raise SystemExit(1)
+if "className=\"claim-after-ticket\"" not in board or "data-claim-after-ticket" not in board:
+    raise SystemExit(1)
+if board.find("data-claim-after-ticket") < board.find("Open this brief"):
+    raise SystemExit(1)
+if 'data-first-click="claim"' in form.split("function OccupiedTicketWrite", 1)[-1].split("function EmptyClaimFirstWrite", 1)[0]:
+    raise SystemExit(1)
+if "data-write-after-open-seven" in board or "data-open-after-write-six" in board:
+    raise SystemExit(1)
+PY
+if ! awk '
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /ticket-featured \.ticket-write-later \{/ { foot=NR }
+  /week-occupied \.hopper\.later-pack\[data-later-pack\] \{/ { pack=NR }
+  /Occupied: Open this brief is the only first click/ { claim=NR }
+  END { exit !(prize && open && foot && pack && claim && prize < open && open < foot && foot < pack && pack < claim) }
+' src/app/board.css; then
+  fail "featured CSS must recede Claim after prize / Open / later Write / later-rank pack"
+fi
+
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -1666,6 +1795,10 @@ if [[ -f package.json ]]; then
     || fail "week tests must cover rolling last-7-days window"
   grep -q 'occupied week window is rolling last-7-days' "$test_log" \
     || fail "rank tests must cover occupied rolling last-7-days window"
+  grep -q 'occupied ticket desk keeps one first click' "$test_log" \
+    || fail "occupied-week Open this brief before Claim test did not run"
+  grep -q 'Claim stays after' "$test_log" \
+    || fail "occupied-week Claim after the ticket test did not run"
 fi
 
 echo "OK: buildable and testable"

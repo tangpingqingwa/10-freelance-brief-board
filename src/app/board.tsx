@@ -296,13 +296,10 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
         data-desk-surface={empty ? "empty" : "occupied"}
       >
         {featured ? (
-          <>
-            <section className="spike" aria-labelledby="spike-heading">
-              <h2 id="spike-heading">This week’s #1</h2>
-              <ListingCard listing={featured} featured />
-            </section>
-            <OutbidForm defaultAmount={defaultAmount} occupied unpaidOff />
-          </>
+          <section className="spike" aria-labelledby="spike-heading">
+            <h2 id="spike-heading">This week’s #1</h2>
+            <ListingCard listing={featured} featured />
+          </section>
         ) : (
           <>
             <section className="spike spike-quiet" aria-labelledby="spike-heading">
@@ -339,6 +336,12 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
           </p>
           <Leaderboard listings={rest} />
         </section>
+      ) : null}
+
+      {featured ? (
+        <div className="claim-after-ticket" data-claim-after-ticket="">
+          <OutbidForm defaultAmount={defaultAmount} occupied unpaidOff />
+        </div>
       ) : null}
     </main>
   );
