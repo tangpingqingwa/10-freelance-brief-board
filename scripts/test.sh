@@ -880,6 +880,108 @@ fi
 if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
   fail "empty isolation must not rebuild the ticket desk into a stacked layout"
 fi
+
+echo "== UX: occupied later Write this ticket stays quieter than Open this brief =="
+grep -q 'ticket-write-later' src/app/board.tsx \
+  || fail "featured Write this ticket must sit in a later foot after Open this brief"
+grep -q 'data-write-later' src/app/board.tsx \
+  || fail "featured Write this ticket must stamp later Write"
+grep -q 'data-write-later' src/app/outbid-form.tsx \
+  || fail "occupied claim must stamp later Write so it recedes after Open"
+grep -q 'claim ticket-blank write-later' src/app/outbid-form.tsx \
+  || fail "occupied claim must use the later Write class"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "later Write cut must keep Open this brief the first occupied click"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "later Write cut must keep the winner rule as the prize"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "later Write cut must keep rank as the bid"
+grep -q 'data-budget-later' src/app/board.tsx \
+  || fail "later Write cut must keep project budget as a later fact"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "later Write cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "later Write cut must keep empty No paid brief"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "later Write cut must keep Open this brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "later Write cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "later Write cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "later Write cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "later Write cut must keep Outbid"
+grep -Fq '.week-occupied .desk-surface {' src/app/board.css \
+  || fail "occupied desk must stack Open this brief before later Write"
+grep -Fq '.week-occupied .ticket-featured .ticket-write-later' src/app/board.css \
+  || fail "CSS must compose later Write as a ticket foot"
+grep -Fq '.week-occupied .desk-surface .claim.write-later[data-write-later]' src/app/board.css \
+  || fail "CSS must stack later Write claim after Open this brief"
+grep -Fq '.week-occupied .ticket-featured .ticket-write-later a.write-after-rule[data-write-later-quiet]' src/app/board.css \
+  || fail "CSS must keep later Write an unboxed hop after Open"
+grep -Fq '.board[data-empty-ticket] .ticket-write-later' src/app/board.css \
+  || fail "empty-ticket CSS must hide later Write foot"
+grep -Fq '.week-empty .ticket-write-later' src/app/board.css \
+  || fail "empty week shell must hide later Write foot"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'ticket-write-later'; then
+  fail "empty week must not invent a later Write foot"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-later'; then
+  fail "empty week must not stamp later Write"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "later Write must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "later Write must not rebuild the ticket desk into a long form"
+fi
+python3 - src/app/board.css <<'PY' || fail "later Write must stay quieter than Open this brief and the winner-rule prize"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+write_sz = size(r"\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+prize_sz = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+bid_sz = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
+if not (open_sz > write_sz and prize_sz > write_sz and open_sz > bid_sz and prize_sz > bid_sz):
+    raise SystemExit(1)
+foot = re.search(r"\.week-occupied \.ticket-featured \.ticket-write-later\s*\{[^}]*\}", css, re.S)
+hop = re.search(
+    r"\.week-occupied \.ticket-featured \.ticket-write-later a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*\}",
+    css,
+    re.S,
+)
+if not foot or "border-top" not in foot.group(0):
+    raise SystemExit(1)
+if not hop or "display: inline" not in hop.group(0) or "var(--muted)" not in hop.group(0):
+    raise SystemExit(1)
+if "var(--stamp)" in hop.group(0) or "min-height: 2" in hop.group(0):
+    raise SystemExit(1)
+if "background:" in hop.group(0):
+    raise SystemExit(1)
+PY
+if ! awk '
+  /week-occupied \.desk-surface \{/ { stack=NR }
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /ticket-featured \.ticket-write-later \{/ { foot=NR }
+  /ticket-featured a\.write-after-rule\[data-write-later-quiet\]/ { write=NR }
+  END { exit !(stack && prize && open && foot && write && stack < prize && prize < open && open < foot && foot < write) }
+' src/app/board.css; then
+  fail "featured CSS must stack later Write after prize and Open this brief"
+fi
+grep -q 'occupied later Write this ticket stays quieter than Open this brief' tests/rank.test.ts \
+  || fail "rank tests must cover later Write quieter than Open this brief"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "later Write cut must not rebuild the empty ticket desk"
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -1053,6 +1155,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week open-brief-first freelancer test did not run"
   grep -q 'empty week stays Claim #1 — Open / Write cannot leak' "$test_log" \
     || fail "empty-week Open / Write isolation test did not run"
+  grep -q 'occupied later Write this ticket stays quieter than Open this brief' "$test_log" \
+    || fail "occupied-week later Write quieter-than-Open test did not run"
 fi
 
 echo "OK: buildable and testable"

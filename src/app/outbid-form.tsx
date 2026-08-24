@@ -25,9 +25,10 @@ export function OutbidForm({
 
   return (
     <section
-      className="claim ticket-blank"
+      className={occupied ? "claim ticket-blank write-later" : "claim ticket-blank"}
       id="claim"
       data-write-ticket={occupied ? "buyer" : undefined}
+      data-write-later={occupied ? "" : undefined}
       data-empty-ticket={occupied ? undefined : ""}
       aria-label={occupied ? "Write this ticket" : undefined}
     >

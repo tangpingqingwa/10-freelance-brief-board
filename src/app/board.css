@@ -143,6 +143,20 @@ a:hover {
   align-items: start;
 }
 
+/* Occupied: Open this brief is the first click. Write this ticket is a later stack, not a sibling CTA. */
+.week-occupied .desk-surface {
+  grid-template-columns: minmax(0, 36rem);
+  justify-content: start;
+}
+
+.week-occupied .desk-surface .spike {
+  order: 0;
+}
+
+.week-occupied .desk-surface .claim.write-later[data-write-later] {
+  order: 1;
+}
+
 .spike-note {
   margin: 0 0 0.85rem;
   color: rgba(243, 230, 200, 0.68);
@@ -205,6 +219,8 @@ a:hover {
 .board[data-empty-ticket] [data-open-brief],
 .board[data-empty-ticket] [data-write-after-rule],
 .board[data-empty-ticket] [data-write-later-quiet],
+.board[data-empty-ticket] .ticket-write-later,
+.board[data-empty-ticket] .ticket-write-later[data-write-later],
 .board[data-empty-ticket] [data-first-click="open"],
 .week-empty[data-empty-ticket] .ticket-featured,
 .week-empty[data-empty-ticket] .prize-before-price,
@@ -219,6 +235,8 @@ a:hover {
 .week-empty[data-empty-ticket] [data-open-brief],
 .week-empty[data-empty-ticket] [data-write-after-rule],
 .week-empty[data-empty-ticket] [data-write-later-quiet],
+.week-empty[data-empty-ticket] .ticket-write-later,
+.week-empty[data-empty-ticket] .ticket-write-later[data-write-later],
 .week-empty[data-empty-ticket] [data-first-click="open"],
 .week-empty .ticket-featured,
 .week-empty .prize-before-price,
@@ -233,6 +251,8 @@ a:hover {
 .week-empty [data-open-brief],
 .week-empty [data-write-after-rule],
 .week-empty [data-write-later-quiet],
+.week-empty .ticket-write-later,
+.week-empty .ticket-write-later[data-write-later],
 .week-empty [data-first-click="open"],
 .week-occupied .empty-week,
 .week-occupied [data-empty-week] {
@@ -665,9 +685,21 @@ a:hover {
   color: var(--stamp);
 }
 
+.week-occupied .ticket-featured .ticket-write-later {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.75rem;
+  margin: 0.45rem 0 0;
+  padding: 0.35rem 0 0;
+  border-top: 1px dashed var(--rule);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .week-occupied .ticket-featured .write-after-rule-wrap {
-  margin: 0.55rem 0 0;
-  font-size: 0.82rem;
+  margin: 0;
+  font-size: 0.78rem;
   color: var(--muted);
 }
 
@@ -824,24 +856,44 @@ a:hover {
   color: var(--stamp);
 }
 
-/* Occupied Write recedes. Open this brief stays the first freelancer click. */
+/* Occupied Write recedes as a later foot hop. Open this brief stays the first freelancer click. */
 .week-occupied .ticket-featured a.write-after-rule[data-write-later-quiet] {
   display: inline;
   min-width: 0;
   min-height: 0;
   padding: 0;
   border: 0;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
   color: var(--muted);
-  text-decoration: underline dotted;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--rule);
   text-underline-offset: 0.18em;
   box-shadow: none;
 }
 
 .week-occupied .ticket-featured a.write-after-rule[data-write-later-quiet]:hover {
   background: transparent;
+  color: var(--ink);
+}
+
+.week-occupied .ticket-featured .ticket-write-later a.write-after-rule[data-write-later-quiet] {
+  display: inline;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--rule);
+  box-shadow: none;
+}
+
+.week-occupied .ticket-featured .ticket-write-later a.write-after-rule[data-write-later-quiet]:hover {
   color: var(--ink);
 }
 
@@ -864,12 +916,27 @@ a:hover {
 .week-occupied .write-this-ticket[data-write-later-quiet] {
   display: inline;
   min-height: 0;
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.35rem;
   padding: 0;
   border: 0;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.week-occupied .claim.write-later[data-write-later] {
+  opacity: 0.86;
+}
+
+.week-occupied .claim.write-later[data-write-later] .ticket-write-stub {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.week-occupied .claim.write-later[data-write-later] h2 {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
   color: var(--muted);
 }
 
