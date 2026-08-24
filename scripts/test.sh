@@ -983,6 +983,142 @@ grep -q 'occupied later Write this ticket stays quieter than Open this brief' te
 grep -q 'desk-surface-empty' src/app/board.tsx \
   || fail "later Write cut must not rebuild the empty ticket desk"
 
+echo "== UX: occupied later-rank tickets stay quieter than #1 — winner rule stays the prize =="
+grep -q 'function LaterRankTicket' src/app/board.tsx \
+  || fail "later ranks must use a later-ticket composition, not the #1 prize card"
+grep -q 'ticket-later' src/app/board.tsx \
+  || fail "later ranks must use ticket-later anatomy"
+grep -q 'data-later-rank' src/app/board.tsx \
+  || fail "later ranks must stamp data-later-rank"
+grep -q 'data-later-pack' src/app/board.tsx \
+  || fail "later ranks must group in a later pack"
+grep -q 'These tickets are not this week’s #1 prize' src/app/board.tsx \
+  || fail "later pack must say later tickets are not the #1 prize"
+grep -q 'data-later-open' src/app/board.tsx \
+  || fail "later ranks must keep a quieter Open brief hop"
+grep -q 'Open brief' src/app/board.tsx \
+  || fail "later ranks must keep Open brief"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "later-rank cut must keep Open this brief the first occupied click"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "later-rank cut must keep the winner rule as the prize"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "later-rank cut must keep rank as the bid"
+grep -q 'ticket-write-later' src/app/board.tsx \
+  || fail "later-rank cut must keep Write as a later foot"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "later-rank cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "later-rank cut must keep empty No paid brief"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "later-rank cut must keep Open this brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "later-rank cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "later-rank cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "later-rank cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "later-rank cut must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "later-rank cut must not rebuild the empty ticket desk"
+grep -Fq '.week-occupied .hopper.later-pack[data-later-pack]' src/app/board.css \
+  || fail "CSS must group later ranks in a hopper pack after #1"
+grep -Fq '.week-occupied .hopper .ticket-later[data-later-rank]' src/app/board.css \
+  || fail "CSS must compose later ranks as hopper slips"
+grep -Fq '.week-occupied .hopper .ticket-later[data-later-rank] .later-rule .winner-rule' src/app/board.css \
+  || fail "CSS must keep later winner-rule copy quieter than the #1 prize"
+grep -Fq '.week-occupied .hopper .ticket-later[data-later-rank] a.later-open[data-later-open]' src/app/board.css \
+  || fail "CSS must keep later Open brief quieter than Open this brief"
+grep -Fq '.board[data-empty-ticket] .later-pack' src/app/board.css \
+  || fail "empty-ticket CSS must hide later-rank pack"
+grep -Fq '.week-empty .ticket-later' src/app/board.css \
+  || fail "empty week shell must hide later-rank tickets"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'ticket-later'; then
+  fail "empty week must not invent later-rank tickets"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-later-rank'; then
+  fail "empty week must not stamp later ranks"
+fi
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "later-rank quiet must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "later-rank quiet must not rebuild the ticket desk into a long form"
+fi
+if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'data-prize='; then
+  fail "later ranks must not wear the #1 prize stamp"
+fi
+if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'Open this brief'; then
+  fail "later ranks must not wear Open this brief"
+fi
+if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'ticket-featured'; then
+  fail "later ranks must not reuse featured ticket chrome"
+fi
+if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'ticket-facts'; then
+  fail "later ranks must not reuse #1 ticket-facts anatomy"
+fi
+python3 - src/app/board.css src/app/board.tsx <<'PY' || fail "later ranks must stay quieter than the #1 winner-rule prize without recolor or a new hop"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+board = open(sys.argv[2], encoding="utf-8").read()
+
+def size(pattern):
+    match = re.search(pattern, css, re.S)
+    if not match:
+        raise SystemExit(1)
+    return float(match.group(1))
+
+prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
+later_rule = size(r"\.hopper \.ticket-later\[data-later-rank\] \.later-rule \.winner-rule\s*\{[^}]*font-size:\s*([\d.]+)rem")
+later_buyer = size(r"\.hopper \.ticket-later\[data-later-rank\] \.later-buyer\s*\{[^}]*font-size:\s*([\d.]+)rem")
+later_open = size(r"\.hopper \.ticket-later\[data-later-rank\] a\.later-open\[data-later-open\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
+if not (prize > later_rule and prize > later_buyer and open_sz > later_open):
+    raise SystemExit(1)
+pack = re.search(r"\.week-occupied \.hopper\.later-pack\[data-later-pack\]\s*\{[^}]*\}", css, re.S)
+slip = re.search(r"\.week-occupied \.hopper \.ticket-later\[data-later-rank\]\s*\{[^}]*\}", css, re.S)
+hop = re.search(
+    r"\.week-occupied \.hopper \.ticket-later\[data-later-rank\] a\.later-open\[data-later-open\]\s*\{[^}]*\}",
+    css,
+    re.S,
+)
+if not pack or "border-top" not in pack.group(0):
+    raise SystemExit(1)
+if not slip or "box-shadow: none" not in slip.group(0) or "border: 1px dashed var(--rule)" not in slip.group(0):
+    raise SystemExit(1)
+if "background:" in slip.group(0) and "var(--paper)" not in slip.group(0):
+    raise SystemExit(1)
+if not hop or "display: inline" not in hop.group(0) or "var(--muted)" not in hop.group(0):
+    raise SystemExit(1)
+if "var(--stamp)" in hop.group(0) or "min-height: 2" in hop.group(0) or "background:" in hop.group(0):
+    raise SystemExit(1)
+later_fn = board.split("function LaterRankTicket", 1)[-1].split("export function ListingCard", 1)[0]
+if "data-prize" in later_fn or "Open this brief" in later_fn or "ticket-featured" in later_fn:
+    raise SystemExit(1)
+if "ticket-facts" in later_fn or "data-write-later" in later_fn:
+    raise SystemExit(1)
+if "data-write-after-open-seven" in board or "data-open-after-write-six" in board:
+    raise SystemExit(1)
+PY
+if ! awk '
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /ticket-featured \.ticket-write-later \{/ { foot=NR }
+  /week-occupied \.hopper\.later-pack\[data-later-pack\] \{/ { pack=NR }
+  /hopper \.ticket-later\[data-later-rank\] \{/ { later=NR }
+  END { exit !(prize && open && foot && pack && later && prize < open && open < foot && foot < pack && pack < later) }
+' src/app/board.css; then
+  fail "later-rank CSS must sit after occupied prize / Open / later Write"
+fi
+grep -q 'occupied later-rank tickets stay quieter than #1' tests/rank.test.ts \
+  || fail "rank tests must cover quieter later-rank tickets"
+grep -q 'These tickets are not this week’s #1 prize' tests/rank.test.ts \
+  || fail "rank tests must name later tickets as not the #1 prize"
+grep -q 'data-later-rank' tests/rank.test.ts \
+  || fail "rank tests must stamp later ranks"
+
 echo "== UX: empty week Claim #1 is the first click — brief URL is a later write =="
 grep -q 'empty-claim-first' src/app/outbid-form.tsx \
   || fail "empty Claim #1 must use the empty-claim-first class"
@@ -1306,6 +1442,8 @@ if [[ -f package.json ]]; then
     || fail "occupied-week later Write quieter-than-Open test did not run"
   grep -q 'empty week Claim #1 is the first click — brief URL is a later write' "$test_log" \
     || fail "empty-week Claim #1 then later brief URL test did not run"
+  grep -q 'occupied later-rank tickets stay quieter than #1' "$test_log" \
+    || fail "occupied later-rank quieter-than-#1 test did not run"
 fi
 
 echo "OK: buildable and testable"
