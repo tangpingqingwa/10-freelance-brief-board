@@ -192,5 +192,5 @@ test("checkout rejects chat, NSFW, and invented ratings without listing", async 
   const rating = await postJson(draft({ rating: "4.8" }));
   assert.equal(rating.status, 400);
   assert.deepEqual(await rating.json(), { error: "rating_forbidden" });
-  assert.equal(getBoardListings(WEEK).length, 0);
+  assert.equal(getBoardListings().length, 0);
 });

@@ -112,7 +112,7 @@ test("SPEC acceptance 2: $5 fixture create lists at #1", async () => {
   assert.equal(listing.deadline, "2026-09-15");
   assert.equal(listing.briefUrl, "https://example.com/acme");
 
-  const ranked = rankListings(getBoardListings(WEEK));
+  const ranked = rankListings(getBoardListings());
   assert.equal(ranked.length, 1);
   assert.equal(ranked[0]?.rank, 1);
   assert.equal(ranked[0]?.bidUsd, 5);
@@ -140,7 +140,7 @@ test("abandoned checkout does not list", async () => {
     },
   );
   assert.deepEqual(listPaid(WEEK), []);
-  assert.equal(getBoardListings(WEEK).length, 0);
+  assert.equal(getBoardListings().length, 0);
 });
 
 test("underbid still lists below #1", async () => {
@@ -177,7 +177,7 @@ test("underbid still lists below #1", async () => {
     ),
   );
 
-  const ranked = rankListings(getBoardListings(WEEK));
+  const ranked = rankListings(getBoardListings());
   assert.equal(ranked.length, 2);
   assert.equal(ranked[0]?.briefUrl, "https://example.com/top");
   assert.equal(ranked[0]?.rank, 1);
@@ -204,7 +204,7 @@ test("POST /api/checkout fixture pay $5 lists after webhook", async () => {
   assert.equal(response.status, 200);
   const started = (await response.json()) as { sessionId: string; checkoutUrl: string };
   assert.ok(started.sessionId);
-  assert.equal(getBoardListings(WEEK).length, 0);
+  assert.equal(getBoardListings().length, 0);
 
   const webhook = await webhookPost(
     new Request("http://localhost/api/polar/webhook", {
@@ -219,7 +219,7 @@ test("POST /api/checkout fixture pay $5 lists after webhook", async () => {
   assert.equal(webhook.status, 200);
   assert.deepEqual(await webhook.json(), { received: true, applied: true });
 
-  const ranked = rankListings(getBoardListings(WEEK));
+  const ranked = rankListings(getBoardListings());
   assert.equal(ranked.length, 1);
   assert.equal(ranked[0]?.rank, 1);
   assert.equal(ranked[0]?.bidUsd, 5);
@@ -238,7 +238,7 @@ test("POST /api/checkout rejects bids below $5", async () => {
   );
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: "bid_below_min" });
-  assert.equal(getBoardListings(WEEK).length, 0);
+  assert.equal(getBoardListings().length, 0);
 });
 
 test("fixture webhook from recorded Polar paid event inserts the listing", async () => {
@@ -444,7 +444,7 @@ test("/return markup shows paid only after a completed session", async () => {
     }),
   );
   assert.match(openHtml, /data-return="pending"/);
-  assert.equal(getBoardListings(WEEK).length, 0);
+  assert.equal(getBoardListings().length, 0);
 
   applyPaidEvent(checkout.completeSession(started.sessionId));
   const paidHtml = renderToStaticMarkup(
@@ -469,7 +469,7 @@ test("getPaymentPort shares the fixture across checkout and webhook", async () =
     {},
   );
   applyPaidEvent(paid);
-  assert.equal(getBoardListings(WEEK).length, 1);
+  assert.equal(getBoardListings().length, 1);
 });
 
 test("quoteBid charges the full first bid and only the raise difference", () => {
@@ -520,7 +520,7 @@ test("SPEC acceptance 5: #2 raises $5 → $12, pays $7, firstPaidAt unchanged", 
     }),
   );
 
-  const before = rankListings(getBoardListings(WEEK));
+  const before = rankListings(getBoardListings());
   assert.equal(before[0]?.briefUrl, "https://example.com/cover");
   assert.equal(before[1]?.briefUrl, "https://example.com/acme");
   assert.equal(before[1]?.bidUsd, 5);
@@ -579,7 +579,7 @@ test("SPEC acceptance 5: #2 raises $5 → $12, pays $7, firstPaidAt unchanged", 
   assert.equal(raised.firstPaidAt, firstPaidAt);
   assert.equal(raised.lastPaidAt, paid.paidAt);
 
-  const ranked = rankListings(getBoardListings(WEEK));
+  const ranked = rankListings(getBoardListings());
   assert.equal(ranked.length, 2);
   assert.equal(ranked[0]?.briefUrl, "https://example.com/acme");
   assert.equal(ranked[0]?.rank, 1);
@@ -619,7 +619,7 @@ test("different listing cannot steal by paying only the raise difference", async
     }),
   );
 
-  const ranked = rankListings(getBoardListings(WEEK));
+  const ranked = rankListings(getBoardListings());
   assert.equal(ranked.length, 2);
   assert.equal(ranked[0]?.briefUrl, "https://example.com/incumbent");
   assert.equal(ranked[0]?.bidUsd, 12);
@@ -763,7 +763,7 @@ test("same brief URL in a later UTC week pays a full new bid", () => {
     },
     amountUsd: 5,
     kind: "create",
-    paidAt: "2026-08-24T00:00:00.000Z",
+    paidAt: "2026-08-24T09:00:01.000Z",
   });
   assert.ok(thisWeek);
   assert.ok(nextWeek);

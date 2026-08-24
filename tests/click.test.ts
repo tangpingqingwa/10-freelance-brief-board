@@ -29,7 +29,7 @@ test("GET /click/:id 302s to the stripped brief URL and increments clicks", asyn
     },
     amountUsd: 5,
     kind: "create",
-    paidAt: "2026-08-17T09:00:00.000Z",
+    paidAt: new Date().toISOString(),
   });
   assert.ok(listing);
   assert.equal(listing.briefUrl, "https://example.com/acme");
@@ -49,7 +49,7 @@ test("GET /click/:id 302s to the stripped brief URL and increments clicks", asyn
   });
   assert.equal(again.status, 302);
   assert.equal(getListingById(listing.id)?.clicks, 2);
-  assert.equal(getBoardListings(WEEK.weekId)[0]?.clicks, 2);
+  assert.equal(getBoardListings()[0]?.clicks, 2);
 });
 
 test("unknown listing click is 404 and does not invent a hop", async () => {
@@ -74,13 +74,13 @@ test("board brief CTA uses the click route and does not label clicks as ratings"
     },
     amountUsd: 5,
     kind: "create",
-    paidAt: "2026-08-17T09:00:00.000Z",
+    paidAt: new Date().toISOString(),
   });
   assert.ok(listing);
   const html = renderToStaticMarkup(
     createElement(Board, {
       week: WEEK,
-      listings: rankListings(getBoardListings(WEEK.weekId)),
+      listings: rankListings(getBoardListings()),
     }),
   );
   assert.match(html, new RegExp(`href="/click/${listing.id}"`));

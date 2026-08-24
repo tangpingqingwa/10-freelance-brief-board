@@ -266,13 +266,18 @@ export function Board({ week, listings }: BoardProps) {
       data-week-empty={empty ? "true" : undefined}
       data-week-occupied={empty ? undefined : "true"}
       data-empty-ticket={empty ? "" : undefined}
+      data-rolling-week="true"
     >
       <header className="desk-mast">
         <p className="kicker">This week’s #1 freelance brief</p>
         <h1>Brief desk</h1>
         <p className="period-meta" data-week-id={week.weekId}>
-          Week {week.weekId}. Next reset {week.endsAt}. Rank is the bid. Budget,
-          deadline, and how a winner is chosen are public facts, not scores.
+          Week {week.weekId}. Window since {week.startsAt}. Rank is the bid.
+          Budget, deadline, and how a winner is chosen are public facts, not
+          scores.
+        </p>
+        <p className="week-window" data-rolling-week="true">
+          Rolling last 7 days. Not Monday 00:00 UTC.
         </p>
       </header>
 

@@ -1,6 +1,6 @@
 # Freelance Brief Board — Detailed Specification and Build Plan
 
-**Contract:** [SPEC.md](./SPEC.md) wins on ranking, weekly UTC reset, listing shape, ratings honesty, and errors.
+**Contract:** [SPEC.md](./SPEC.md) wins on ranking, rolling last-7-days week window, listing shape, ratings honesty, and errors.
 **This file** wins on stack, module boundaries, test layout, and the PR sequence.
 **Git:** [CONTRIBUTING.md](./CONTRIBUTING.md). Every `### PR N:` row is one squash-merged PR. `main` stays green.
 
@@ -26,22 +26,22 @@ Pay-to-rank clone of outbid.lol. Weekly public auction for the #1 freelance brie
 ## 2. Ranking and week
 
 ```
-weeks (id pk, starts_at, ends_at)          -- Monday 00:00 UTC
+weeks (id pk, starts_at, ends_at)          -- rolling last 7 days; weekId is a label
 listings (id, week_id, brief_key, buyer, budget_usd, deadline, winner_rule,
           brief_url, bid_usd, first_paid_at, clicks)
 payments (id, listing_id, polar_session, amount_usd, kind create|raise)
 ```
 
-Board query (current week only):
+Board query (rolling last 7 days only):
 
 ```
-WHERE week_id = current_week_utc()
+WHERE last_paid_at >= now - 7 days AND last_paid_at <= now
 ORDER BY bid_usd DESC, first_paid_at ASC, id ASC
 ```
 
-`current_week_utc()` is ISO week in UTC. Adding a craft lane later must not touch this `ORDER BY`.
+Rank does not filter by Monday 00:00 UTC `weekId`. Adding a craft lane later must not touch this `ORDER BY`.
 
-Identity key for raise: canonical `briefUrl` + `weekId`.
+Identity key for raise: canonical `briefUrl` still inside the rolling last-7-days window.
 
 `budget_usd` and `deadline` are stored and shown. They never appear in `ORDER BY`.
 
@@ -71,7 +71,7 @@ Identity key for raise: canonical `briefUrl` + `weekId`.
       healthz/route.ts
     core/
       rank.ts                  # ORDER BY contract
-      week.ts                  # Monday 00:00 UTC
+      week.ts                  # rolling last-7-days window; weekId label
       listing.ts               # buyer + budget + deadline + brief URL
       url.ts                   # strip tracking, reject chat/NSFW
       honesty.ts               # reject invented ratings / stars
@@ -102,7 +102,7 @@ No application `src/` in this docs PR.
 
 | Test | Assert |
 |---|---|
-| week | Monday 00:00 UTC included in the new week; Sunday still previous ISO week |
+| week | rolling last-7-days window; Monday 00:00 UTC does not drop a bid still inside 7 days |
 | rank | higher bid above; **older wins ties**; below-#1 still lists |
 | raise | $5 → $12 charges **$7**; other listing cannot steal by paying $7 |
 | listing | buyer + budget + deadline + brief URL required; rating field rejected |

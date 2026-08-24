@@ -1,4 +1,5 @@
-import { listPaid } from "./listings";
+import { listPaidRolling } from "./listings";
+import { bidInRollingWeek } from "./week";
 
 /** Rank is the bid. Budget and deadline are public facts; they do not sort. */
 
@@ -24,11 +25,17 @@ export type RankedListing = Listing & {
 
 /**
  * Display order: bidUsd DESC, firstPaidAt ASC (older wins ties), id ASC.
+ * When `now` is passed, only lastPaidAt inside the rolling last-7-days window ranks.
  * Does not read budget, deadline, winner rule, or clicks.
  */
-export function rankListings(listings: readonly Listing[]): RankedListing[] {
-  return listings
-    .slice()
+export function rankListings(
+  listings: readonly Listing[],
+  now?: Date,
+): RankedListing[] {
+  const live = now
+    ? listings.filter((row) => bidInRollingWeek(row.lastPaidAt, now))
+    : listings.slice();
+  return live
     .sort((a, b) => {
       if (a.bidUsd !== b.bidUsd) return b.bidUsd - a.bidUsd;
       if (a.firstPaidAt !== b.firstPaidAt) {
@@ -41,6 +48,6 @@ export function rankListings(listings: readonly Listing[]): RankedListing[] {
 }
 
 /** Live board has no paid rows until checkout lands. Never invent a #1 brief. */
-export function getBoardListings(weekId: string): Listing[] {
-  return listPaid(weekId);
+export function getBoardListings(now: Date = new Date()): Listing[] {
+  return listPaidRolling(now);
 }
