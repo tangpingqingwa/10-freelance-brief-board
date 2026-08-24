@@ -3149,6 +3149,153 @@ test("occupied Open this brief stays the first freelancer click; Write this tick
   assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
 });
 
+test("occupied later Write this ticket stays quieter than Open this brief", () => {
+  const css = readFileSync(join(process.cwd(), "src", "app", "board.css"), "utf8");
+  const openSize = css.match(
+    /\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const writeSize = css.match(
+    /\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const prizeSize = css.match(
+    /\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const bidSize = css.match(
+    /\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  assert.ok(openSize);
+  assert.ok(writeSize);
+  assert.ok(prizeSize);
+  assert.ok(bidSize);
+  assert.ok(Number(openSize[1]) > Number(writeSize[1]));
+  assert.ok(Number(prizeSize[1]) > Number(writeSize[1]));
+  assert.ok(Number(openSize[1]) > Number(bidSize[1]));
+  assert.match(css, /\.week-occupied \.desk-surface \{/);
+  assert.match(css, /\.week-occupied \.ticket-featured \.ticket-write-later/);
+  assert.match(
+    css,
+    /\.week-occupied \.desk-surface \.claim\.write-later\[data-write-later\]/,
+  );
+  assert.match(
+    css,
+    /\.week-occupied \.ticket-featured \.ticket-write-later a\.write-after-rule\[data-write-later-quiet\]/,
+  );
+  const laterFoot =
+    css.match(
+      /\.week-occupied \.ticket-featured \.ticket-write-later\s*\{[^}]*\}/,
+    )?.[0] ?? "";
+  assert.match(laterFoot, /border-top:\s*1px dashed var\(--rule\)/);
+  assert.doesNotMatch(laterFoot, /min-width:\s*1[0-9]/);
+  const laterHop =
+    css.match(
+      /\.week-occupied \.ticket-featured \.ticket-write-later a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*\}/,
+    )?.[0] ?? "";
+  assert.match(laterHop, /display:\s*inline/);
+  assert.match(laterHop, /border-bottom:\s*1px dashed var\(--rule\)/);
+  assert.match(laterHop, /color:\s*var\(--muted\)/);
+  assert.doesNotMatch(laterHop, /min-height:\s*[2-9]/);
+  assert.doesNotMatch(laterHop, /var\(--stamp\)/);
+  assert.doesNotMatch(css, /data-write-after-open-seven|data-open-after-write-six/);
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /class="board desk week-empty"/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.doesNotMatch(empty, /ticket-write-later/);
+  assert.doesNotMatch(empty, /data-write-later/);
+  assert.doesNotMatch(empty, /class="claim ticket-blank write-later"/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-write-later-quiet/);
+  assert.doesNotMatch(empty, /data-first-click="open"/);
+  assert.doesNotMatch(empty, /data-write-after-open-seven/);
+  assert.doesNotMatch(empty, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+          clicks: 4,
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+          clicks: 2,
+        }),
+      ]),
+    }),
+  );
+  const leadStart = occupied.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = occupied.indexOf('data-listing-id="lst_hopper"');
+  const claimAt = occupied.indexOf('id="claim"');
+  const lead = occupied.slice(leadStart, hopperStart);
+  const hopper = occupied.slice(hopperStart);
+  const prize = lead.indexOf('data-prize=""');
+  const winnerText = lead.indexOf("Best portfolio by Friday");
+  const firstClick = lead.indexOf('data-first-click="open"');
+  const openLead = lead.indexOf("Open this brief");
+  const foot = lead.indexOf('class="ticket-write-later"');
+  const writeQuiet = lead.indexOf('data-write-later-quiet=""');
+  const writeLabel = lead.indexOf("Write this ticket");
+  const formLater = occupied.indexOf('data-write-later=""', claimAt);
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(prize >= 0 && winnerText > prize);
+  assert.ok(firstClick >= 0 && openLead > firstClick);
+  assert.ok(foot > openLead);
+  assert.ok(writeQuiet > foot);
+  assert.ok(writeLabel > writeQuiet);
+  assert.ok(writeQuiet < hopperStart);
+  assert.ok(claimAt > leadStart && claimAt < hopperStart);
+  assert.ok(formLater > claimAt);
+  assert.match(lead, /class="ticket-write-later"/);
+  assert.match(lead, /data-write-later=""/);
+  assert.match(lead, /data-first-click="open"/);
+  assert.match(lead, /Open this brief/);
+  assert.match(lead, /Write this ticket/);
+  assert.match(lead, /data-prize=""/);
+  assert.match(lead, /data-rank-is-bid=""/);
+  assert.match(lead, /\$12/);
+  assert.match(lead, /4 clicks/);
+  assert.match(occupied, /class="claim ticket-blank write-later"/);
+  assert.match(occupied, /data-write-later=""/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, />Outbid</);
+  assert.match(occupied, /class="amount-field"/);
+  assert.doesNotMatch(hopper, /ticket-write-later/);
+  assert.doesNotMatch(hopper, /data-write-later/);
+  assert.doesNotMatch(hopper, /Write this ticket/);
+  assert.doesNotMatch(hopper, /Open this brief/);
+  assert.match(hopper, /Open brief/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(boardSource, /data-write-after-open-seven/);
+  assert.doesNotMatch(boardSource, /data-open-after-write-six/);
+  assert.match(boardSource, /ticket-write-later/);
+  assert.match(boardSource, /data-write-later/);
+  assert.match(formSource, /claim ticket-blank write-later/);
+  assert.match(formSource, /data-write-later=\{occupied \? "" : undefined\}/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+});
+
 test("empty week stays Claim #1 — Open / Write cannot leak", () => {
   const empty = renderToStaticMarkup(
     createElement(Board, { week: WEEK_META, listings: [] }),

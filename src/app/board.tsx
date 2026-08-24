@@ -181,24 +181,26 @@ export function ListingCard({
           </a>
         </p>
         {featured ? (
-          <p className="write-after-rule-wrap">
-            <a
-              className="write-after-rule"
-              href="#claim"
-              data-write-after-rule=""
-              data-write-after-open=""
-              data-write-after-open-two=""
-              data-write-after-open-three=""
-              data-write-after-open-four=""
-              data-write-after-open-five=""
-              data-write-after-open-six=""
-              data-write-later-quiet=""
-              aria-label="Write this ticket after the winner rule"
-            >
-              Write this ticket
-            </a>{" "}
-            after the winner rule. Paying less than #1 still lists.
-          </p>
+          <footer className="ticket-write-later" data-write-later="">
+            <p className="write-after-rule-wrap">
+              <a
+                className="write-after-rule"
+                href="#claim"
+                data-write-after-rule=""
+                data-write-after-open=""
+                data-write-after-open-two=""
+                data-write-after-open-three=""
+                data-write-after-open-four=""
+                data-write-after-open-five=""
+                data-write-after-open-six=""
+                data-write-later-quiet=""
+                aria-label="Write this ticket after the winner rule"
+              >
+                Write this ticket
+              </a>{" "}
+              after the winner rule. Paying less than #1 still lists.
+            </p>
+          </footer>
         ) : null}
       </div>
     </article>
