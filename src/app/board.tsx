@@ -1,13 +1,15 @@
 import React from "react";
 import { briefClickPath } from "../core/listing";
+import type { UnpaidTicket } from "../core/listings";
 import type { RankedListing } from "../core/rank";
-import { MIN_BID_USD } from "../core/rank";
+import { MIN_BID_USD, isPolarPaidListing } from "../core/rank";
 import type { UtcWeek } from "../core/week";
 import { OutbidForm } from "./outbid-form";
 
 type BoardProps = {
   week: UtcWeek;
   listings: readonly RankedListing[];
+  unpaid?: readonly UnpaidTicket[];
 };
 
 export function formatUsd(amount: number): string {
@@ -110,6 +112,9 @@ export function ListingCard({
   listing: RankedListing;
   featured?: boolean;
 }) {
+  if (!isPolarPaidListing(listing)) {
+    return null;
+  }
   if (!featured) {
     return <LaterRankTicket listing={listing} />;
   }
@@ -233,7 +238,9 @@ export function Leaderboard({
 }: {
   listings: readonly RankedListing[];
 }) {
-  const later = listings.filter((listing) => listing.rank !== 1);
+  const later = listings.filter(
+    (listing) => listing.rank !== 1 && isPolarPaidListing(listing),
+  );
   if (later.length === 0) {
     return null;
   }
@@ -249,13 +256,15 @@ export function Leaderboard({
   );
 }
 
-export function Board({ week, listings }: BoardProps) {
-  const featured = listings[0];
-  const rest = listings.slice(1);
+export function Board({ week, listings, unpaid = [] }: BoardProps) {
+  const paid = listings.filter(isPolarPaidListing);
+  const featured = paid[0];
+  const rest = paid.slice(1);
   const topBid = featured?.bidUsd ?? 0;
   const defaultAmount = topBid > 0 ? topBid + 1 : MIN_BID_USD;
 
   const empty = featured === undefined;
+  const leftoverUnpaid = unpaid.length > 0;
 
   return (
     <main
@@ -266,6 +275,7 @@ export function Board({ week, listings }: BoardProps) {
       data-week-empty={empty ? "true" : undefined}
       data-week-occupied={empty ? undefined : "true"}
       data-empty-ticket={empty ? "" : undefined}
+      data-unpaid-off={empty && leftoverUnpaid ? "" : undefined}
     >
       <header className="desk-mast">
         <p className="kicker">This week’s #1 freelance brief</p>
@@ -286,7 +296,7 @@ export function Board({ week, listings }: BoardProps) {
               <h2 id="spike-heading">This week’s #1</h2>
               <ListingCard listing={featured} featured />
             </section>
-            <OutbidForm defaultAmount={defaultAmount} occupied />
+            <OutbidForm defaultAmount={defaultAmount} occupied unpaidOff />
           </>
         ) : (
           <>
@@ -299,11 +309,14 @@ export function Board({ week, listings }: BoardProps) {
                     This week’s board is empty. No buyer has paid to pin a
                     ticket. There is no invented #1 brief and no invented
                     ratings. There is no sample gig.
+                    {leftoverUnpaid
+                      ? " An unpaid Polar checkout stays off this desk until Polar reports paid."
+                      : null}
                   </p>
                 </div>
               </div>
             </section>
-            <OutbidForm defaultAmount={defaultAmount} />
+            <OutbidForm defaultAmount={defaultAmount} unpaidOff={leftoverUnpaid} />
           </>
         )}
       </div>

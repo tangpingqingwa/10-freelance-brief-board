@@ -270,7 +270,33 @@ a:hover {
 .week-empty [data-later-rank],
 .week-empty [data-later-pack],
 .week-occupied .empty-week,
-.week-occupied [data-empty-week] {
+.week-occupied [data-empty-week],
+.board[data-empty-ticket] [data-unpaid-ticket],
+.week-empty[data-empty-ticket] [data-unpaid-ticket],
+.week-empty [data-unpaid-ticket],
+.week-empty .unpaid-ticket,
+.board[data-unpaid-off] .ticket-featured,
+.board[data-unpaid-off] .prize-before-price,
+.board[data-unpaid-off] .open-this-brief,
+.board[data-unpaid-off] [data-prize],
+.board[data-unpaid-off] [data-prize-before-price],
+.board[data-unpaid-off] [data-rank-is-bid],
+.board[data-unpaid-off] [data-open-brief],
+.board[data-unpaid-off] [data-first-click="open"],
+.board[data-unpaid-off] .later-pack,
+.board[data-unpaid-off] .ticket-later,
+.board[data-unpaid-off] [data-later-rank],
+.week-empty[data-unpaid-off] .ticket-featured,
+.week-empty[data-unpaid-off] .prize-before-price,
+.week-empty[data-unpaid-off] .open-this-brief,
+.week-empty[data-unpaid-off] [data-prize],
+.week-empty[data-unpaid-off] [data-prize-before-price],
+.week-empty[data-unpaid-off] [data-rank-is-bid],
+.week-empty[data-unpaid-off] [data-open-brief],
+.week-empty[data-unpaid-off] [data-first-click="open"],
+.week-empty[data-unpaid-off] .later-pack,
+.week-empty[data-unpaid-off] .ticket-later,
+.week-empty[data-unpaid-off] [data-later-rank] {
   display: none;
 }
 
@@ -1098,6 +1124,24 @@ a:hover {
 }
 
 /* End empty-week later-write. Occupied Outbid stays on the ticket rail. */
+
+/* Unpaid Polar checkout stays off the ticket desk. Occupied prize is Polar-paid only. */
+.claim-note[data-unpaid-off] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.week-empty .claim-note[data-unpaid-off] {
+  border-top: 1px dashed var(--rule);
+  padding-top: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.week-occupied .claim.write-later[data-write-later] .claim-note[data-unpaid-off] {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+}
 
 .bid-row {
   display: flex;

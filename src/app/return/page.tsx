@@ -48,8 +48,7 @@ export default async function ReturnPage({ searchParams }: ReturnPageProps) {
     <main className="return-page" data-return="pending">
       <h1>Checkout pending</h1>
       <p>
-        Payment is not complete. Rank updates only after a paid webhook or
-        fixture event. This page does not trust the query string alone.
+        Payment is not complete. Rank updates only after Polar reports paid. An unpaid or abandoned ticket stays off the desk. This page does not trust the query string alone.
       </p>
       <p>
         <a href="/">Back to the board</a>

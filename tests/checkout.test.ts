@@ -23,8 +23,15 @@ import {
   setPaymentPort,
 } from "../src/billing/select";
 import { ListingError, quoteBid } from "../src/core/listing";
-import { applyPaidEvent, listPaid, resetListings } from "../src/core/listings";
+import {
+  applyPaidEvent,
+  listPaid,
+  listUnpaid,
+  rememberUnpaidCheckout,
+  resetListings,
+} from "../src/core/listings";
 import { getBoardListings, MIN_BID_USD, rankListings } from "../src/core/rank";
+import { Board } from "../src/app/board";
 import { currentWeekUtc } from "../src/core/week";
 
 const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "polar");
@@ -123,6 +130,13 @@ test("abandoned checkout does not list", async () => {
   const started = await checkout.createCheckout(
     parseCheckoutInput(draftFields({ buyer: "Ghost", briefUrl: "https://example.com/ghost" })),
   );
+  rememberUnpaidCheckout({
+    sessionId: started.sessionId,
+    listingDraft: parseCheckoutInput(
+      draftFields({ buyer: "Ghost", briefUrl: "https://example.com/ghost" }),
+    ).listingDraft,
+  });
+  assert.equal(listUnpaid(WEEK).length, 1);
   checkout.abandonSession(started.sessionId);
   await assert.rejects(
     () =>
@@ -698,6 +712,70 @@ test("unpaid raise checkout leaves the current bid unchanged", async () => {
   assert.equal(listed[0]?.id, first.listing.id);
   assert.equal(listed[0]?.bidUsd, 5);
   assert.equal(listed[0]?.firstPaidAt, first.listing.firstPaidAt);
+});
+
+test("unpaid Polar checkout stays off the ticket desk until Polar reports paid", async () => {
+  const checkout = new FixturePaymentPort();
+  setPaymentPort(checkout);
+  const response = await checkoutPost(
+    new Request("http://localhost/api/checkout", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+      },
+      body: formBody(
+        draftFields({
+          buyer: "Ghost Studio",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/ghost",
+        }),
+      ),
+    }),
+  );
+  assert.equal(response.status, 200);
+  const started = (await response.json()) as { sessionId: string };
+  assert.ok(started.sessionId);
+  assert.equal(listPaid(WEEK).length, 0);
+  assert.equal(getBoardListings(WEEK).length, 0);
+  const leftover = listUnpaid(WEEK);
+  assert.equal(leftover.length, 1);
+  assert.equal(leftover[0]?.buyer, "Ghost Studio");
+  assert.equal(leftover[0]?.winnerRule, "Best portfolio by Friday");
+
+  const html = renderToStaticMarkup(
+    createElement(Board, {
+      week: currentWeekUtc(),
+      listings: rankListings(getBoardListings(WEEK)),
+      unpaid: leftover,
+    }),
+  );
+  assert.match(html, /No paid brief/);
+  assert.match(html, /data-unpaid-off=""/);
+  assert.match(html, /until Polar reports paid/);
+  assert.match(html, /Claim #1 for/);
+  assert.doesNotMatch(html, /Ghost Studio/);
+  assert.doesNotMatch(html, /Best portfolio by Friday/);
+  assert.doesNotMatch(html, /ticket-featured/);
+  assert.doesNotMatch(html, /data-prize=/);
+  assert.doesNotMatch(html, /Open this brief/);
+
+  checkout.abandonSession(started.sessionId);
+  const expired = await webhookPost(
+    new Request("http://localhost/api/polar/webhook", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        type: "checkout.updated",
+        data: { id: started.sessionId, status: "expired" },
+      }),
+    }),
+  );
+  assert.equal(expired.status, 200);
+  assert.deepEqual(await expired.json(), { received: true, applied: false });
+  assert.equal(listPaid(WEEK).length, 0);
+  assert.equal(listUnpaid(WEEK).length, 0);
+  assert.equal(getBoardListings(WEEK).length, 0);
 });
 
 test("same canonical brief URL in the same week is a raise", async () => {

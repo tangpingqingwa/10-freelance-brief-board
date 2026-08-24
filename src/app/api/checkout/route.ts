@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CheckoutError, parseCheckoutInput } from "../../../billing/port";
 import { getPaymentPort } from "../../../billing/select";
+import { rememberUnpaidCheckout } from "../../../core/listings";
 
 export async function POST(request: Request): Promise<Response> {
   const origin = new URL(request.url).origin;
@@ -14,6 +15,10 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const input = parseCheckoutInput(body);
     const started = await getPaymentPort().createCheckout(input);
+    rememberUnpaidCheckout({
+      sessionId: started.sessionId,
+      listingDraft: input.listingDraft,
+    });
     if (wantsJson(request)) {
       return NextResponse.json(started);
     }

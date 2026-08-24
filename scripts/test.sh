@@ -1265,6 +1265,149 @@ if ! awk '
 ' src/app/board.css; then
   fail "empty later-write CSS must sit after occupied prize / Open / later Write"
 fi
+
+echo "== UX: unpaid stays off the ticket desk — No paid brief until Polar reports paid =="
+grep -q 'export function isPolarPaidListing' src/core/rank.ts \
+  || fail "rank.ts must export isPolarPaidListing"
+grep -q 'filter(isPolarPaidListing)' src/core/rank.ts \
+  || fail "rankListings must drop unpaid Polar checkout"
+grep -q 'listPaid(weekId)' src/core/rank.ts \
+  || fail "live board must load Polar-paid listings only"
+grep -q 'export function listUnpaid' src/core/listings.ts \
+  || fail "listings.ts must expose unpaid Polar checkout off the desk"
+grep -q 'export function rememberUnpaidCheckout' src/core/listings.ts \
+  || fail "listings.ts must remember unpaid Polar checkout"
+grep -q 'isPolarPaidListing' src/core/listings.ts \
+  || fail "listPaid must keep Polar-paid rows only"
+grep -q 'rememberUnpaidCheckout' src/app/api/checkout/route.ts \
+  || fail "checkout must remember unpaid Polar checkout off the desk"
+grep -q 'forgetUnpaidCheckout' src/app/api/polar/webhook/route.ts \
+  || fail "abandoned Polar webhook must forget unpaid checkout"
+grep -q 'listUnpaid' src/app/page.tsx \
+  || fail "board page must load unpaid Polar leftover off the desk"
+grep -q 'data-unpaid-off' src/app/board.tsx \
+  || fail "empty leftover Polar checkout must stamp unpaid-off"
+grep -q 'An unpaid Polar checkout stays off this desk until Polar reports paid' src/app/board.tsx \
+  || fail "empty leftover must say unpaid Polar checkout stays off this desk"
+grep -q 'data-unpaid-off' src/app/outbid-form.tsx \
+  || fail "claim form must stamp unpaid Polar checkout stays off the desk"
+grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
+  || fail "claim form must say unpaid Polar checkout stays off this desk"
+grep -q 'An abandoned ticket is not #1' src/app/outbid-form.tsx \
+  || fail "claim form must say an abandoned ticket is not #1"
+grep -q 'Polar reports paid' src/app/return/page.tsx \
+  || fail "return page must wait for Polar paid, not the query string"
+grep -Fq '.claim-note[data-unpaid-off]' src/app/board.css \
+  || fail "CSS must make unpaid-off certain on the claim note"
+grep -Fq '.board[data-unpaid-off] .ticket-featured' src/app/board.css \
+  || fail "unpaid leftover CSS must hide featured prize chrome"
+grep -Fq '.board[data-unpaid-off] [data-prize]' src/app/board.css \
+  || fail "unpaid leftover CSS must hide prize chrome"
+grep -Fq '.board[data-unpaid-off] .open-this-brief' src/app/board.css \
+  || fail "unpaid leftover CSS must hide Open this brief"
+grep -Fq '.week-empty[data-unpaid-off] [data-prize]' src/app/board.css \
+  || fail "empty unpaid leftover CSS must hide prize chrome"
+grep -Fq '.week-empty[data-unpaid-off] .later-pack' src/app/board.css \
+  || fail "empty unpaid leftover CSS must hide later-pack"
+unpaid_hide="$(awk '/^\.board\[data-unpaid-off\] \.ticket-featured,/,/^\}/' src/app/board.css)"
+echo "$unpaid_hide" | grep -q 'display: none' \
+  || fail "unpaid leftover CSS must hide occupied prize / Open / later-pack"
+echo "$unpaid_hide" | grep -q 'data-prize' \
+  || fail "unpaid leftover CSS must hide data-prize"
+echo "$unpaid_hide" | grep -q 'open-this-brief' \
+  || fail "unpaid leftover CSS must hide Open this brief"
+echo "$unpaid_hide" | grep -q 'later-pack' \
+  || fail "unpaid leftover CSS must hide later-pack"
+if echo "$unpaid_hide" | grep -q 'background:'; then
+  fail "unpaid leftover must hide occupied chrome, not recolor the desk"
+fi
+grep -q 'unpaid stays off the ticket desk' tests/rank.test.ts \
+  || fail "rank tests must cover unpaid Polar checkout off the ticket desk"
+grep -q 'unpaid Polar checkout never ranks as #1' tests/rank.test.ts \
+  || fail "rank tests must drop unpaid Polar checkout from rankListings"
+grep -q 'unpaid Polar checkout stays off the ticket desk until Polar reports paid' tests/checkout.test.ts \
+  || fail "checkout tests must keep unpaid Polar checkout off the desk"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "unpaid-off cut must keep occupied winner rule as the prize"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "unpaid-off cut must keep occupied Open this brief"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "unpaid-off cut must keep occupied Open this brief the first click"
+grep -q 'data-rank-is-bid' src/app/board.tsx \
+  || fail "unpaid-off cut must keep rank as the bid"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep occupied Write this ticket"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "unpaid-off cut must keep empty No paid brief"
+grep -q 'Then the brief URL' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep empty later brief URL"
+grep -q 'data-first-click="claim"' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep empty Claim #1 the first click"
+grep -q 'function LaterRankTicket' src/app/board.tsx \
+  || fail "unpaid-off cut must keep later-rank tickets quieter than #1"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "unpaid-off cut must not rebuild the ticket desk"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "unpaid-off cut must keep Outbid"
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "unpaid-off must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
+  fail "unpaid-off must not rebuild the ticket desk into a long form"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Open this brief'; then
+  fail "empty week must not invent Open this brief"
+fi
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
+  fail "empty week must not stamp prize before price"
+fi
+if awk '/function EmptyClaimFirstWrite/,/export function OutbidForm/' src/app/outbid-form.tsx | grep -q 'Write this ticket'; then
+  fail "empty Claim #1 must not invent Write this ticket"
+fi
+python3 - src/app/board.css src/app/board.tsx src/app/outbid-form.tsx <<'PY' || fail "unpaid leftover must stay off the desk without recolor or a new hop"
+import re
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+board = open(sys.argv[2], encoding="utf-8").read()
+form = open(sys.argv[3], encoding="utf-8").read()
+if "data-write-after-open-seven" in css or "data-open-after-write-six" in css:
+    raise SystemExit(1)
+if "data-write-after-open-seven" in board or "data-open-after-write-six" in board:
+    raise SystemExit(1)
+if "data-write-after-open-seven" in form or "data-open-after-write-six" in form:
+    raise SystemExit(1)
+hide = re.search(r"\.board\[data-unpaid-off\] \.ticket-featured,[\s\S]*?display: none;", css)
+if not hide:
+    raise SystemExit(1)
+if "background:" in hide.group(0):
+    raise SystemExit(1)
+note = re.search(r"\.claim-note\[data-unpaid-off\]\s*\{[^}]*\}", css)
+if not note or "font-weight: 600" not in note.group(0):
+    raise SystemExit(1)
+if "background:" in note.group(0):
+    raise SystemExit(1)
+if "isPolarPaidListing" not in board or "data-unpaid-off" not in board:
+    raise SystemExit(1)
+if "Unpaid Polar checkout stays off this desk" not in form:
+    raise SystemExit(1)
+if "An abandoned ticket is not #1" not in form:
+    raise SystemExit(1)
+PY
+if ! awk '
+  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
+  /ticket-featured \.open-this-brief \{/ { open=NR }
+  /Empty week: Brief URL is a later write after Claim #1 \/ Outbid/ { later=NR }
+  /Unpaid Polar checkout stays off the ticket desk/ { unpaid=NR }
+  END { exit !(prize && open && later && unpaid && prize < open && open < later && later < unpaid) }
+' src/app/board.css; then
+  fail "unpaid-off CSS must sit after occupied prize / Open / empty later-write"
+fi
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -1444,6 +1587,12 @@ if [[ -f package.json ]]; then
     || fail "empty-week Claim #1 then later brief URL test did not run"
   grep -q 'occupied later-rank tickets stay quieter than #1' "$test_log" \
     || fail "occupied later-rank quieter-than-#1 test did not run"
+  grep -q 'unpaid stays off the ticket desk' "$test_log" \
+    || fail "unpaid Polar leftover off-desk UX test did not run"
+  grep -q 'unpaid Polar checkout never ranks as #1' "$test_log" \
+    || fail "unpaid Polar checkout rank gate test did not run"
+  grep -q 'unpaid Polar checkout stays off the ticket desk until Polar reports paid' "$test_log" \
+    || fail "unpaid Polar checkout fixture test did not run"
 fi
 
 echo "OK: buildable and testable"
