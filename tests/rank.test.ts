@@ -711,7 +711,7 @@ test("occupied week makes writing a new ticket after the winner rule the buyer h
   assert.match(html, /data-write-after-rule=""/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Paying less than #1 still lists/);
@@ -794,6 +794,7 @@ test("empty week does not stamp Write this ticket over No paid brief", () => {
   assert.doesNotMatch(html, /data-write-after-open-five/);
   assert.doesNotMatch(html, /data-write-after-open-six/);
   assert.doesNotMatch(html, /after the winner rule/);
+  assert.doesNotMatch(html, /data-write-later-quiet/);
   assert.doesNotMatch(html, /data-first-click="open"/);
   assert.doesNotMatch(html, /data-open-after-write-first/);
   assert.doesNotMatch(html, /data-first-read="open"/);
@@ -917,7 +918,7 @@ test("occupied week concentrates writing a new ticket after Open this brief wins
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -1058,7 +1059,7 @@ test("occupied week concentrates opening the paid #1 brief after Write this tick
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -1228,7 +1229,7 @@ test("occupied week concentrates writing a new ticket after Open this brief is r
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -1398,7 +1399,7 @@ test("occupied week concentrates opening the paid #1 brief after Write this tick
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -1568,7 +1569,7 @@ test("occupied week concentrates writing a new ticket after Open this brief is r
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -1738,7 +1739,7 @@ test("occupied week concentrates opening the paid #1 brief after Write this tick
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -1908,7 +1909,7 @@ test("occupied week concentrates writing a new ticket after Open this brief is r
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -2078,7 +2079,7 @@ test("occupied week concentrates opening the paid #1 brief after Write this tick
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -2248,7 +2249,7 @@ test("occupied week concentrates writing a new ticket after Open this brief is r
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -2418,7 +2419,7 @@ test("occupied week concentrates opening the paid #1 brief after Write this tick
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -2588,7 +2589,7 @@ test("occupied week concentrates writing a new ticket after Open this brief is r
   assert.match(html, /href="\/click\/lst_lead"/);
   assert.match(
     html,
-    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""/,
+    /class="write-after-rule"[^>]*href="#claim"[^>]*data-write-after-rule=""[^>]*data-write-after-open=""[^>]*data-write-after-open-two=""[^>]*data-write-after-open-three=""[^>]*data-write-after-open-four=""[^>]*data-write-after-open-five=""[^>]*data-write-after-open-six=""[^>]*data-write-later-quiet=""/,
   );
   assert.match(html, /after the winner rule/);
   assert.match(html, /Write this ticket/);
@@ -2772,6 +2773,7 @@ test("empty week stays Claim #1 + No paid brief without prize / Write / Open", (
   assert.doesNotMatch(empty, /data-open-after-write-first/);
   assert.doesNotMatch(empty, /data-write-after-open-seven/);
   assert.doesNotMatch(empty, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, /data-write-later-quiet/);
   assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
 
   assert.doesNotMatch(occupied, /data-empty-ticket/);
@@ -2783,6 +2785,7 @@ test("empty week stays Claim #1 + No paid brief without prize / Write / Open", (
   assert.match(occupied, /data-budget-later=""/);
   assert.match(occupied, /Open this brief/);
   assert.match(occupied, /Write this ticket/);
+  assert.match(occupied, /data-write-later-quiet=""/);
   assert.match(occupied, /Claim #1 for/);
   assert.match(occupied, /\$12/);
   assert.doesNotMatch(occupied, /data-write-after-open-seven/);
@@ -2812,6 +2815,10 @@ test("empty week stays Claim #1 + No paid brief without prize / Write / Open", (
   assert.match(
     cssSource,
     /\.board\[data-empty-ticket\] \[data-first-click="open"\]/,
+  );
+  assert.match(
+    cssSource,
+    /\.board\[data-empty-ticket\] \[data-write-later-quiet\]/,
   );
   const emptyRule =
     cssSource.match(/\.board\[data-empty-ticket\][\s\S]*?\n\}/)?.[0] ?? "";
@@ -3009,6 +3016,133 @@ test("occupied #1 rank is the bid; project budget stays a later fact", () => {
   assert.equal((occupied.match(/data-rank-is-bid=""/g) ?? []).length, 1);
   assert.equal((occupied.match(/data-rank-bid=""/g) ?? []).length, 1);
   assert.equal((occupied.match(/data-budget-later=""/g) ?? []).length, 1);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+});
+
+test("occupied Open this brief stays the first freelancer click; Write this ticket recedes", () => {
+  const css = readFileSync(join(process.cwd(), "src", "app", "board.css"), "utf8");
+  const openSize = css.match(
+    /\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const writeSize = css.match(
+    /\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const bidSize = css.match(
+    /\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const budgetSize = css.match(
+    /\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  const prizeSize = css.match(
+    /\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem/,
+  );
+  assert.ok(openSize);
+  assert.ok(writeSize);
+  assert.ok(bidSize);
+  assert.ok(budgetSize);
+  assert.ok(prizeSize);
+  assert.ok(Number(openSize[1]) > Number(writeSize[1]));
+  assert.ok(Number(openSize[1]) > Number(bidSize[1]));
+  assert.ok(Number(openSize[1]) > Number(budgetSize[1]));
+  assert.ok(Number(prizeSize[1]) > Number(bidSize[1]));
+  assert.match(
+    css,
+    /\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*color:\s*var\(--muted\)/,
+  );
+  assert.doesNotMatch(
+    css,
+    /\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*color:\s*var\(--stamp\)/,
+  );
+  assert.match(css, /\.write-this-ticket\[data-write-later-quiet\]/);
+  assert.match(css, /\.board\[data-empty-ticket\] \[data-write-later-quiet\]/);
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.doesNotMatch(empty, /data-write-later-quiet/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-first-click="open"/);
+  assert.doesNotMatch(empty, /data-write-after-open-seven/);
+  assert.doesNotMatch(empty, /data-open-after-write-six/);
+
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          budgetUsd: 3200,
+          deadline: "2026-09-15",
+          winnerRule: "Best portfolio by Friday",
+          briefUrl: "https://example.com/lead",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T00:00:00.000Z",
+          clicks: 4,
+        }),
+        listing({
+          id: "lst_hopper",
+          buyer: "Hopper Studio",
+          budgetUsd: 800,
+          deadline: "2026-10-01",
+          winnerRule: "First qualified",
+          briefUrl: "https://example.com/hopper",
+          bidUsd: 6,
+          firstPaidAt: "2026-08-18T00:00:00.000Z",
+          clicks: 2,
+        }),
+      ]),
+    }),
+  );
+  const leadStart = occupied.indexOf('data-listing-id="lst_lead"');
+  const hopperStart = occupied.indexOf('data-listing-id="lst_hopper"');
+  const claimAt = occupied.indexOf('id="claim"');
+  const lead = occupied.slice(leadStart, hopperStart);
+  const hopper = occupied.slice(hopperStart);
+  const prize = lead.indexOf('data-prize=""');
+  const winnerText = lead.indexOf("Best portfolio by Friday");
+  const budgetLater = lead.indexOf('data-budget-later=""');
+  const rankBid = lead.indexOf('data-rank-bid=""');
+  const firstClick = lead.indexOf('data-first-click="open"');
+  const openLead = lead.indexOf("Open this brief");
+  const writeQuiet = lead.indexOf('data-write-later-quiet=""');
+  const writeLabel = lead.indexOf("Write this ticket");
+  const formQuiet = occupied.indexOf('data-write-later-quiet=""', claimAt);
+  assert.ok(leadStart >= 0 && hopperStart > leadStart);
+  assert.ok(prize >= 0 && winnerText > prize);
+  assert.ok(budgetLater >= 0 && budgetLater < prize);
+  assert.ok(rankBid > winnerText && rankBid < firstClick);
+  assert.ok(firstClick >= 0 && openLead > firstClick);
+  assert.ok(writeQuiet > openLead);
+  assert.ok(writeLabel > writeQuiet);
+  assert.ok(writeQuiet < hopperStart);
+  assert.ok(formQuiet > claimAt);
+  assert.match(lead, /data-first-click="open"/);
+  assert.match(lead, /Open this brief/);
+  assert.match(lead, /data-write-later-quiet=""/);
+  assert.match(lead, /href="#claim"/);
+  assert.match(lead, /data-prize=""/);
+  assert.match(lead, /data-rank-is-bid=""/);
+  assert.match(lead, /data-budget-later=""/);
+  assert.match(lead, /Project budget, not the bid/);
+  assert.match(lead, /\$12/);
+  assert.match(lead, /4 clicks/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, />Outbid</);
+  assert.match(occupied, /Write this ticket/);
+  assert.doesNotMatch(hopper, /data-write-later-quiet/);
+  assert.doesNotMatch(hopper, /Open this brief/);
+  assert.doesNotMatch(hopper, /data-first-click="open"/);
+  assert.doesNotMatch(hopper, /Write this ticket/);
+  assert.match(hopper, /Open brief/);
+  assert.equal((occupied.match(/data-first-click="open"/g) ?? []).length, 1);
+  assert.equal((occupied.match(/data-write-later-quiet=""/g) ?? []).length, 2);
   assert.doesNotMatch(occupied, /data-write-after-open-seven/);
   assert.doesNotMatch(occupied, /data-open-after-write-six/);
   assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
