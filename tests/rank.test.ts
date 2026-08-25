@@ -3728,7 +3728,7 @@ test("occupied later-rank tickets stay quieter than #1 — winner rule stays the
   assert.match(boardSource, /className="card ticket ticket-later"/);
   assert.match(boardSource, /data-later-rank=""/);
   assert.match(boardSource, /data-later-pack=""/);
-  assert.match(boardSource, /These tickets are not this week’s #1 prize/);
+  assert.match(boardSource, /These tickets are not the last 7 days’ #1 prize/);
   assert.match(boardSource, /data-first-click=\{featured \? "open" : undefined\}/);
   assert.match(boardSource, /data-prize=/);
   assert.match(boardSource, /data-rank-is-bid/);
@@ -3745,7 +3745,7 @@ test("occupied later-rank tickets stay quieter than #1 — winner rule stays the
   assert.doesNotMatch(empty, /ticket-later/);
   assert.doesNotMatch(empty, /later-open/);
   assert.doesNotMatch(empty, /Tickets on the desk/);
-  assert.doesNotMatch(empty, /These tickets are not this week’s #1 prize/);
+  assert.doesNotMatch(empty, /These tickets are not the last 7 days’ #1 prize/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /Write this ticket/);
   assert.doesNotMatch(empty, /data-prize=/);
@@ -3779,7 +3779,7 @@ test("occupied later-rank tickets stay quieter than #1 — winner rule stays the
   assert.doesNotMatch(onlyOne, /data-later-rank/);
   assert.doesNotMatch(onlyOne, /data-later-pack/);
   assert.doesNotMatch(onlyOne, /Tickets on the desk/);
-  assert.doesNotMatch(onlyOne, /These tickets are not this week’s #1 prize/);
+  assert.doesNotMatch(onlyOne, /These tickets are not the last 7 days’ #1 prize/);
   assert.doesNotMatch(onlyOne, /data-later-open/);
 
   const laterCard = renderToStaticMarkup(
@@ -3896,7 +3896,7 @@ test("occupied later-rank tickets stay quieter than #1 — winner rule stays the
   assert.doesNotMatch(lead, /data-later-rank/);
   assert.doesNotMatch(lead, /ticket-later/);
   assert.match(occupied, /class="hopper later-pack"/);
-  assert.match(occupied, /These tickets are not this week’s #1 prize/);
+  assert.match(occupied, /These tickets are not the last 7 days’ #1 prize/);
   assert.match(occupied, /Tickets on the desk/);
   assert.match(occupied, /Claim #1 for/);
   assert.match(occupied, />Outbid</);
@@ -4039,7 +4039,7 @@ test("unpaid stays off the ticket desk — No paid brief until Polar reports pai
   assert.doesNotMatch(leftover, /data-first-click="open"/);
   assert.doesNotMatch(leftover, /data-later-rank/);
   assert.doesNotMatch(leftover, /data-later-pack/);
-  assert.doesNotMatch(leftover, /These tickets are not this week’s #1 prize/);
+  assert.doesNotMatch(leftover, /These tickets are not the last 7 days’ #1 prize/);
   assert.doesNotMatch(leftover, /data-write-after-open-seven/);
   assert.doesNotMatch(leftover, /data-open-after-write-six/);
   assert.doesNotMatch(leftover, RATINGS_FORBIDDEN);
@@ -4106,7 +4106,7 @@ test("unpaid stays off the ticket desk — No paid brief until Polar reports pai
   assert.match(occupied, /Write this ticket/);
   assert.match(occupied, /ticket-write-later/);
   assert.match(occupied, /data-later-rank=""/);
-  assert.match(occupied, /These tickets are not this week’s #1 prize/);
+  assert.match(occupied, /These tickets are not the last 7 days’ #1 prize/);
   assert.match(occupied, /Claim #1 for/);
   assert.match(occupied, />Outbid</);
   assert.match(occupied, /Unpaid Polar checkout stays off this desk/);
@@ -4381,7 +4381,7 @@ test("occupied ticket desk keeps one first click — Open this brief, Claim stay
   assert.match(occupied, /data-prize=""/);
   assert.match(occupied, /data-rank-is-bid=""/);
   assert.match(occupied, /ticket-write-later/);
-  assert.match(occupied, /These tickets are not this week’s #1 prize/);
+  assert.match(occupied, /These tickets are not the last 7 days’ #1 prize/);
   assert.match(occupied, /Rolling last 7 days\. Not Monday 00:00 UTC\./);
   assert.match(lead, /Open this brief/);
   assert.match(lead, /Best portfolio by Friday/);
@@ -4446,3 +4446,77 @@ test("occupied raise identity is last-7-days, not this week", () => {
   assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
   assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
 });
+
+test("occupied desk chrome names last-7-days, not this week", () => {
+  assert.match(boardSource, /The last 7 days’ #1 freelance brief/);
+  assert.match(boardSource, /The last 7 days’ #1/);
+  assert.match(boardSource, /These tickets are not the last 7 days’ #1 prize/);
+  assert.match(boardSource, /This week’s #1 freelance brief/);
+  assert.match(boardSource, /This week’s board is empty/);
+  assert.doesNotMatch(boardSource, /These tickets are not this week’s #1 prize/);
+  assert.doesNotMatch(
+    boardSource,
+    /data-write-after-open-seven|data-open-after-write-six|data-write-after-open-N/,
+  );
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /This week’s #1 freelance brief/);
+  assert.match(empty, /This week’s #1/);
+  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, /data-first-click="claim"/);
+  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /These tickets are not the last 7 days’ #1 prize/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-prize=/);
+
+  const sundayPay = listing({
+    id: "lst_lead",
+    buyer: "Lead Studio",
+    weekId: "2026-W33",
+    bidUsd: 12,
+    firstPaidAt: "2026-08-16T12:00:00.000Z",
+    lastPaidAt: "2026-08-16T12:00:00.000Z",
+    winnerRule: "Best portfolio by Friday",
+    briefUrl: "https://example.com/lead",
+  });
+  const hopper = listing({
+    id: "lst_hopper",
+    buyer: "Hopper Studio",
+    weekId: "2026-W33",
+    bidUsd: 6,
+    firstPaidAt: "2026-08-16T13:00:00.000Z",
+    lastPaidAt: "2026-08-16T13:00:00.000Z",
+    winnerRule: "First qualified",
+    briefUrl: "https://example.com/hopper",
+  });
+  const monday = new Date("2026-08-17T00:00:00.000Z");
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: currentWeekUtc(monday),
+      listings: rankListings([sundayPay, hopper], monday),
+    }),
+  );
+  assert.match(occupied, /The last 7 days’ #1 freelance brief/);
+  assert.match(occupied, /The last 7 days’ #1/);
+  assert.match(occupied, /These tickets are not the last 7 days’ #1 prize/);
+  assert.doesNotMatch(occupied, /This week’s #1/);
+  assert.doesNotMatch(occupied, /this week’s #1 prize/i);
+  assert.match(occupied, /data-desk-surface="occupied"/);
+  assert.match(occupied, /data-listing-id="lst_lead"/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, /Already on the last 7 days\?/);
+  assert.doesNotMatch(occupied, /data-first-click="claim"/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+});
+
