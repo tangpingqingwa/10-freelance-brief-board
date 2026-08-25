@@ -105,6 +105,9 @@ test("about and rules state min $5, older wins ties, raise pays difference, week
   assert.match(about, /English/);
   assert.match(about, /USD/);
   assert.match(about, /global/i);
+  assert.match(about, /last 7 days’ #1 freelance brief/);
+  assert.match(about, /rolling last 7 days/);
+  assert.doesNotMatch(about, /weekly public auction/i);
 
   assert.match(rules, /data-page="rules"/);
   assert.match(rules, /\$5/);

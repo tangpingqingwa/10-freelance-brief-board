@@ -2317,6 +2317,111 @@ if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-fo
   fail "document chrome must not rebuild the ticket desk into a long form"
 fi
 
+echo "== UX: about page names last-7-days — not a weekly auction =="
+grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
+  || fail "about meta must name last-7-days, not a weekly auction"
+grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
+  || fail "about lead must name last-7-days, not a weekly auction"
+if grep -q 'Weekly public auction' src/app/about/page.tsx; then
+  fail "about must not tax an empty Monday tab as a weekly auction"
+fi
+if grep -q 'weekly public auction' src/app/about/page.tsx; then
+  fail "about lead must not tax an empty Monday tab as a weekly auction"
+fi
+grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
+  || fail "SPEC must name about copy as last-7-days, not a weekly auction"
+grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
+  || fail "about cut must keep last-7-days document chrome in SPEC"
+grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
+  || fail "about cut must keep empty last-7-days prize chrome in SPEC"
+grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
+  || fail "about cut must keep occupied last-7-days prize chrome in SPEC"
+grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
+  || fail "SPEC must keep empty Claim #1 / No paid brief"
+grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
+  || fail "rank tests must cover last-7-days about copy"
+grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
+  || fail "about cut must keep last-7-days document chrome tests"
+grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
+  || fail "about cut must keep empty last-7-days kicker"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "about cut must keep empty last-7-days board copy"
+grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
+  || fail "about cut must keep occupied last-7-days later-pack"
+grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
+  || fail "about cut must keep last-7-days document title"
+grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
+  || fail "about cut must keep last-7-days document meta"
+grep -q 'data-empty-window=""' src/app/board.tsx \
+  || fail "about cut must keep empty last-7-days week label"
+grep -q 'data-empty-since=""' src/app/board.tsx \
+  || fail "about cut must keep empty last-7-days window-since"
+grep -q 'data-occupied-window=""' src/app/board.tsx \
+  || fail "about cut must keep occupied last-7-days week label"
+grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
+  || fail "about cut must keep last-7-days raise identity"
+grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
+  || fail "about cut must keep occupied rolling last-7-days"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "about cut must keep the winner rule as the prize"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "about cut must keep occupied Open this brief the first click"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "about cut must keep Open this brief"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "about cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "about cut must keep empty No paid brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "about cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "about cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "about cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "about cut must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "about must not rebuild the empty ticket desk"
+grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
+  || fail "about cut must keep unpaid off the board"
+grep -q 'data-empty-week="true"' src/app/board.tsx \
+  || fail "about cut must keep honest empty desk"
+python3 - src/app/about/page.tsx src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "about copy must name last-7-days, not a weekly auction"
+import sys
+about = open(sys.argv[1], encoding="utf-8").read()
+board = open(sys.argv[2], encoding="utf-8").read()
+css = open(sys.argv[3], encoding="utf-8").read()
+layout = open(sys.argv[4], encoding="utf-8").read()
+if "Public auction for the last 7 days’ #1 freelance brief" not in about:
+    raise SystemExit(1)
+if "last 7 days’ #1 freelance brief" not in about:
+    raise SystemExit(1)
+if "Weekly public auction" in about or "weekly public auction" in about:
+    raise SystemExit(1)
+if "The last 7 days’ #1 freelance brief" not in board:
+    raise SystemExit(1)
+if "No paid brief" not in board:
+    raise SystemExit(1)
+if "Open this brief" not in board:
+    raise SystemExit(1)
+if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
+    raise SystemExit(1)
+if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
+    raise SystemExit(1)
+if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
+    raise SystemExit(1)
+if "occupied-mast-window" in css or "occupied-mast-since" in css:
+    raise SystemExit(1)
+if "raise-rolling-identity" in css or "document-chrome-rolling" in css:
+    raise SystemExit(1)
+PY
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx; then
+  fail "about must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx; then
+  fail "about must not rebuild the ticket desk into a long form"
+fi
+
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -2530,6 +2635,8 @@ if [[ -f package.json ]]; then
     || fail "empty last-7-days prize chrome test did not run"
   grep -q 'document chrome names last-7-days, not this week' "$test_log" \
     || fail "last-7-days document chrome test did not run"
+  grep -q 'about page names last-7-days, not a weekly auction' "$test_log" \
+    || fail "last-7-days about copy test did not run"
 fi
 
 echo "OK: buildable and testable"
