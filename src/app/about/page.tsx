@@ -49,7 +49,7 @@ export default function AboutPage() {
       </p>
       <p>
         <a href="/rules">Read the rules</a> for the $5 minimum, older-wins ties,
-        raise-pays-difference, rolling last-7-days weekly reset, and banned chat
+        raise-pays-difference, rolling last 7 days, and banned chat
         / NSFW URLs.
       </p>
     </main>
