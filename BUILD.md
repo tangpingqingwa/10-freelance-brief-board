@@ -148,7 +148,7 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 - **Description:** `/about`, `/rules`. Strip tracking. Reject chat/NSFW. Reject invented ratings. Public click route on the brief URL.
 - **Files:** `src/app/about/page.tsx`, `src/app/rules/page.tsx`, `src/core/url.ts`, `src/core/honesty.ts`, `src/app/click/[id]/route.ts`, `tests/listing.test.ts`, `tests/click.test.ts`, `tests/honesty.test.ts`
 - **Dependencies:** PR 2
-- **Acceptance:** Rules page states min $5, older wins ties, raise pays difference, weekly UTC reset, no invented ratings. Tracking keys stripped. Click 302s the brief URL.
+- **Acceptance:** Rules page states min $5, older wins ties, raise pays difference, rolling last 7 days, no invented ratings. Tracking keys stripped. Click 302s the brief URL.
 
 ### PR 6: live-smoke
 - **Description:** Operator script walks board, about/rules, checkout (live Polar or `BLOCKED-SECRET`), click, honesty. Not in CI.
