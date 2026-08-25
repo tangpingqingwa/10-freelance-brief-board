@@ -93,7 +93,7 @@ test("board HTML has no stars or review scores", () => {
   assert.match(html, /no invented ratings/i);
 });
 
-test("about and rules state min $5, older wins ties, raise pays difference, weekly UTC, no invented ratings", () => {
+test("about and rules state min $5, older wins ties, raise pays difference, last 7 days, no invented ratings", () => {
   const about = renderToStaticMarkup(createElement(AboutPage));
   const rules = renderToStaticMarkup(createElement(RulesPage));
 
@@ -108,6 +108,7 @@ test("about and rules state min $5, older wins ties, raise pays difference, week
   assert.match(about, /last 7 days’ #1 freelance brief/);
   assert.match(about, /rolling last 7 days/);
   assert.doesNotMatch(about, /weekly public auction/i);
+  assert.doesNotMatch(about, /weekly UTC reset/i);
 
   assert.match(rules, /data-page="rules"/);
   assert.match(rules, /\$5/);
@@ -116,6 +117,7 @@ test("about and rules state min $5, older wins ties, raise pays difference, week
   assert.match(rules, /Not Monday 00:00:00.000 UTC/);
   assert.match(rules, /rolling last 7 days/i);
   assert.match(rules, /No invented ratings/);
+  assert.doesNotMatch(rules, /weekly UTC reset/i);
   assert.match(rules, /utm_\*/);
   assert.match(rules, /url_forbidden/);
   assert.match(rules, /GET \/click\/:id/);
