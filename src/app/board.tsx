@@ -287,9 +287,10 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
         <h1>Brief desk</h1>
         {empty ? (
           <p className="period-meta" data-week-id={week.weekId}>
-            Week {week.weekId}. Window since {week.startsAt}. Rank is the bid.
-            Budget, deadline, and how a winner is chosen are public facts, not
-            scores.
+            Week {week.weekId}.{" "}
+            <span data-empty-since="">Window last 7 days.</span> Rank is the
+            bid. Budget, deadline, and how a winner is chosen are public facts,
+            not scores.
           </p>
         ) : (
           <p
