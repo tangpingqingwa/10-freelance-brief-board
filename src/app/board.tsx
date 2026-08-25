@@ -285,11 +285,23 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
             : "The last 7 days’ #1 freelance brief"}
         </p>
         <h1>Brief desk</h1>
-        <p className="period-meta" data-week-id={week.weekId}>
-          Week {week.weekId}. Window since {week.startsAt}. Rank is the bid.
-          Budget, deadline, and how a winner is chosen are public facts, not
-          scores.
-        </p>
+        {empty ? (
+          <p className="period-meta" data-week-id={week.weekId}>
+            Week {week.weekId}. Window since {week.startsAt}. Rank is the bid.
+            Budget, deadline, and how a winner is chosen are public facts, not
+            scores.
+          </p>
+        ) : (
+          <p
+            className="period-meta"
+            data-week-id={week.weekId}
+            data-occupied-window=""
+          >
+            Last 7 days. Window since {week.startsAt}. Rank is the bid.
+            Budget, deadline, and how a winner is chosen are public facts, not
+            scores.
+          </p>
+        )}
         <p className="week-window" data-rolling-week="true">
           Rolling last 7 days. Not Monday 00:00 UTC.
         </p>
