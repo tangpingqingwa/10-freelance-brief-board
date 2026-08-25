@@ -146,6 +146,11 @@ a:hover {
   white-space: nowrap;
 }
 
+/* Empty mast window-since is last-7-days. Not an ISO timestamp. */
+.week-empty .period-meta [data-empty-since] {
+  white-space: nowrap;
+}
+
 .week-window[data-rolling-week] {
   margin: 0.4rem 0 0;
   max-width: 38rem;
