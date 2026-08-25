@@ -90,7 +90,11 @@ export function publicBaseUrl(env: PolarEnv = process.env): string {
   return "http://localhost:3000";
 }
 
-export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckoutInput {
+/** Raise identity is `findPaidByIdentity` (last 7 days), not weekId. */
+export function parseCheckoutInput(
+  body: Record<string, unknown>,
+  now: Date = new Date(),
+): CreateCheckoutInput {
   rejectRatings(body);
 
   const buyer = readTrimmed(body.buyer);
@@ -118,9 +122,9 @@ export function parseCheckoutInput(body: Record<string, unknown>): CreateCheckou
     throw new CheckoutError("bid_not_whole", 400);
   }
   const requestedWeekId = readTrimmed(body.weekId);
-  const existing = findPaidByIdentity(briefUrl);
+  const existing = findPaidByIdentity(briefUrl, now);
   const weekId =
-    existing?.weekId || requestedWeekId || currentWeekUtc().weekId;
+    existing?.weekId || requestedWeekId || currentWeekUtc(now).weekId;
   const quote = planQuote(existing, targetBidUsd);
 
   return {

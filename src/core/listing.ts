@@ -1,7 +1,7 @@
 import { MIN_BID_USD, type Listing } from "./rank";
 import { canonicalizeBriefUrl, UrlError } from "./url";
 
-/** Identity for raise: canonical brief URL still inside the rolling last-7-days window. `weekId` is a Polar/audit label. */
+/** Raise identity: same canonical brief URL still inside last 7 days. Not weekId. `weekId` stays a Polar/audit label. */
 
 export class ListingError extends Error {
   constructor(
@@ -50,18 +50,20 @@ export function listingIdentity(input: ListingIdentity): ListingIdentity {
   };
 }
 
+/** Same canonical brief URL is the raise key. weekId is not compared. */
 export function sameListingIdentity(
   left: ListingIdentity,
   right: ListingIdentity,
 ): boolean {
   const a = listingIdentity(left);
   const b = listingIdentity(right);
-  return a.weekId === b.weekId && a.briefUrl === b.briefUrl;
+  return a.briefUrl === b.briefUrl;
 }
 
 /**
- * First bid charges the full amount (≥ $5). Same identity raises by
- * target − current only. Raise must be a whole dollar ≥ current + $1.
+ * First bid charges the full amount (≥ $5). Same brief still inside last 7 days
+ * raises by target − current only. weekId is not the raise key. Raise must be
+ * a whole dollar ≥ current + $1.
  */
 export function quoteBid(
   existing: Pick<Listing, "bidUsd"> | undefined,

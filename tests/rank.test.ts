@@ -4401,3 +4401,48 @@ test("occupied ticket desk keeps one first click — Open this brief, Claim stay
   assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
   assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
 });
+
+test("occupied raise identity is last-7-days, not this week", () => {
+  assert.match(formSource, /Already on the last 7 days\?/);
+  assert.doesNotMatch(formSource, /Already on this week\?/);
+  assert.match(formSource, /Enter the same brief URL and raise/);
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, /data-first-click="claim"/);
+  assert.doesNotMatch(empty, /Already on this week/);
+  assert.doesNotMatch(empty, /Already on the last 7 days/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: WEEK_META,
+      listings: rankListings([
+        listing({
+          id: "lst_lead",
+          buyer: "Lead Studio",
+          winnerRule: "Best portfolio by Friday",
+          bidUsd: 12,
+          firstPaidAt: "2026-08-17T10:00:00.000Z",
+        }),
+      ]),
+    }),
+  );
+  assert.match(occupied, /Already on the last 7 days\?/);
+  assert.match(occupied, /Enter the same brief URL and raise/);
+  assert.match(occupied, /Raise pays the difference only after checkout lands/);
+  assert.doesNotMatch(occupied, /Already on this week/);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, /data-claim-after-ticket=""/);
+  assert.doesNotMatch(occupied, /data-first-click="claim"/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+});

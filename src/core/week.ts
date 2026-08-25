@@ -51,7 +51,7 @@ export function weekStartUtc(now: Date = new Date()): Date {
   return start;
 }
 
-/** ISO week id in UTC, e.g. `2026-W34`. Rank does not expire on this label. */
+/** ISO week id in UTC, e.g. `2026-W34`. Rank does not expire on this label. Raise identity: same canonical brief URL still inside last 7 days. Not weekId. */
 export function weekIdUtc(now: Date = new Date()): string {
   const thursday = utcMidnight(now);
   const day = thursday.getUTCDay() || 7;

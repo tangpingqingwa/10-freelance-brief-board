@@ -63,7 +63,10 @@ export function rankListings(
     .map((listing, index) => ({ ...listing, rank: index + 1 }));
 }
 
-/** Live board has no paid rows until Polar reports paid. Never invent a #1 brief. */
+/**
+ * Live board has no paid rows until Polar reports paid. Never invent a #1 brief.
+ * Same brief still inside last 7 days raises. A new URL always pays a full bid. weekId is not the raise key.
+ */
 export function getBoardListings(now: Date = new Date()): Listing[] {
   return listPaidRolling(now).filter(isPolarPaidListing);
 }

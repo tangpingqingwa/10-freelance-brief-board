@@ -82,6 +82,7 @@ export function forgetUnpaidCheckout(sessionId: string): void {
   if (index >= 0) unpaidTickets.splice(index, 1);
 }
 
+/** Raise identity: same canonical brief URL still inside last 7 days. Not weekId. */
 export function findPaidByIdentity(
   briefUrl: string,
   now: Date = new Date(),

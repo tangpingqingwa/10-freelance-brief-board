@@ -54,8 +54,8 @@ export default function RulesPage() {
           <tr>
             <th>Raise</th>
             <td>
-              Same canonical brief URL still inside the rolling last 7 days
-              raises.{" "}
+              Same canonical brief URL still inside last 7 days raises.{" "}
+              <code>weekId</code> stays an audit label — not raise identity.{" "}
               <strong>Raise pays difference</strong> only (
               <code>new − current</code>). New amount must be a whole dollar ≥
               current + $1.

@@ -110,7 +110,7 @@ type Listing = {
 
 **Required to place:** `buyer`, `budgetUsd`, `deadline`, `winnerRule`, `briefUrl`, `bidUsd`.
 
-**Identity for raise:** canonical `briefUrl` still inside the rolling last-7-days window. Same live listing → raise. Outside the window → new listing that must pay the full bid. `weekId` is a Polar/audit label.
+Identity for raise: same **canonical brief URL** still inside the rolling last 7 days. Same live listing → raise. Buyer name may be edited on raise; the URL key does not change. `weekId` stays a Polar/audit label — not raise identity. A buyer who paid Sunday still raises on Monday if that listing is inside last 7 days. After the window ends, the same URL is a new ticket (full bid), not a raise.
 
 `budgetUsd` is the buyer’s stated project budget for the freelance work. It does **not** affect rank. `bidUsd` is the pay-to-rank amount. Do not conflate them on the card.
 
@@ -136,7 +136,7 @@ Clone of outbid.lol. Rank is the bid. Nothing else.
 | Rank | Descending `bidUsd`. **rank = bid** |
 | Below #1 | Still lists, at the rank that amount can take |
 | Ties | **Older wins ties.** Compare `firstPaidAt` ascending, then listing id |
-| Raise | Same canonical `briefUrl` still inside the rolling last 7 days may raise. Charge **new − current** only |
+| Raise | Same canonical `briefUrl` still inside the rolling last 7 days may raise. `weekId` is not the raise key. Charge **new − current** only |
 | Steal | A *different* listing that wants that rank must pay the **full** target amount, not the incumbent’s difference |
 | Floor after raise | New amount must be a whole dollar ≥ current + $1 and ≥ $5 |
 | Claim | A **completed payment** claims the rank. Unpaid checkout does not |
