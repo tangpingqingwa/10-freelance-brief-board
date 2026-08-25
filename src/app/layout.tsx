@@ -3,9 +3,9 @@ import React, { type ReactNode } from "react";
 import "./board.css";
 
 export const metadata: Metadata = {
-  title: "Brief desk — this week’s #1 freelance brief",
+  title: "Brief desk — the last 7 days’ #1 freelance brief",
   description:
-    "Bid USD. Pin this week’s #1 job ticket. Rank is the bid, not the project budget. No invented ratings.",
+    "Bid USD. Pin the last 7 days’ #1 job ticket. Rank is the bid, not the project budget. No invented ratings.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
