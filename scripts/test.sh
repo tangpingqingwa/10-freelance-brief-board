@@ -2661,6 +2661,141 @@ if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-fo
   fail "about last paragraph must not rebuild the ticket desk into a long form"
 fi
 
+echo "== UX: SPEC pitch names last-7-days — not a weekly auction =="
+grep -Fq 'A public auction for the last 7 days’ **#1 freelance brief**' SPEC.md \
+  || fail "SPEC product statement must name last-7-days, not a weekly auction"
+grep -Fq 'Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first.' SPEC.md \
+  || fail "SPEC one-line pitch must name last-7-days, not this week"
+if grep -q 'A weekly public auction' SPEC.md; then
+  fail "SPEC product statement must not tax the contract as a weekly auction"
+fi
+if grep -q 'Own the #1 brief this week' SPEC.md; then
+  fail "SPEC one-line pitch must not tax the prize as this week"
+fi
+grep -Fq 'SPEC pitch (product statement and one-line) names last-7-days, not a weekly auction' SPEC.md \
+  || fail "SPEC must name the pitch as last-7-days, not a weekly auction"
+grep -Fq 'About last paragraph names last-7-days, not a weekly reset' SPEC.md \
+  || fail "SPEC-pitch cut must keep last-7-days about last paragraph in SPEC"
+grep -Fq 'README (lead) names that rolling window, not a weekly auction' SPEC.md \
+  || fail "SPEC-pitch cut must keep last-7-days README lead in SPEC"
+grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
+  || fail "SPEC-pitch cut must keep last-7-days about copy in SPEC"
+grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
+  || fail "SPEC-pitch cut must keep last-7-days document chrome in SPEC"
+grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
+  || fail "SPEC-pitch cut must keep empty last-7-days prize chrome in SPEC"
+grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
+  || fail "SPEC-pitch cut must keep occupied last-7-days prize chrome in SPEC"
+grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
+  || fail "SPEC must keep empty Claim #1 / No paid brief"
+grep -q 'spec pitch names last-7-days, not a weekly auction' tests/rank.test.ts \
+  || fail "rank tests must cover last-7-days SPEC pitch"
+grep -q 'about last paragraph names last-7-days, not a weekly reset' tests/rank.test.ts \
+  || fail "SPEC-pitch cut must keep last-7-days about last paragraph tests"
+grep -q 'readme names last-7-days, not a weekly auction' tests/rank.test.ts \
+  || fail "SPEC-pitch cut must keep last-7-days README copy tests"
+grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
+  || fail "SPEC-pitch cut must keep last-7-days about copy tests"
+grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
+  || fail "SPEC-pitch cut must keep last-7-days document chrome tests"
+grep -q 'raise-pays-difference, rolling last 7 days, and banned chat' src/app/about/page.tsx \
+  || fail "SPEC-pitch cut must keep last-7-days about last paragraph"
+grep -q 'Public auction for the last 7 days’ #1 freelance brief' README.md \
+  || fail "SPEC-pitch cut must keep last-7-days README lead"
+grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
+  || fail "SPEC-pitch cut must keep last-7-days about meta"
+grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
+  || fail "SPEC-pitch cut must keep last-7-days about lead"
+grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep empty last-7-days kicker"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep empty last-7-days board copy"
+grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep occupied last-7-days later-pack"
+grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
+  || fail "SPEC-pitch cut must keep last-7-days document title"
+grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
+  || fail "SPEC-pitch cut must keep last-7-days document meta"
+grep -q 'data-empty-window=""' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep empty last-7-days week label"
+grep -q 'data-empty-since=""' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep empty last-7-days window-since"
+grep -q 'data-occupied-window=""' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep occupied last-7-days week label"
+grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep last-7-days raise identity"
+grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep occupied rolling last-7-days"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep the winner rule as the prize"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep occupied Open this brief the first click"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep Open this brief"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep empty No paid brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "SPEC pitch must not rebuild the empty ticket desk"
+grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
+  || fail "SPEC-pitch cut must keep unpaid off the board"
+grep -q 'data-empty-week="true"' src/app/board.tsx \
+  || fail "SPEC-pitch cut must keep honest empty desk"
+python3 - SPEC.md README.md src/app/about/page.tsx src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "SPEC pitch must name last-7-days, not a weekly auction"
+import sys
+spec = open(sys.argv[1], encoding="utf-8").read()
+readme = open(sys.argv[2], encoding="utf-8").read()
+about = open(sys.argv[3], encoding="utf-8").read()
+board = open(sys.argv[4], encoding="utf-8").read()
+css = open(sys.argv[5], encoding="utf-8").read()
+layout = open(sys.argv[6], encoding="utf-8").read()
+if "A public auction for the last 7 days’ **#1 freelance brief**" not in spec:
+    raise SystemExit(1)
+if "Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first." not in spec:
+    raise SystemExit(1)
+if "A weekly public auction" in spec or "Own the #1 brief this week" in spec:
+    raise SystemExit(1)
+if "raise-pays-difference, rolling last 7 days, and banned chat" not in about:
+    raise SystemExit(1)
+if "Public auction for the last 7 days’ #1 freelance brief" not in readme:
+    raise SystemExit(1)
+if "Public auction for the last 7 days’ #1 freelance brief" not in about:
+    raise SystemExit(1)
+if "The last 7 days’ #1 freelance brief" not in board:
+    raise SystemExit(1)
+if "No paid brief" not in board:
+    raise SystemExit(1)
+if "Open this brief" not in board:
+    raise SystemExit(1)
+if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
+    raise SystemExit(1)
+if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
+    raise SystemExit(1)
+if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
+    raise SystemExit(1)
+if "occupied-mast-window" in css or "occupied-mast-since" in css:
+    raise SystemExit(1)
+if "raise-rolling-identity" in css or "document-chrome-rolling" in css:
+    raise SystemExit(1)
+if "about-rolling-window" in css or "readme-rolling-window" in css or "about-reset-copy" in css:
+    raise SystemExit(1)
+PY
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md SPEC.md; then
+  fail "SPEC pitch must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md SPEC.md; then
+  fail "SPEC pitch must not rebuild the ticket desk into a long form"
+fi
+
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -2880,6 +3015,8 @@ if [[ -f package.json ]]; then
     || fail "last-7-days README copy test did not run"
   grep -q 'about last paragraph names last-7-days, not a weekly reset' "$test_log" \
     || fail "last-7-days about last paragraph test did not run"
+  grep -q 'spec pitch names last-7-days, not a weekly auction' "$test_log" \
+    || fail "last-7-days SPEC pitch test did not run"
 fi
 
 echo "OK: buildable and testable"
