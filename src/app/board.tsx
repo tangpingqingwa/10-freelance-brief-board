@@ -297,9 +297,10 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
             data-week-id={week.weekId}
             data-occupied-window=""
           >
-            Last 7 days. Window since {week.startsAt}. Rank is the bid.
-            Budget, deadline, and how a winner is chosen are public facts, not
-            scores.
+            Last 7 days.{" "}
+            <span data-occupied-since="">Window last 7 days.</span> Rank is the
+            bid. Budget, deadline, and how a winner is chosen are public facts,
+            not scores.
           </p>
         )}
         <p className="week-window" data-rolling-week="true">
