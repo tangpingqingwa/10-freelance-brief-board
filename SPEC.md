@@ -16,11 +16,11 @@ Implementation plan (stack, modules, PR DAG): [BUILD.md](./BUILD.md).
 
 ## 1. Product statement
 
-A weekly public auction for the **#1 freelance brief** so designers, developers, and editors see the demand first. Buyers in the US and EU pay USD to be seen by global freelancers. Rank is the bid. Nothing else.
+A public auction for the last 7 days’ **#1 freelance brief** so designers, developers, and editors see the demand first. Buyers in the US and EU pay USD to be seen by global freelancers. Rank is the bid. Nothing else.
 
 Budget, deadline, and how the winner is chosen are **public**. There are no invented ratings, no star scores, and no “top freelancer” badges.
 
-One-line pitch: **Bid USD. Own the #1 brief this week. Freelancers see you first.**
+One-line pitch: **Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first.**
 
 ---
 
@@ -168,7 +168,7 @@ Worked examples, same week:
 | History | Aged-out rows may stay readable as archive. They are not the live #1 brief. |
 | Empty week | Valid. No invented brief. |
 
-The board header shows the rolling last-7-days window. Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week. Occupied mast period-meta follows last-7-days, not ISO `weekId`. Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty mast period-meta follows last-7-days, not ISO `weekId`. Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week. Document chrome (title and meta) names that rolling window, not a calendar week. About copy (meta and lead) names that rolling window, not a weekly auction. README (lead) names that rolling window, not a weekly auction. About last paragraph names last-7-days, not a weekly reset. Empty week stays Claim #1 / No paid brief.
+The board header shows the rolling last-7-days window. Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week. Occupied mast period-meta follows last-7-days, not ISO `weekId`. Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty mast period-meta follows last-7-days, not ISO `weekId`. Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week. Document chrome (title and meta) names that rolling window, not a calendar week. About copy (meta and lead) names that rolling window, not a weekly auction. README (lead) names that rolling window, not a weekly auction. About last paragraph names last-7-days, not a weekly reset. SPEC pitch (product statement and one-line) names last-7-days, not a weekly auction. Empty week stays Claim #1 / No paid brief.
 
 Do not carry bids after they age out of the rolling window. Submitting a brief URL whose last payment is older than 7 days is a **new** listing and pays a full bid ≥ $5.
 
