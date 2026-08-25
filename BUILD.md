@@ -41,7 +41,7 @@ ORDER BY bid_usd DESC, first_paid_at ASC, id ASC
 
 Rank does not filter by Monday 00:00 UTC `weekId`. Adding a craft lane later must not touch this `ORDER BY`.
 
-Identity key for raise: canonical `briefUrl` still inside the rolling last-7-days window.
+Identity key for raise: canonical `briefUrl` still inside the rolling last-7-days window. Raise identity is the same canonical brief URL still inside that window — not `weekId`.
 
 `budget_usd` and `deadline` are stored and shown. They never appear in `ORDER BY`.
 
@@ -104,7 +104,7 @@ No application `src/` in this docs PR.
 |---|---|
 | week | rolling last-7-days window; Monday 00:00 UTC does not drop a bid still inside 7 days |
 | rank | higher bid above; **older wins ties**; below-#1 still lists |
-| raise | $5 → $12 charges **$7**; other listing cannot steal by paying $7 |
+| raise | $5 → $12 charges **$7**; other listing cannot steal by paying $7; same brief still in last 7 days raises after `weekId` rolls |
 | listing | buyer + budget + deadline + brief URL required; rating field rejected |
 | url | `utm_source` stripped; telegram invite → `url_forbidden` |
 | honesty | board HTML has no stars / review scores; `rating_forbidden` on submit |
@@ -139,7 +139,7 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 - **Acceptance:** $5 fixture create lists at #1. Abandoned checkout does not. CI does not set `POLAR_LIVE`.
 
 ### PR 4: raise-bid
-- **Description:** Same canonical brief URL in the same UTC week raises by paying the difference. Different listing pays full amount. `firstPaidAt` unchanged.
+- **Description:** Same canonical brief URL still inside last 7 days raises; `weekId` is not the raise key. Different listing pays full amount. `firstPaidAt` unchanged.
 - **Files:** `src/core/listing.ts`, checkout raise path, `tests/checkout.test.ts`
 - **Dependencies:** PR 3
 - **Acceptance:** SPEC acceptance 5. `bid_not_higher` when raise ≤ current.

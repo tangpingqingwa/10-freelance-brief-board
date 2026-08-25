@@ -197,10 +197,12 @@ export function OutbidForm({
             budget. Unpaid Polar checkout stays off this desk until Polar reports paid. An abandoned ticket is not #1.
           </p>
           {occupied ? <OccupiedTicketWrite /> : <EmptyClaimFirstWrite />}
-          <p className="raise-hint">
-            Already on this week? Enter the same brief URL and raise. Raise pays
-            the difference only after checkout lands.
-          </p>
+          {occupied ? (
+            <p className="raise-hint">
+              Already on the last 7 days? Enter the same brief URL and raise.
+              Raise pays the difference only after checkout lands.
+            </p>
+          ) : null}
         </div>
       </form>
     </section>

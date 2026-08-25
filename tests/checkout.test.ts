@@ -22,9 +22,10 @@ import {
   resetPaymentPort,
   setPaymentPort,
 } from "../src/billing/select";
-import { ListingError, quoteBid } from "../src/core/listing";
+import { ListingError, quoteBid, sameListingIdentity } from "../src/core/listing";
 import {
   applyPaidEvent,
+  findPaidByIdentity,
   listPaid,
   listUnpaid,
   rememberUnpaidCheckout,
@@ -32,7 +33,7 @@ import {
 } from "../src/core/listings";
 import { getBoardListings, MIN_BID_USD, rankListings } from "../src/core/rank";
 import { Board } from "../src/app/board";
-import { currentWeekUtc } from "../src/core/week";
+import { currentWeekUtc, weekIdUtc } from "../src/core/week";
 
 const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "polar");
 const WEEK = currentWeekUtc().weekId;
@@ -852,6 +853,82 @@ test("same brief URL after the rolling last-7-days window pays a full new bid", 
   assert.equal(listPaid(WEEK).length, 1);
   assert.equal(getBoardListings().length, 1);
   assert.equal(getBoardListings()[0]?.id, now.id);
+});
+
+test("same brief still inside last-7-days raises after the UTC week label rolls", () => {
+  const sunday = new Date("2026-08-16T12:00:00.000Z");
+  const monday = new Date("2026-08-17T00:00:00.000Z");
+  const url = "https://example.com/sunday-raise";
+  assert.equal(weekIdUtc(sunday), "2026-W33");
+  assert.equal(weekIdUtc(monday), "2026-W34");
+  assert.equal(
+    sameListingIdentity(
+      { weekId: "2026-W33", briefUrl: url },
+      { weekId: "2026-W34", briefUrl: url },
+    ),
+    true,
+  );
+
+  const placed = applyPaidEvent({
+    sessionId: "chk_sunday",
+    listingDraft: {
+      buyer: "Sunday Buyer",
+      budgetUsd: 3200,
+      deadline: "2026-09-15",
+      winnerRule: "Best portfolio by Friday",
+      briefUrl: url,
+      bidUsd: 5,
+      weekId: "2026-W33",
+    },
+    amountUsd: 5,
+    kind: "create",
+    paidAt: sunday.toISOString(),
+  });
+  assert.ok(placed);
+  assert.equal(placed.weekId, "2026-W33");
+  assert.equal(placed.bidUsd, 5);
+  assert.equal(findPaidByIdentity(url, monday)?.id, placed.id);
+  assert.equal(findPaidByIdentity(url, monday)?.weekId, "2026-W33");
+
+  const raiseInput = parseCheckoutInput(
+    draftFields({
+      buyer: "Sunday Raised",
+      amountUsd: "7",
+      briefUrl: url,
+      weekId: "2026-W34",
+    }),
+    monday,
+  );
+  assert.equal(raiseInput.kind, "raise");
+  assert.equal(raiseInput.amountUsd, 2);
+  assert.equal(raiseInput.listingDraft.bidUsd, 7);
+  assert.equal(raiseInput.listingDraft.weekId, "2026-W33");
+
+  const raised = applyPaidEvent({
+    sessionId: "chk_monday_raise",
+    listingDraft: raiseInput.listingDraft,
+    amountUsd: raiseInput.amountUsd,
+    kind: raiseInput.kind,
+    paidAt: monday.toISOString(),
+  });
+  assert.ok(raised);
+  assert.equal(raised.id, placed.id);
+  assert.equal(raised.weekId, "2026-W33");
+  assert.equal(raised.bidUsd, 7);
+  assert.equal(raised.firstPaidAt, placed.firstPaidAt);
+
+  const aged = new Date(monday.getTime() + 7 * 24 * 60 * 60 * 1000 + 1);
+  assert.equal(findPaidByIdentity(url, aged), undefined);
+  const agedInput = parseCheckoutInput(
+    draftFields({
+      amountUsd: "5",
+      briefUrl: url,
+      weekId: "2026-W34",
+    }),
+    aged,
+  );
+  assert.equal(agedInput.kind, "create");
+  assert.equal(agedInput.amountUsd, 5);
 });
 
 test("HTTP pages do not import billing/polar.ts", () => {

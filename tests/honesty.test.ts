@@ -121,3 +121,15 @@ test("about and rules state min $5, older wins ties, raise pays difference, week
   assert.doesNotMatch(about, /4\.8 stars|data-stars|data-rating|★|⭐/);
   assert.doesNotMatch(rules, /4\.8 stars|data-stars|data-rating|★|⭐/);
 });
+
+test("occupied /rules raise identity is last-7-days, not the UTC week label", () => {
+  const html = renderToStaticMarkup(createElement(RulesPage));
+  assert.match(html, /Same canonical brief URL still inside last 7 days raises/);
+  assert.match(html, /weekId<\/code> stays an audit label — not raise identity/);
+  assert.doesNotMatch(html, /same UTC week raises/i);
+  assert.doesNotMatch(html, /same weekId/i);
+  assert.doesNotMatch(html, /Already on this week/);
+  assert.match(html, /Raise pays difference/);
+  assert.match(html, /Not Monday 00:00:00.000 UTC/);
+  assert.match(html, /rolling last 7 days/i);
+});
