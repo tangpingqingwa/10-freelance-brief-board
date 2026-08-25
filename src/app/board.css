@@ -146,6 +146,11 @@ a:hover {
   white-space: nowrap;
 }
 
+/* Empty mast week label follows last-7-days. Not ISO weekId. */
+.week-empty .period-meta[data-empty-window] {
+  font-weight: 600;
+}
+
 /* Empty mast window-since is last-7-days. Not an ISO timestamp. */
 .week-empty .period-meta [data-empty-since] {
   white-space: nowrap;
