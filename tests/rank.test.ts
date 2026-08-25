@@ -4520,3 +4520,87 @@ test("occupied desk chrome names last-7-days, not this week", () => {
   assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
 });
 
+test("occupied mast week label follows last-7-days, not ISO weekId", () => {
+  assert.match(boardSource, /data-occupied-window=""/);
+  assert.match(boardSource, /Last 7 days\. Window since \{week\.startsAt\}/);
+  assert.match(boardSource, /Week \{week\.weekId\}\. Window since \{week\.startsAt\}/);
+  assert.match(
+    cssSource,
+    /\.week-occupied \.period-meta\[data-occupied-window\]/,
+  );
+  assert.doesNotMatch(
+    boardSource,
+    /data-write-after-open-seven|data-open-after-write-six|data-write-after-open-N/,
+  );
+  const occupiedMeta =
+    boardSource.split('data-occupied-window=""', 2)[1]?.slice(0, 420) ?? "";
+  assert.match(occupiedMeta, /Last 7 days\. Window since/);
+  assert.doesNotMatch(occupiedMeta, /Week \{week\.weekId\}/);
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /class="period-meta"/);
+  assert.match(empty, /Week 2026-W34/);
+  assert.match(empty, /This week’s #1 freelance brief/);
+  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, /data-first-click="claim"/);
+  assert.doesNotMatch(empty, /data-occupied-window/);
+  assert.doesNotMatch(empty, /Last 7 days\. Window since/);
+  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-prize=/);
+
+  const sundayPay = listing({
+    id: "lst_lead",
+    buyer: "Lead Studio",
+    weekId: "2026-W33",
+    bidUsd: 12,
+    firstPaidAt: "2026-08-16T12:00:00.000Z",
+    lastPaidAt: "2026-08-16T12:00:00.000Z",
+    winnerRule: "Best portfolio by Friday",
+    briefUrl: "https://example.com/lead",
+  });
+  const hopper = listing({
+    id: "lst_hopper",
+    buyer: "Hopper Studio",
+    weekId: "2026-W33",
+    bidUsd: 6,
+    firstPaidAt: "2026-08-16T13:00:00.000Z",
+    lastPaidAt: "2026-08-16T13:00:00.000Z",
+    winnerRule: "First qualified",
+    briefUrl: "https://example.com/hopper",
+  });
+  const monday = new Date("2026-08-17T00:00:00.000Z");
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: currentWeekUtc(monday),
+      listings: rankListings([sundayPay, hopper], monday),
+    }),
+  );
+  const mast = occupied.slice(0, occupied.indexOf("data-desk-surface"));
+  assert.match(mast, /data-occupied-window=""/);
+  assert.match(mast, /Last 7 days\. Window since 2026-08-10T00:00:00.000Z/);
+  assert.doesNotMatch(mast, /Week 2026-W34/);
+  assert.doesNotMatch(mast, /Week 2026-W33/);
+  assert.match(occupied, /The last 7 days’ #1 freelance brief/);
+  assert.match(occupied, /The last 7 days’ #1/);
+  assert.match(occupied, /These tickets are not the last 7 days’ #1 prize/);
+  assert.match(occupied, /data-desk-surface="occupied"/);
+  assert.match(occupied, /data-listing-id="lst_lead"/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, /Already on the last 7 days\?/);
+  assert.doesNotMatch(occupied, /This week’s #1/);
+  assert.doesNotMatch(occupied, /data-first-click="claim"/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
+});
+

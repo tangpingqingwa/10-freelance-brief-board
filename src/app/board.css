@@ -136,6 +136,11 @@ a:hover {
   font-size: 0.95rem;
 }
 
+/* Occupied mast week label follows last-7-days. Not ISO weekId. */
+.week-occupied .period-meta[data-occupied-window] {
+  font-weight: 600;
+}
+
 .week-window[data-rolling-week] {
   margin: 0.4rem 0 0;
   max-width: 38rem;
