@@ -1772,7 +1772,7 @@ PY
 echo "== UX: occupied mast week label follows last-7-days — not ISO weekId =="
 grep -q 'data-occupied-window=""' src/app/board.tsx \
   || fail "occupied period-meta must stamp data-occupied-window"
-grep -q 'Last 7 days. Window since' src/app/board.tsx \
+grep -q 'Last 7 days.' src/app/board.tsx \
   || fail "occupied period-meta must lead with last-7-days, not ISO weekId"
 grep -q 'Week {week.weekId}. Window since' src/app/board.tsx \
   || fail "empty period-meta may still show the ISO weekId label"
@@ -1824,7 +1824,7 @@ idx = board.find('data-occupied-window=""')
 if idx < 0:
     raise SystemExit(1)
 block = board[idx:idx + 480]
-if "Last 7 days. Window since" not in block:
+if "Last 7 days." not in block:
     raise SystemExit(1)
 if "Week {week.weekId}" in block:
     raise SystemExit(1)
@@ -1840,6 +1840,97 @@ if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/boar
 fi
 if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
   fail "mast-window cut must not rebuild the ticket desk into a long form"
+fi
+
+echo "== UX: occupied mast window since is last-7-days — not an ISO timestamp =="
+grep -q 'data-occupied-since=""' src/app/board.tsx \
+  || fail "occupied window-since must stamp data-occupied-since"
+grep -q 'Window last 7 days' src/app/board.tsx \
+  || fail "occupied window-since must name last-7-days, not an ISO timestamp"
+grep -q 'Last 7 days.' src/app/board.tsx \
+  || fail "window-since cut must keep occupied last-7-days week label"
+grep -q 'Week {week.weekId}. Window since' src/app/board.tsx \
+  || fail "empty period-meta may still show the ISO weekId label and window instant"
+grep -q 'This week’s board is empty' src/app/board.tsx \
+  || fail "empty desk must keep This week’s board is empty"
+grep -Fq '.week-occupied .period-meta[data-occupied-window] [data-occupied-since]' src/app/board.css \
+  || fail "CSS must compose occupied window-since as last-7-days, not an ISO timestamp"
+grep -Fq 'Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
+  || fail "SPEC must name occupied window-since as last-7-days, not an ISO timestamp"
+grep -Fq 'Occupied mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
+  || fail "window-since cut must keep occupied last-7-days week label in SPEC"
+grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
+  || fail "SPEC must keep empty Claim #1 / No paid brief"
+grep -q 'occupied mast window since is last-7-days, not an ISO timestamp' tests/rank.test.ts \
+  || fail "rank tests must cover occupied last-7-days window-since"
+grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
+  || fail "window-since cut must keep occupied last-7-days prize chrome"
+grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep last-7-days raise identity"
+grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
+  || fail "window-since cut must keep occupied rolling last-7-days"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "window-since cut must keep the winner rule as the prize"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "window-since cut must keep occupied Open this brief the first click"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "window-since cut must keep Open this brief"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "window-since cut must keep empty No paid brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "window-since cut must not rebuild the empty ticket desk"
+grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
+  || fail "window-since cut must keep unpaid off the board"
+grep -q 'data-empty-week="true"' src/app/board.tsx \
+  || fail "window-since cut must keep honest empty desk"
+python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "occupied window-since must not tax the live window as an ISO timestamp"
+import sys
+board = open(sys.argv[1], encoding="utf-8").read()
+css = open(sys.argv[2], encoding="utf-8").read()
+idx = board.find('data-occupied-window=""')
+if idx < 0:
+    raise SystemExit(1)
+block = board[idx:idx + 520]
+if 'data-occupied-since=""' not in block:
+    raise SystemExit(1)
+if "Window last 7 days" not in block:
+    raise SystemExit(1)
+if "Last 7 days." not in block:
+    raise SystemExit(1)
+if "Window since {week.startsAt}" in block:
+    raise SystemExit(1)
+if "{week.startsAt}" in block:
+    raise SystemExit(1)
+if "Week {week.weekId}" in block:
+    raise SystemExit(1)
+if "Week {week.weekId}. Window since {week.startsAt}" not in board:
+    raise SystemExit(1)
+if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
+    raise SystemExit(1)
+sel = ".week-occupied .period-meta[data-occupied-window] [data-occupied-since]"
+start = css.find(sel)
+end = css.find("}", start)
+if start < 0 or end < 0:
+    raise SystemExit(1)
+chunk = css[start:end + 1]
+if "background:" in chunk or "color:" in chunk:
+    raise SystemExit(1)
+PY
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "window-since cut must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
+  fail "window-since cut must not rebuild the ticket desk into a long form"
 fi
 
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
@@ -2045,6 +2136,8 @@ if [[ -f package.json ]]; then
     || fail "occupied last-7-days prize chrome test did not run"
   grep -q 'occupied mast week label follows last-7-days, not ISO weekId' "$test_log" \
     || fail "occupied last-7-days mast week label test did not run"
+  grep -q 'occupied mast window since is last-7-days, not an ISO timestamp' "$test_log" \
+    || fail "occupied last-7-days mast window-since test did not run"
 fi
 
 echo "OK: buildable and testable"
