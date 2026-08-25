@@ -4452,8 +4452,9 @@ test("occupied desk chrome names last-7-days, not this week", () => {
   assert.match(boardSource, /The last 7 days’ #1 freelance brief/);
   assert.match(boardSource, /The last 7 days’ #1/);
   assert.match(boardSource, /These tickets are not the last 7 days’ #1 prize/);
-  assert.match(boardSource, /This week’s #1 freelance brief/);
-  assert.match(boardSource, /This week’s board is empty/);
+  assert.match(boardSource, /The last 7 days’ board is empty/);
+  assert.doesNotMatch(boardSource, /This week’s #1 freelance brief/);
+  assert.doesNotMatch(boardSource, /This week’s board is empty/);
   assert.doesNotMatch(boardSource, /These tickets are not this week’s #1 prize/);
   assert.doesNotMatch(
     boardSource,
@@ -4463,13 +4464,14 @@ test("occupied desk chrome names last-7-days, not this week", () => {
   const empty = renderToStaticMarkup(
     createElement(Board, { week: WEEK_META, listings: [] }),
   );
-  assert.match(empty, /This week’s #1 freelance brief/);
-  assert.match(empty, /This week’s #1/);
-  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /The last 7 days’ #1 freelance brief/);
+  assert.match(empty, /The last 7 days’ #1/);
+  assert.match(empty, /The last 7 days’ board is empty/);
   assert.match(empty, /No paid brief/);
   assert.match(empty, /Claim #1 for/);
   assert.match(empty, /data-first-click="claim"/);
-  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /This week’s #1/);
+  assert.doesNotMatch(empty, /This week’s board is empty/);
   assert.doesNotMatch(empty, /These tickets are not the last 7 days’ #1 prize/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /Write this ticket/);
@@ -4541,14 +4543,15 @@ test("occupied mast week label follows last-7-days, not ISO weekId", () => {
     createElement(Board, { week: WEEK_META, listings: [] }),
   );
   assert.match(empty, /class="period-meta"/);
-  assert.match(empty, /This week’s #1 freelance brief/);
-  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /The last 7 days’ #1 freelance brief/);
+  assert.match(empty, /The last 7 days’ board is empty/);
   assert.match(empty, /No paid brief/);
   assert.match(empty, /Claim #1 for/);
   assert.match(empty, /data-first-click="claim"/);
   assert.doesNotMatch(empty, /data-occupied-window/);
   assert.doesNotMatch(empty, /Last 7 days\. Window since/);
-  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /This week’s #1/);
+  assert.doesNotMatch(empty, /This week’s board is empty/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /Write this ticket/);
   assert.doesNotMatch(empty, /data-prize=/);
@@ -4629,14 +4632,15 @@ test("occupied mast window since is last-7-days, not an ISO timestamp", () => {
     createElement(Board, { week: WEEK_META, listings: [] }),
   );
   assert.match(empty, /class="period-meta"/);
-  assert.match(empty, /This week’s #1 freelance brief/);
-  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /The last 7 days’ #1 freelance brief/);
+  assert.match(empty, /The last 7 days’ board is empty/);
   assert.match(empty, /No paid brief/);
   assert.match(empty, /Claim #1 for/);
   assert.match(empty, /data-first-click="claim"/);
   assert.doesNotMatch(empty, /data-occupied-window/);
   assert.doesNotMatch(empty, /data-occupied-since/);
-  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /This week’s #1/);
+  assert.doesNotMatch(empty, /This week’s board is empty/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /Write this ticket/);
   assert.doesNotMatch(empty, /data-prize=/);
@@ -4729,12 +4733,13 @@ test("empty mast window since is last-7-days, not an ISO timestamp", () => {
   assert.doesNotMatch(emptyMast, /2026-08-17T00:00:00.000Z/);
   assert.doesNotMatch(emptyMast, /data-occupied-window/);
   assert.doesNotMatch(emptyMast, /data-occupied-since/);
-  assert.match(empty, /This week’s #1 freelance brief/);
-  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /The last 7 days’ #1 freelance brief/);
+  assert.match(empty, /The last 7 days’ board is empty/);
   assert.match(empty, /No paid brief/);
   assert.match(empty, /Claim #1 for/);
   assert.match(empty, /data-first-click="claim"/);
-  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /This week’s #1/);
+  assert.doesNotMatch(empty, /This week’s board is empty/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /Write this ticket/);
   assert.doesNotMatch(empty, /data-prize=/);
@@ -4852,12 +4857,13 @@ test("empty mast week label follows last-7-days, not ISO weekId", () => {
   assert.match(emptyMast, /Window last 7 days/);
   assert.doesNotMatch(emptyMast, /data-occupied-window/);
   assert.doesNotMatch(emptyMast, /data-occupied-since/);
-  assert.match(empty, /This week’s #1 freelance brief/);
-  assert.match(empty, /This week’s board is empty/);
+  assert.match(empty, /The last 7 days’ #1 freelance brief/);
+  assert.match(empty, /The last 7 days’ board is empty/);
   assert.match(empty, /No paid brief/);
   assert.match(empty, /Claim #1 for/);
   assert.match(empty, /data-first-click="claim"/);
-  assert.doesNotMatch(empty, /The last 7 days’ #1/);
+  assert.doesNotMatch(empty, /This week’s #1/);
+  assert.doesNotMatch(empty, /This week’s board is empty/);
   assert.doesNotMatch(empty, /Open this brief/);
   assert.doesNotMatch(empty, /Write this ticket/);
   assert.doesNotMatch(empty, /data-prize=/);
@@ -4879,7 +4885,8 @@ test("empty mast week label follows last-7-days, not ISO weekId", () => {
   assert.doesNotMatch(mondayMast, /Week 2026-W33/);
   assert.match(mondayMast, /data-empty-since=""/);
   assert.match(mondayMast, /Window last 7 days/);
-  assert.match(emptyMonday, /This week’s board is empty/);
+  assert.match(emptyMonday, /The last 7 days’ board is empty/);
+  assert.doesNotMatch(emptyMonday, /This week’s board is empty/);
   assert.match(emptyMonday, /No paid brief/);
   assert.match(emptyMonday, /Claim #1 for/);
   assert.match(emptyMonday, /data-first-click="claim"/);
@@ -4939,5 +4946,100 @@ test("empty mast week label follows last-7-days, not ISO weekId", () => {
   assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
   assert.doesNotMatch(emptyMonday, RATINGS_FORBIDDEN);
   assert.doesNotMatch(occupiedEmptyCut, RATINGS_FORBIDDEN);
+});
+
+test("empty desk chrome names last-7-days, not this week", () => {
+  assert.match(boardSource, /The last 7 days’ #1 freelance brief/);
+  assert.match(boardSource, /The last 7 days’ #1/);
+  assert.match(boardSource, /The last 7 days’ board is empty/);
+  assert.doesNotMatch(boardSource, /This week’s #1 freelance brief/);
+  assert.doesNotMatch(boardSource, /This week’s board is empty/);
+  assert.doesNotMatch(boardSource, />This week’s #1</);
+  assert.doesNotMatch(
+    boardSource,
+    /data-write-after-open-seven|data-open-after-write-six|data-write-after-open-N/,
+  );
+
+  const empty = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(empty, /The last 7 days’ #1 freelance brief/);
+  assert.match(empty, /The last 7 days’ #1/);
+  assert.match(empty, /The last 7 days’ board is empty/);
+  assert.match(empty, /No paid brief/);
+  assert.match(empty, /Claim #1 for/);
+  assert.match(empty, /data-first-click="claim"/);
+  assert.match(empty, /data-empty-week="true"/);
+  assert.doesNotMatch(empty, /This week’s #1/);
+  assert.doesNotMatch(empty, /This week’s board is empty/);
+  assert.doesNotMatch(empty, /These tickets are not the last 7 days’ #1 prize/);
+  assert.doesNotMatch(empty, /Open this brief/);
+  assert.doesNotMatch(empty, /Write this ticket/);
+  assert.doesNotMatch(empty, /data-prize=/);
+  assert.doesNotMatch(empty, /data-first-click="open"/);
+
+  const monday = new Date("2026-08-17T00:00:00.000Z");
+  const emptyMonday = renderToStaticMarkup(
+    createElement(Board, {
+      week: currentWeekUtc(monday),
+      listings: [],
+    }),
+  );
+  assert.match(emptyMonday, /The last 7 days’ #1 freelance brief/);
+  assert.match(emptyMonday, /The last 7 days’ #1/);
+  assert.match(emptyMonday, /The last 7 days’ board is empty/);
+  assert.match(emptyMonday, /No paid brief/);
+  assert.match(emptyMonday, /Claim #1 for/);
+  assert.match(emptyMonday, /data-first-click="claim"/);
+  assert.doesNotMatch(emptyMonday, /This week’s #1/);
+  assert.doesNotMatch(emptyMonday, /This week’s board is empty/);
+  assert.doesNotMatch(emptyMonday, /Week 2026-W34/);
+  assert.doesNotMatch(emptyMonday, /Open this brief/);
+  assert.doesNotMatch(emptyMonday, /data-prize=/);
+
+  const sundayPay = listing({
+    id: "lst_lead",
+    buyer: "Lead Studio",
+    weekId: "2026-W33",
+    bidUsd: 12,
+    firstPaidAt: "2026-08-16T12:00:00.000Z",
+    lastPaidAt: "2026-08-16T12:00:00.000Z",
+    winnerRule: "Best portfolio by Friday",
+    briefUrl: "https://example.com/lead",
+  });
+  const hopper = listing({
+    id: "lst_hopper",
+    buyer: "Hopper Studio",
+    weekId: "2026-W33",
+    bidUsd: 6,
+    firstPaidAt: "2026-08-16T13:00:00.000Z",
+    lastPaidAt: "2026-08-16T13:00:00.000Z",
+    winnerRule: "First qualified",
+    briefUrl: "https://example.com/hopper",
+  });
+  const occupied = renderToStaticMarkup(
+    createElement(Board, {
+      week: currentWeekUtc(monday),
+      listings: rankListings([sundayPay, hopper], monday),
+    }),
+  );
+  assert.match(occupied, /The last 7 days’ #1 freelance brief/);
+  assert.match(occupied, /The last 7 days’ #1/);
+  assert.match(occupied, /These tickets are not the last 7 days’ #1 prize/);
+  assert.doesNotMatch(occupied, /The last 7 days’ board is empty/);
+  assert.doesNotMatch(occupied, /This week’s #1/);
+  assert.match(occupied, /data-desk-surface="occupied"/);
+  assert.match(occupied, /data-listing-id="lst_lead"/);
+  assert.match(occupied, /Open this brief/);
+  assert.match(occupied, /data-first-click="open"/);
+  assert.match(occupied, /data-prize=""/);
+  assert.match(occupied, /Claim #1 for/);
+  assert.match(occupied, /Already on the last 7 days\?/);
+  assert.doesNotMatch(occupied, /data-first-click="claim"/);
+  assert.doesNotMatch(occupied, /data-write-after-open-seven/);
+  assert.doesNotMatch(occupied, /data-open-after-write-six/);
+  assert.doesNotMatch(empty, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(emptyMonday, RATINGS_FORBIDDEN);
+  assert.doesNotMatch(occupied, RATINGS_FORBIDDEN);
 });
 

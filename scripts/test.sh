@@ -1713,10 +1713,14 @@ grep -q 'The last 7 days’ #1' src/app/board.tsx \
   || fail "occupied #1 heading must name last-7-days, not this week"
 grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
   || fail "occupied later-pack must name last-7-days, not this week"
-grep -q 'This week’s #1 freelance brief' src/app/board.tsx \
-  || fail "empty kicker may still name this week"
-grep -q 'This week’s board is empty' src/app/board.tsx \
-  || fail "empty desk must keep This week’s board is empty"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "empty-board copy must name last-7-days, not this week"
+if grep -q 'This week’s #1 freelance brief' src/app/board.tsx; then
+  fail "empty kicker must follow occupied last-7-days, not this week"
+fi
+if grep -q 'This week’s board is empty' src/app/board.tsx; then
+  fail "empty-board copy must not tax the empty desk as this week"
+fi
 if grep -q 'These tickets are not this week’s #1 prize' src/app/board.tsx; then
   fail "occupied later-pack must not tax the prize as this week"
 fi
@@ -1774,8 +1778,8 @@ grep -q 'data-occupied-window=""' src/app/board.tsx \
   || fail "occupied period-meta must stamp data-occupied-window"
 grep -q 'Last 7 days.' src/app/board.tsx \
   || fail "occupied period-meta must lead with last-7-days, not ISO weekId"
-grep -q 'This week’s board is empty' src/app/board.tsx \
-  || fail "empty desk must keep This week’s board is empty"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "empty-board copy must name last-7-days, not this week"
 grep -Fq '.week-occupied .period-meta[data-occupied-window]' src/app/board.css \
   || fail "CSS must compose occupied period-meta as the last-7-days week label"
 grep -Fq 'Occupied mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
@@ -1845,8 +1849,8 @@ grep -q 'Window last 7 days' src/app/board.tsx \
   || fail "occupied window-since must name last-7-days, not an ISO timestamp"
 grep -q 'Last 7 days.' src/app/board.tsx \
   || fail "window-since cut must keep occupied last-7-days week label"
-grep -q 'This week’s board is empty' src/app/board.tsx \
-  || fail "empty desk must keep This week’s board is empty"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "empty-board copy must name last-7-days, not this week"
 grep -Fq '.week-occupied .period-meta[data-occupied-window] [data-occupied-since]' src/app/board.css \
   || fail "CSS must compose occupied window-since as last-7-days, not an ISO timestamp"
 grep -Fq 'Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
@@ -1937,8 +1941,8 @@ grep -q 'data-occupied-since=""' src/app/board.tsx \
   || fail "empty window-since cut must keep occupied last-7-days window-since"
 grep -q 'Last 7 days.' src/app/board.tsx \
   || fail "empty window-since cut must keep occupied last-7-days week label"
-grep -q 'This week’s board is empty' src/app/board.tsx \
-  || fail "empty desk must keep This week’s board is empty"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "empty-board copy must name last-7-days, not this week"
 grep -Fq '.week-empty .period-meta [data-empty-since]' src/app/board.css \
   || fail "CSS must compose empty window-since as last-7-days, not an ISO timestamp"
 grep -Fq 'Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
@@ -2035,8 +2039,8 @@ grep -q 'Last 7 days.' src/app/board.tsx \
 if grep -Fq 'Week {week.weekId}' src/app/board.tsx; then
   fail "empty period-meta must follow last-7-days, not ISO weekId"
 fi
-grep -q 'This week’s board is empty' src/app/board.tsx \
-  || fail "empty desk must keep This week’s board is empty"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "empty-board copy must name last-7-days, not this week"
 grep -Fq '.week-empty .period-meta[data-empty-window]' src/app/board.css \
   || fail "CSS must compose empty period-meta as the last-7-days week label"
 grep -Fq 'Empty mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
@@ -2125,6 +2129,96 @@ if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/boar
 fi
 if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
   fail "empty week-label cut must not rebuild the ticket desk into a long form"
+fi
+
+echo "== UX: empty desk chrome names last-7-days — not this week =="
+grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
+  || fail "empty kicker must name last-7-days, not this week"
+grep -q 'The last 7 days’ #1' src/app/board.tsx \
+  || fail "empty #1 heading must name last-7-days, not this week"
+grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
+  || fail "empty-board copy must name last-7-days, not this week"
+if grep -q 'This week’s #1 freelance brief' src/app/board.tsx; then
+  fail "empty kicker must not name this week"
+fi
+if grep -q 'This week’s board is empty' src/app/board.tsx; then
+  fail "empty-board copy must not tax the empty desk as this week"
+fi
+if grep -Fq '>This week’s #1<' src/app/board.tsx; then
+  fail "empty #1 heading must not name this week"
+fi
+grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
+  || fail "SPEC must name empty prize chrome as last-7-days, not a calendar week"
+grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
+  || fail "empty chrome cut must keep occupied last-7-days prize chrome in SPEC"
+grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
+  || fail "SPEC must keep empty Claim #1 / No paid brief"
+grep -q 'empty desk chrome names last-7-days, not this week' tests/rank.test.ts \
+  || fail "rank tests must cover empty last-7-days prize chrome"
+grep -q 'data-empty-window=""' src/app/board.tsx \
+  || fail "empty chrome cut must keep empty last-7-days week label"
+grep -q 'data-empty-since=""' src/app/board.tsx \
+  || fail "empty chrome cut must keep empty last-7-days window-since"
+grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
+  || fail "empty chrome cut must keep occupied last-7-days later-pack"
+grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep last-7-days raise identity"
+grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
+  || fail "empty chrome cut must keep occupied rolling last-7-days"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "empty chrome cut must keep the winner rule as the prize"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "empty chrome cut must keep occupied Open this brief the first click"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "empty chrome cut must keep Open this brief"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "empty chrome cut must keep empty No paid brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "empty chrome must not rebuild the empty ticket desk"
+grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
+  || fail "empty chrome cut must keep unpaid off the board"
+grep -q 'data-empty-week="true"' src/app/board.tsx \
+  || fail "empty chrome cut must keep honest empty desk"
+python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "empty prize chrome must name last-7-days, not this week"
+import sys
+board = open(sys.argv[1], encoding="utf-8").read()
+css = open(sys.argv[2], encoding="utf-8").read()
+if "The last 7 days’ #1 freelance brief" not in board:
+    raise SystemExit(1)
+if "The last 7 days’ board is empty" not in board:
+    raise SystemExit(1)
+if "This week’s #1 freelance brief" in board:
+    raise SystemExit(1)
+if "This week’s board is empty" in board:
+    raise SystemExit(1)
+if ">This week’s #1<" in board:
+    raise SystemExit(1)
+if "No paid brief" not in board:
+    raise SystemExit(1)
+if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
+    raise SystemExit(1)
+if "empty-mast-window" in css or "empty-mast-since" in css:
+    raise SystemExit(1)
+if "occupied-mast-window" in css or "occupied-mast-since" in css:
+    raise SystemExit(1)
+if "raise-rolling-identity" in css:
+    raise SystemExit(1)
+PY
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "empty chrome must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
+  fail "empty chrome must not rebuild the ticket desk into a long form"
 fi
 
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
@@ -2336,6 +2430,8 @@ if [[ -f package.json ]]; then
     || fail "empty last-7-days mast window-since test did not run"
   grep -q 'empty mast week label follows last-7-days, not ISO weekId' "$test_log" \
     || fail "empty last-7-days mast week label test did not run"
+  grep -q 'empty desk chrome names last-7-days, not this week' "$test_log" \
+    || fail "empty last-7-days prize chrome test did not run"
 fi
 
 echo "OK: buildable and testable"

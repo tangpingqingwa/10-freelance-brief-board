@@ -279,11 +279,7 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
       data-rolling-week="true"
     >
       <header className="desk-mast">
-        <p className="kicker">
-          {empty
-            ? "This week’s #1 freelance brief"
-            : "The last 7 days’ #1 freelance brief"}
-        </p>
+        <p className="kicker">The last 7 days’ #1 freelance brief</p>
         <h1>Brief desk</h1>
         {empty ? (
           <p
@@ -325,12 +321,12 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
         ) : (
           <>
             <section className="spike spike-quiet" aria-labelledby="spike-heading">
-              <h2 id="spike-heading">This week’s #1</h2>
+              <h2 id="spike-heading">The last 7 days’ #1</h2>
               <div className="empty-week" data-empty-week="true">
                 <div className="empty-ticket">
                   <p className="empty-stamp">No paid brief</p>
                   <p>
-                    This week’s board is empty. No buyer has paid to pin a
+                    The last 7 days’ board is empty. No buyer has paid to pin a
                     ticket. There is no invented #1 brief and no invented
                     ratings. There is no sample gig.
                     {leftoverUnpaid
