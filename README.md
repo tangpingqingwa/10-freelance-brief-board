@@ -1,6 +1,6 @@
 # Freelance Brief Board
 
-Weekly public auction for the #1 freelance brief so designers, developers, and editors see the demand first. Buyers (US/EU) pay USD. Rank is the bid. Budget, deadline, and how the winner is chosen are public. No invented ratings.
+Public auction for the last 7 days’ #1 freelance brief so designers, developers, and editors see the demand first. Buyers (US/EU) pay USD. Rank is the bid. Budget, deadline, and how the winner is chosen are public. No invented ratings.
 
 Build contract: [SPEC.md](./SPEC.md).
 How we build: [BUILD.md](./BUILD.md).
