@@ -168,7 +168,7 @@ Worked examples, same week:
 | History | Aged-out rows may stay readable as archive. They are not the live #1 brief. |
 | Empty week | Valid. No invented brief. |
 
-The board header shows the rolling last-7-days window. Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week. Occupied mast period-meta follows last-7-days, not ISO `weekId`. Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty week may still show the `weekId` label. Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty week stays Claim #1 / No paid brief.
+The board header shows the rolling last-7-days window. Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week. Occupied mast period-meta follows last-7-days, not ISO `weekId`. Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty mast period-meta follows last-7-days, not ISO `weekId`. Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty week stays Claim #1 / No paid brief.
 
 Do not carry bids after they age out of the rolling window. Submitting a brief URL whose last payment is older than 7 days is a **new** listing and pays a full bid ≥ $5.
 

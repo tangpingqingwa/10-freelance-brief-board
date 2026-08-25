@@ -286,8 +286,12 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
         </p>
         <h1>Brief desk</h1>
         {empty ? (
-          <p className="period-meta" data-week-id={week.weekId}>
-            Week {week.weekId}.{" "}
+          <p
+            className="period-meta"
+            data-week-id={week.weekId}
+            data-empty-window=""
+          >
+            Last 7 days.{" "}
             <span data-empty-since="">Window last 7 days.</span> Rank is the
             bid. Budget, deadline, and how a winner is chosen are public facts,
             not scores.
