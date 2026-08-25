@@ -4,7 +4,7 @@
 **This file** wins on stack, module boundaries, test layout, and the PR sequence.
 **Git:** [CONTRIBUTING.md](./CONTRIBUTING.md). Every `### PR N:` row is one squash-merged PR. `main` stays green.
 
-Pay-to-rank clone of outbid.lol. Weekly public auction for the #1 freelance brief so designers, developers, and editors see the demand first. Buyers (US/EU) pay USD. Budget, deadline, and how the winner is chosen are public. No invented ratings.
+Pay-to-rank clone of outbid.lol. Public auction for the last 7 days’ #1 freelance brief so designers, developers, and editors see the demand first. Buyers (US/EU) pay USD. Budget, deadline, and how the winner is chosen are public. No invented ratings.
 
 ---
 
