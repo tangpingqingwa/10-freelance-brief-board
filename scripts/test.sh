@@ -1006,7 +1006,7 @@ grep -q 'data-later-rank' src/app/board.tsx \
   || fail "later ranks must stamp data-later-rank"
 grep -q 'data-later-pack' src/app/board.tsx \
   || fail "later ranks must group in a later pack"
-grep -q 'These tickets are not this week’s #1 prize' src/app/board.tsx \
+grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
   || fail "later pack must say later tickets are not the #1 prize"
 grep -q 'data-later-open' src/app/board.tsx \
   || fail "later ranks must keep a quieter Open brief hop"
@@ -1128,7 +1128,7 @@ if ! awk '
 fi
 grep -q 'occupied later-rank tickets stay quieter than #1' tests/rank.test.ts \
   || fail "rank tests must cover quieter later-rank tickets"
-grep -q 'These tickets are not this week’s #1 prize' tests/rank.test.ts \
+grep -q 'These tickets are not the last 7 days’ #1 prize' tests/rank.test.ts \
   || fail "rank tests must name later tickets as not the #1 prize"
 grep -q 'data-later-rank' tests/rank.test.ts \
   || fail "rank tests must stamp later ranks"
@@ -1706,6 +1706,69 @@ if "raise-identity" in css or "raise-rolling" in css:
     raise SystemExit(1)
 PY
 
+echo "== UX: occupied desk chrome names last-7-days — not this week =="
+grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
+  || fail "occupied kicker must name last-7-days, not this week"
+grep -q 'The last 7 days’ #1' src/app/board.tsx \
+  || fail "occupied #1 heading must name last-7-days, not this week"
+grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
+  || fail "occupied later-pack must name last-7-days, not this week"
+grep -q 'This week’s #1 freelance brief' src/app/board.tsx \
+  || fail "empty kicker may still name this week"
+grep -q 'This week’s board is empty' src/app/board.tsx \
+  || fail "empty desk must keep This week’s board is empty"
+if grep -q 'These tickets are not this week’s #1 prize' src/app/board.tsx; then
+  fail "occupied later-pack must not tax the prize as this week"
+fi
+grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
+  || fail "SPEC must name occupied prize chrome as last-7-days, not a calendar week"
+grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
+  || fail "SPEC must keep empty Claim #1 / No paid brief"
+grep -q 'occupied desk chrome names last-7-days, not this week' tests/rank.test.ts \
+  || fail "rank tests must cover occupied last-7-days prize chrome"
+grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep last-7-days raise identity"
+grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
+  || fail "occupied chrome cut must keep occupied rolling last-7-days"
+grep -q 'data-prize=' src/app/board.tsx \
+  || fail "occupied chrome cut must keep the winner rule as the prize"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "occupied chrome cut must keep occupied Open this brief the first click"
+grep -q 'Open this brief' src/app/board.tsx \
+  || fail "occupied chrome cut must keep Open this brief"
+grep -q 'Claim #1' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep Claim #1"
+grep -q 'No paid brief' src/app/board.tsx \
+  || fail "occupied chrome cut must keep empty No paid brief"
+grep -q 'Write this ticket' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep Write this ticket"
+grep -q 'amount-field' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep the dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep Outbid"
+grep -q 'desk-surface-empty' src/app/board.tsx \
+  || fail "occupied chrome must not rebuild the empty ticket desk"
+grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
+  || fail "occupied chrome cut must keep unpaid off the board"
+grep -q 'data-empty-week="true"' src/app/board.tsx \
+  || fail "occupied chrome cut must keep honest empty desk"
+grep -q 'data-later-pack' src/app/board.tsx \
+  || fail "occupied chrome cut must keep the later-pack"
+if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
+  fail "occupied chrome must not add another numbered hop stamp"
+fi
+if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
+  fail "occupied chrome must not rebuild the ticket desk into a long form"
+fi
+python3 - src/app/board.css <<'PY' || fail "occupied chrome must not recolor the desk"
+import sys
+css = open(sys.argv[1], encoding="utf-8").read()
+if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
+    raise SystemExit(1)
+PY
+
 grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
 grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
 grep -q 'rating_forbidden' tests/listing.test.ts \
@@ -1905,6 +1968,8 @@ if [[ -f package.json ]]; then
     || fail "occupied /rules last-7-days raise identity test did not run"
   grep -q 'occupied raise identity is last-7-days, not this week' "$test_log" \
     || fail "occupied last-7-days raise copy test did not run"
+  grep -q 'occupied desk chrome names last-7-days, not this week' "$test_log" \
+    || fail "occupied last-7-days prize chrome test did not run"
 fi
 
 echo "OK: buildable and testable"

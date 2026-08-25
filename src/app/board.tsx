@@ -279,7 +279,11 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
       data-rolling-week="true"
     >
       <header className="desk-mast">
-        <p className="kicker">This week’s #1 freelance brief</p>
+        <p className="kicker">
+          {empty
+            ? "This week’s #1 freelance brief"
+            : "The last 7 days’ #1 freelance brief"}
+        </p>
         <h1>Brief desk</h1>
         <p className="period-meta" data-week-id={week.weekId}>
           Week {week.weekId}. Window since {week.startsAt}. Rank is the bid.
@@ -297,7 +301,7 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
       >
         {featured ? (
           <section className="spike" aria-labelledby="spike-heading">
-            <h2 id="spike-heading">This week’s #1</h2>
+            <h2 id="spike-heading">The last 7 days’ #1</h2>
             <ListingCard listing={featured} featured />
           </section>
         ) : (
@@ -332,7 +336,7 @@ export function Board({ week, listings, unpaid = [] }: BoardProps) {
           <h2 id="hopper-heading">Tickets on the desk</h2>
           <p className="hopper-note">
             Paying less than #1 still lists. Rank is the bid, not the project
-            budget. These tickets are not this week’s #1 prize.
+            budget. These tickets are not the last 7 days’ #1 prize.
           </p>
           <Leaderboard listings={rest} />
         </section>
