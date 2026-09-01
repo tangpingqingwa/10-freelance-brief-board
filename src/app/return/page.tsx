@@ -1,11 +1,14 @@
 import React from "react";
-import { getPaymentPort } from "../../billing/select";
-import { listPaidRolling } from "../../core/listings";
+import {
+  getCheckoutIntent,
+  getListingForCheckout,
+} from "../../core/listings";
 
 export const dynamic = "force-dynamic";
 
 type ReturnPageProps = {
   searchParams?: Promise<{
+    intent?: string | string[];
     sessionId?: string | string[];
     checkoutId?: string | string[];
     status?: string | string[];
@@ -35,7 +38,7 @@ export default async function ReturnPage({ searchParams }: ReturnPageProps) {
         <p>
           {result.buyer
             ? `${result.buyer} is listed at $${result.bidUsd}.`
-            : "Payment completed. Rank updates only after paid."}
+            : "Payment confirmed. Return to the board to see the current rank."}
         </p>
         <p>
           <a href="/">Back to the board</a>
@@ -48,7 +51,8 @@ export default async function ReturnPage({ searchParams }: ReturnPageProps) {
     <main className="return-page" data-return="pending">
       <h1>Checkout pending</h1>
       <p>
-        Payment is not complete. Rank updates only after Polar reports paid. An unpaid or abandoned ticket stays off the desk. This page does not trust the query string alone.
+        Payment has not been confirmed. No rank changes until confirmation,
+        and an incomplete or abandoned brief stays off the board.
       </p>
       <p>
         <a href="/">Back to the board</a>
@@ -62,6 +66,7 @@ function firstQuery(value: string | string[] | undefined): string | undefined {
 }
 
 function resolveReturn(params: {
+  intent?: string | string[];
   sessionId?: string | string[];
   checkoutId?: string | string[];
   status?: string | string[];
@@ -70,33 +75,22 @@ function resolveReturn(params: {
   buyer?: string;
   bidUsd?: number;
 } {
-  const sessionId = firstQuery(params.sessionId) ?? firstQuery(params.checkoutId);
-  const rawStatus = firstQuery(params.status);
-  const canceled = rawStatus === "cancel" || rawStatus === "canceled";
+  // `status=cancel` is presentation input only. It cannot manufacture a
+  // cancellation (or a paid row) without a durable intent state.
+  const reference =
+    firstQuery(params.intent) ??
+    firstQuery(params.sessionId) ??
+    firstQuery(params.checkoutId);
+  if (!reference?.trim()) return { status: "pending" };
 
-  if (canceled) {
+  const intent = getCheckoutIntent(reference.trim());
+  if (!intent) return { status: "pending" };
+  if (intent.status === "rejected" || intent.status === "expired" || intent.status === "failed") {
     return { status: "cancel" };
   }
-  if (!sessionId) {
-    return { status: "pending" };
-  }
+  if (intent.status !== "paid") return { status: "pending" };
 
-  const session = getPaymentPort().getSession(sessionId);
-  if (!session) {
-    return { status: "pending" };
-  }
-  if (session.status === "expired") {
-    return { status: "cancel" };
-  }
-  if (session.status !== "complete") {
-    return { status: "pending" };
-  }
-
-  const listing = listPaidRolling().find(
-    (row) => row.briefUrl === session.listingDraft.briefUrl,
-  );
-  if (!listing) {
-    return { status: "pending" };
-  }
+  const listing = getListingForCheckout(reference.trim());
+  if (!listing) return { status: "pending" };
   return { status: "paid", buyer: listing.buyer, bidUsd: listing.bidUsd };
 }

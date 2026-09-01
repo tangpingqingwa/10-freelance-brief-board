@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import React, { type ReactNode } from "react";
 import "./board.css";
+import { FindPopover, ThemeToggle } from "./theme-toggle";
 
 export const metadata: Metadata = {
   title: "Brief desk — the last 7 days’ #1 freelance brief",
@@ -11,24 +12,18 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body>
-        <header className="site-header">
-          <div className="site-header-inner">
-            <a className="logo" href="/">
+        <header className="site-header" data-slot="site-header">
+          <div className="site-header-inner" data-slot="shell">
+            <a className="logo" href="/" aria-label="Brief desk home" data-slot="brand">
               brief<span>desk</span>
             </a>
-            <nav className="site-nav" aria-label="Main">
+            <nav className="site-nav" aria-label="Main" data-slot="primary-nav">
               <ul>
                 <li>
-                  <a href="/">Desk</a>
+                  <a href="/" aria-current="page">
+                    Desk
+                  </a>
                 </li>
                 <li>
                   <a href="/about">About</a>
@@ -38,9 +33,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </li>
               </ul>
             </nav>
+            <div className="header-actions">
+              <FindPopover />
+              <ThemeToggle />
+            </div>
           </div>
         </header>
         {children}
+        <footer className="maker-contact" data-maker-contact="">
+          Built by <a href="mailto:tangpingqingwa@gmail.com">tangpingqingwa@gmail.com</a>
+        </footer>
       </body>
     </html>
   );

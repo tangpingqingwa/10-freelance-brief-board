@@ -4,6 +4,7 @@ import { getBoardListings, rankListings } from "../core/rank";
 import { currentWeekUtc } from "../core/week";
 import { Board } from "./board";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {

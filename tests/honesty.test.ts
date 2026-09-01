@@ -93,46 +93,52 @@ test("board HTML has no stars or review scores", () => {
   assert.match(html, /no invented ratings/i);
 });
 
-test("about and rules state min $5, older wins ties, raise pays difference, weekly UTC, no invented ratings", () => {
+test("about and rules state min $5, older wins ties, raise pays difference, last 7 days, no invented ratings", () => {
   const about = renderToStaticMarkup(createElement(AboutPage));
   const rules = renderToStaticMarkup(createElement(RulesPage));
 
   assert.match(about, /data-page="about"/);
   assert.match(about, /Rank is the bid/);
   assert.match(about, /no invented ratings/i);
-  assert.match(about, /freelance-brief-board/);
-  assert.match(about, /outbid\.lol/);
+  assert.match(about, /Freelance Brief Board is a public auction/);
   assert.match(about, /English/);
   assert.match(about, /USD/);
-  assert.match(about, /global/i);
+  assert.match(about, /browse briefs from anywhere/);
   assert.match(about, /last 7 days’ #1 freelance brief/);
   assert.match(about, /rolling last 7 days/);
   assert.doesNotMatch(about, /weekly public auction/i);
+  assert.doesNotMatch(about, /weekly UTC reset/i);
+  assert.doesNotMatch(
+    about,
+    /outbid\.lol|freelance-brief-board|\bclone\b|\bv1\b|\bfixture\b|weekId|createdAt|paidAt|Waffo/i,
+  );
 
   assert.match(rules, /data-page="rules"/);
   assert.match(rules, /\$5/);
-  assert.match(rules, /Older wins ties/);
-  assert.match(rules, /Raise pays difference/);
-  assert.match(rules, /Not Monday 00:00:00.000 UTC/);
+  assert.match(rules, /brief placed first keeps the higher rank/);
+  assert.match(rules, /same cleaned brief link may raise while its placement is active/i);
+  assert.match(rules, /charged only the <strong>difference/);
+  assert.match(rules, /does not reset for everyone at Monday midnight/);
   assert.match(rules, /rolling last 7 days/i);
   assert.match(rules, /No invented ratings/);
-  assert.match(rules, /utm_\*/);
-  assert.match(rules, /url_forbidden/);
-  assert.match(rules, /GET \/click\/:id/);
-  assert.match(rules, /rating_forbidden/);
+  assert.doesNotMatch(rules, /weekly UTC reset/i);
+  assert.match(rules, /Tracking, referral, and affiliate parameters are removed/);
+  assert.match(rules, /unsafe destinations are rejected/);
+  assert.match(rules, /Public <strong>clicks<\/strong>/);
+  assert.doesNotMatch(
+    rules,
+    /outbid\.lol|freelance-brief-board|\bclone\b|\bv1\b|\bfixture\b|weekId|createdAt|paidAt|Waffo/i,
+  );
 
   assert.doesNotMatch(about, /4\.8 stars|data-stars|data-rating|★|⭐/);
   assert.doesNotMatch(rules, /4\.8 stars|data-stars|data-rating|★|⭐/);
 });
 
-test("occupied /rules raise identity is last-7-days, not the UTC week label", () => {
+test("occupied /rules explains active-placement raises in public language", () => {
   const html = renderToStaticMarkup(createElement(RulesPage));
-  assert.match(html, /Same canonical brief URL still inside last 7 days raises/);
-  assert.match(html, /weekId<\/code> stays an audit label — not raise identity/);
-  assert.doesNotMatch(html, /same UTC week raises/i);
-  assert.doesNotMatch(html, /same weekId/i);
-  assert.doesNotMatch(html, /Already on this week/);
-  assert.match(html, /Raise pays difference/);
-  assert.match(html, /Not Monday 00:00:00.000 UTC/);
+  assert.match(html, /same cleaned brief link may raise while its placement is active/i);
+  assert.match(html, /original payer is charged only the <strong>difference/);
+  assert.match(html, /Each placement keeps its own seven-day window/);
   assert.match(html, /rolling last 7 days/i);
+  assert.doesNotMatch(html, /weekId|createdAt|paidAt|Waffo|outbid\.lol|\bclone\b|\bfixture\b/i);
 });

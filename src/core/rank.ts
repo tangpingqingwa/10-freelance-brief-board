@@ -1,9 +1,10 @@
 import { listPaidRolling } from "./listings";
 import { bidInRollingWeek } from "./week";
+import { MIN_BID_USD } from "./money";
 
 /** Rank is the bid. Budget and deadline are public facts; they do not sort. */
 
-export const MIN_BID_USD = 5;
+export { MIN_BID_USD };
 
 export type Listing = {
   id: string;
@@ -24,10 +25,10 @@ export type RankedListing = Listing & {
 };
 
 /**
- * Polar has reported a completed payment. Unpaid / abandoned checkout
- * is not a listing and must not paint #1 winner-rule chrome.
+ * The payment boundary has reported a completed payment. Unpaid / abandoned
+ * checkout is not a listing and must not paint #1 winner-rule chrome.
  */
-export function isPolarPaidListing(
+export function isPaidListing(
   listing: Pick<Listing, "firstPaidAt">,
 ): boolean {
   const paidAt = listing.firstPaidAt;
@@ -37,7 +38,7 @@ export function isPolarPaidListing(
 }
 
 /**
- * Display order among Polar-paid rows only: bidUsd DESC, firstPaidAt ASC
+ * Display order among paid rows only: bidUsd DESC, firstPaidAt ASC
  * (older wins ties), id ASC. When `now` is passed, only lastPaidAt inside
  * the rolling last-7-days window ranks. Does not read budget, deadline,
  * winner rule, or clicks. Unpaid drafts never rank.
@@ -47,7 +48,7 @@ export function rankListings(
   now?: Date,
 ): RankedListing[] {
   const live = listings.filter((row) => {
-    if (!isPolarPaidListing(row)) return false;
+    if (!isPaidListing(row)) return false;
     return now ? bidInRollingWeek(row.lastPaidAt, now) : true;
   });
   return live
@@ -64,9 +65,9 @@ export function rankListings(
 }
 
 /**
- * Live board has no paid rows until Polar reports paid. Never invent a #1 brief.
+ * Live board has no paid rows until the payment boundary reports paid. Never invent a #1 brief.
  * Same brief still inside last 7 days raises. A new URL always pays a full bid. weekId is not the raise key.
  */
 export function getBoardListings(now: Date = new Date()): Listing[] {
-  return listPaidRolling(now).filter(isPolarPaidListing);
+  return listPaidRolling(now).filter(isPaidListing);
 }

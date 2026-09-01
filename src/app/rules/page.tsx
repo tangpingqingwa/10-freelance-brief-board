@@ -12,8 +12,8 @@ export default function RulesPage() {
     <main className="doc-page" data-page="rules">
       <h1>Rules</h1>
       <p>
-        These rules are the product. A bidder can predict rank from this page
-        alone. Rank is the bid. There are no invented ratings.
+        The board follows the published rules below. There are no hidden
+        ranking factors: rank is the bid, and ratings never affect position.
       </p>
 
       <h2>Ranking</h2>
@@ -22,8 +22,8 @@ export default function RulesPage() {
           <tr>
             <th>Rank is the bid</th>
             <td>
-              Sort by <code>bidUsd</code> descending. Nothing else — no recency
-              boost, no editorial pick, no quality score.
+              Briefs are ordered by bid from highest to lowest. Recency,
+              editorial preference, and quality scores do not affect rank.
             </td>
           </tr>
           <tr>
@@ -46,19 +46,15 @@ export default function RulesPage() {
           </tr>
           <tr>
             <th>Equal bids</th>
-            <td>
-              <strong>Older wins ties.</strong> Compare{" "}
-              <code>firstPaidAt</code> ascending, then listing id.
-            </td>
+            <td>The brief placed first keeps the higher rank.</td>
           </tr>
           <tr>
             <th>Raise</th>
             <td>
-              Same canonical brief URL still inside last 7 days raises.{" "}
-              <code>weekId</code> stays an audit label — not raise identity.{" "}
-              <strong>Raise pays difference</strong> only (
-              <code>new − current</code>). New amount must be a whole dollar ≥
-              current + $1.
+              The same cleaned brief link may raise while its placement is
+              active. The original payer is charged only the{" "}
+              <strong>difference</strong>, and the new total must be at least
+              $1 higher.
             </td>
           </tr>
           <tr>
@@ -72,8 +68,8 @@ export default function RulesPage() {
           <tr>
             <th>Payment claims rank</th>
             <td>
-              A completed payment claims the rank. Unpaid checkout does not. We
-              do not invent a paid #1 brief.
+              Rank changes only after payment is confirmed. An incomplete or
+              abandoned checkout never appears on the board.
             </td>
           </tr>
         </tbody>
@@ -92,19 +88,8 @@ export default function RulesPage() {
           <tr>
             <th>Boundary</th>
             <td>
-              <code>now − 7d</code> inclusive through <code>now</code>.{" "}
-              <strong>Not Monday 00:00:00.000 UTC</strong>. A buyer outside
-              that civil midnight does not lose the ticket on a timezone tax.
-            </td>
-          </tr>
-          <tr>
-            <th>
-              <code>weekId</code>
-            </th>
-            <td>
-              ISO week in UTC, <code>YYYY-Www</code> (e.g. <code>2026-W34</code>
-              ). Label only. Rank expires from <code>lastPaidAt</code>, not
-              Monday midnight.
+              Each placement keeps its own seven-day window. The board does not
+              reset for everyone at Monday midnight.
             </td>
           </tr>
           <tr>
@@ -124,33 +109,20 @@ export default function RulesPage() {
         </tbody>
       </table>
       <p>
-        An empty week is valid. There is no #1 brief until someone pays. Do not
-        invent a brief.
+        If nobody has paid for an active placement, the board has no #1 brief.
       </p>
 
       <h2>No invented ratings</h2>
       <p>
         We never display stars, review scores, hire rates, reputation, or “top
-        freelancer” badges. Submitting those fields is{" "}
-        <code>rating_forbidden</code>. Public <strong>clicks</strong> on{" "}
-        <code>GET /click/:id</code> are the only counter. Clicks are not a
-        rating.
+        freelancer” badges. Public <strong>clicks</strong> on the brief link are
+        the only counter. Clicks are not a rating.
       </p>
 
       <h2>Brief URL hygiene</h2>
       <ol>
-        <li>
-          Require <code>https:</code>. <code>http:</code> is{" "}
-          <code>url_insecure</code>.
-        </li>
-        <li>
-          Strip tracking and affiliate query keys: <code>utm_*</code>,{" "}
-          <code>fbclid</code>, <code>gclid</code>, <code>gbraid</code>,{" "}
-          <code>wbraid</code>, <code>msclkid</code>, <code>ref</code>,{" "}
-          <code>ref_</code>, <code>affiliate</code>, <code>aff</code>,{" "}
-          <code>irclickid</code>, <code>mc_cid</code>, <code>mc_eid</code>,{" "}
-          <code>icid</code>, <code>si</code>, <code>igshid</code>.
-        </li>
+        <li>Use a secure, public brief link.</li>
+        <li>Tracking, referral, and affiliate parameters are removed.</li>
         <li>Strip fragments. Store and click only the stripped URL.</li>
         <li>
           Reject chat / invite hosts: Telegram, <code>t.me</code>,{" "}
@@ -158,9 +130,8 @@ export default function RulesPage() {
           invite, <code>m.me</code>, <code>signal.me</code>.
         </li>
         <li>
-          Reject <strong>NSFW</strong> path tokens and adult hosts. Reject{" "}
-          <code>javascript:</code>, <code>data:</code>, credentials-in-URL, and
-          localhost / link-local hosts.
+          Adult content and private, local-only, credentialed, or otherwise
+          unsafe destinations are rejected.
         </li>
         <li>
           Known shorteners (<code>bit.ly</code>, <code>t.co</code>,{" "}
@@ -168,8 +139,7 @@ export default function RulesPage() {
         </li>
       </ol>
       <p>
-        Chat / invite and NSFW fail as <code>url_forbidden</code>. No listing.
-        No charge.
+        Rejected links never create a listing or start a charge.
       </p>
     </main>
   );

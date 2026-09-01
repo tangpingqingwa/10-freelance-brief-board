@@ -36,16 +36,13 @@ export default function AboutPage() {
         counter. Clicks are not a rating.
       </p>
       <p>
-        No ads, no API keys, no revenue share with listed buyers or freelancers.
-        Copy is <strong>English</strong>. Currency is <strong>USD</strong>. The
-        market is <strong>global</strong> — there is no China-city default. This
-        is the <strong>freelance-brief-board</strong> vertical, a clone of{" "}
-        <a href="https://outbid.lol">outbid.lol</a> pay-to-rank mechanics.
+        The board is in <strong>English</strong>, bids use{" "}
+        <strong>USD</strong>, and freelancers can browse briefs from anywhere.
       </p>
       <p>
-        Anyone can read the board without an account. Payment is the only write
-        path. Live money is Polar Checkout. Tests use a fixture so they never
-        call live Polar. Abandoned checkout does not invent a #1 brief.
+        Anyone can read the board without an account. A brief appears only
+        after payment is confirmed. A canceled or abandoned checkout never
+        creates a #1 brief.
       </p>
       <p>
         <a href="/rules">Read the rules</a> for the $5 minimum, older-wins ties,

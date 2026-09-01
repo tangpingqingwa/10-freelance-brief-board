@@ -5,9 +5,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { GET as getClick } from "../src/app/click/[id]/route";
 import { Board } from "../src/app/board";
 import { briefClickPath } from "../src/core/listing";
-import { applyPaidEvent, getListingById, resetListings } from "../src/core/listings";
+import { getListingById, resetListings } from "../src/core/listings";
 import { getBoardListings, rankListings } from "../src/core/rank";
 import { currentWeekUtc } from "../src/core/week";
+import { settleFixtureEvent } from "./fixture-settlement";
 
 afterEach(() => {
   resetListings();
@@ -16,7 +17,7 @@ afterEach(() => {
 const WEEK = currentWeekUtc();
 
 test("GET /click/:id 302s to the stripped brief URL and increments clicks", async () => {
-  const listing = applyPaidEvent({
+  const listing = settleFixtureEvent({
     sessionId: "chk_click",
     listingDraft: {
       buyer: "Acme Studio",
@@ -37,7 +38,7 @@ test("GET /click/:id 302s to the stripped brief URL and increments clicks", asyn
   assert.equal(briefClickPath(listing.id), `/click/${listing.id}`);
 
   const response = await getClick(new Request(`http://localhost/click/${listing.id}`), {
-    params: { id: listing.id },
+    params: Promise.resolve({ id: listing.id }),
   });
   assert.equal(response.status, 302);
   assert.equal(response.headers.get("location"), "https://example.com/acme");
@@ -54,14 +55,14 @@ test("GET /click/:id 302s to the stripped brief URL and increments clicks", asyn
 
 test("unknown listing click is 404 and does not invent a hop", async () => {
   const missing = await getClick(new Request("http://localhost/click/missing"), {
-    params: { id: "missing" },
+    params: Promise.resolve({ id: "missing" }),
   });
   assert.equal(missing.status, 404);
   assert.deepEqual(await missing.json(), { error: "listing_not_found" });
 });
 
 test("board brief CTA uses the click route and does not label clicks as ratings", () => {
-  const listing = applyPaidEvent({
+  const listing = settleFixtureEvent({
     sessionId: "chk_ui_click",
     listingDraft: {
       buyer: "Acme Studio",

@@ -6,7 +6,7 @@
 **Market:** global English
 **Currency:** USD only
 **Clone of:** [outbid.lol](https://outbid.lol/) pay-to-rank mechanics
-**Forbidden:** invented ratings, stars, review scores, chat/invite links, NSFW, live Polar in CI
+**Forbidden:** invented ratings, stars, review scores, chat/invite links, NSFW, live Waffo in CI
 
 This document is the product contract. If README and SPEC disagree, SPEC wins until README is updated. If SPEC and code disagree, fix one of them in the same PR.
 
@@ -41,7 +41,7 @@ One-line pitch: **Bid USD. Own the last 7 days’ #1 brief. Freelancers see you 
 - Strip tracking and affiliate query strings from the brief URL.
 - Reject chat / invite links and NSFW.
 - Public click counts on the brief URL.
-- Live payments via Polar (merchant of record). Tests use a Polar **fixture**.
+- Live payments via Waffo Pancake (merchant of record). Tests use an explicit **fixture**.
 - Pages: board, about, rules, checkout return.
 
 ### Non-goals
@@ -57,7 +57,7 @@ One-line pitch: **Bid USD. Own the last 7 days’ #1 brief. Freelancers see you 
 ### Kill / change rules
 
 - If after 90 days nobody will bid because freelancers are not looking, freeze features. Do not invent ratings or a marketplace to “fix” an empty week.
-- Polar down → checkout fails closed. Do not invent a paid #1 brief.
+- Waffo down → checkout fails closed. Do not invent a paid #1 brief.
 
 ---
 
@@ -88,7 +88,7 @@ v1 is one public board. Do not fork ranking per craft (design / dev / edit). A l
 
 ## 5. Listing schema (normative)
 
-A listing is created only after Polar (or the fixture checkout) reports a completed payment.
+A listing is created only after Waffo (or the fixture checkout) reports a completed payment.
 
 A listing is **buyer + budget + deadline + brief URL**.
 
@@ -110,7 +110,7 @@ type Listing = {
 
 **Required to place:** `buyer`, `budgetUsd`, `deadline`, `winnerRule`, `briefUrl`, `bidUsd`.
 
-Identity for raise: same **canonical brief URL** still inside the rolling last 7 days. Same live listing → raise. Buyer name may be edited on raise; the URL key does not change. `weekId` stays a Polar/audit label — not raise identity. A buyer who paid Sunday still raises on Monday if that listing is inside last 7 days. After the window ends, the same URL is a new ticket (full bid), not a raise.
+Identity for raise: same **canonical brief URL** still inside the rolling last 7 days. Same live listing → raise. Buyer name may be edited on raise; the URL key does not change. `weekId` stays an audit label — not raise identity. A buyer who paid Sunday still raises on Monday if that listing is inside last 7 days. After the window ends, the same URL is a new ticket (full bid), not a raise.
 
 `budgetUsd` is the buyer’s stated project budget for the freelance work. It does **not** affect rank. `bidUsd` is the pay-to-rank amount. Do not conflate them on the card.
 
@@ -168,7 +168,7 @@ Worked examples, same week:
 | History | Aged-out rows may stay readable as archive. They are not the live #1 brief. |
 | Empty week | Valid. No invented brief. |
 
-The board header shows the rolling last-7-days window. Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week. Occupied mast period-meta follows last-7-days, not ISO `weekId`. Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty mast period-meta follows last-7-days, not ISO `weekId`. Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week. Document chrome (title and meta) names that rolling window, not a calendar week. About copy (meta and lead) names that rolling window, not a weekly auction. README (lead) names that rolling window, not a weekly auction. About last paragraph names last-7-days, not a weekly reset. SPEC pitch (product statement and one-line) names last-7-days, not a weekly auction. BUILD intro names last-7-days, not a weekly auction. Empty week stays Claim #1 / No paid brief.
+The board header shows the rolling last-7-days window. Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week. Occupied mast period-meta follows last-7-days, not ISO `weekId`. Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty mast period-meta follows last-7-days, not ISO `weekId`. Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp. Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week. Document chrome (title and meta) names that rolling window, not a calendar week. About copy (meta and lead) names that rolling window, not a weekly auction. README (lead) names that rolling window, not a weekly auction. About last paragraph names last-7-days, not a weekly reset. SPEC pitch (product statement and one-line) names last-7-days, not a weekly auction. BUILD intro names last-7-days, not a weekly auction. BUILD PR 5 acceptance names last-7-days, not a weekly UTC reset. Empty week stays Claim #1 / No paid brief.
 
 Do not carry bids after they age out of the rolling window. Submitting a brief URL whose last payment is older than 7 days is a **new** listing and pays a full bid ≥ $5.
 
@@ -220,10 +220,10 @@ handleWebhook(rawBody: string, headers: Record<string, string>): Promise<PaidEve
 
 | Mode | When | Behavior |
 |---|---|---|
-| Fixture | tests, `POLAR_FIXTURE_ONLY=1`, or Polar unset | In-memory / signed fixture session. No network |
-| Live Polar | `POLAR_LIVE=1` + Polar secrets | Polar checkout + webhook. Merchant of record |
+| Fixture | explicit `WAFFO_MODE=fixture` in tests/local only | Durable fixture session. No network |
+| Live Waffo | explicit `WAFFO_MODE=waffo-test` or `waffo-prod` + Waffo secrets | Waffo checkout + signed webhook. Merchant of record |
 
-`POLAR_FIXTURE_ONLY=1` always wins. Unset / `0` / `true` stay fixture or fail-closed. CI must not set `POLAR_LIVE=1`.
+Legacy Polar flags are inert and never select a provider. An unset mode fails closed; CI must use explicit fixture mode and never select live Waffo.
 
 Rank updates **only** after a successful paid event. Abandoned checkout does not create or raise a listing. Do not invent a paid #1 brief.
 
@@ -264,7 +264,7 @@ Board UI (clone outbid.lol, not a redesign):
 | `week_closed` | 400 | bid outside the rolling last-7-days window |
 | `rating_forbidden` | 400 | submit tried to attach stars / review / hire-rate |
 | `payment_incomplete` | 402 | checkout abandoned; board unchanged |
-| `polar_unavailable` | 503 | live Polar down; fixture never invents a paid event |
+| `waffo_unavailable` | 503 | live Waffo down; fixture never invents a paid event |
 
 Zero invented listings on any error. Zero invented ratings.
 
@@ -285,7 +285,7 @@ Zero invented listings on any error. Zero invented ratings.
 | 9 | Click brief CTA | 302 to stripped URL; public clicks +1 |
 | 10 | Rating field / star copy | `rating_forbidden` or not rendered; no invented ratings |
 | 11 | After a payment ages past 7 days | board drops that rank; Monday 00:00 UTC does not drop a bid still inside the window |
-| 12 | `POLAR_LIVE` unset | fixture / fail-closed; no Polar network |
+| 12 | `WAFFO_MODE` unset | fail-closed; no Waffo network |
 
 ---
 
@@ -293,17 +293,17 @@ Zero invented listings on any error. Zero invented ratings.
 
 Operator-only. `scripts/live-smoke.sh` is **not** called from `scripts/test.sh` or Actions.
 
-Local process, `POLAR_LIVE=1` if Polar secrets exist, else record `BLOCKED-SECRET` for checkout only. Board, rules, about, and click still run.
+Local process, explicit Waffo mode if Waffo secrets exist, else record `BLOCKED-SECRET` for checkout only. Board, rules, about, and click still run.
 
 | Flow | Pass |
 |---|---|
 | Board | 200, rolling last-7-days window, listing shape buyer + budget + deadline + brief URL, no invented ratings |
 | About / rules | 200, state min $5, older wins ties, raise pays difference, rolling last 7 days (not Monday 00:00 UTC), no invented ratings |
-| Create checkout | Polar session for a real https brief URL **or** `BLOCKED-SECRET` (`POLAR_ACCESS_TOKEN`) |
+| Create checkout | Waffo session for a real https brief URL **or** `BLOCKED-SECRET` (Waffo credential) |
 | Click | 302, click count increments (fixture listing allowed if live pay is blocked) |
 | Honesty | no stars, no review scores, no invented #1 brief |
 
-Missing Polar secret is not a license to invent a paid #1 brief.
+Missing Waffo secret is not a license to invent a paid #1 brief.
 
 ---
 
@@ -339,4 +339,4 @@ Development is GitHub trunk-based. **`main` is always cloneable, buildable, and 
 
 Full process: [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-Until there is an application binary, `scripts/test.sh` still has to pass: contract files exist, SPEC/CONTRIBUTING agree, no tracked secrets. Adding a server means **extending** that script with unit/contract tests. Live Polar calls are optional and must not be required for `main` to stay green.
+Until there is an application binary, `scripts/test.sh` still has to pass: contract files exist, SPEC/CONTRIBUTING agree, no tracked secrets. Adding a server means **extending** that script with unit/contract tests. Live Waffo calls are optional and must not be required for `main` to stay green.

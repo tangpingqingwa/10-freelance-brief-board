@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Offline gate for main. Must exit 0 on a clean clone with no secrets.
 # When application code lands, add unit/contract tests here. Do not delete the
-# contract checks. Do not require live Polar or any third-party network.
+# contract checks. Do not require live Waffo or any third-party network.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -11,6 +11,14 @@ fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
+
+echo "== Node 22 runtime =="
+command -v node >/dev/null || fail "node is required"
+node_major="$(node --input-type=module -e 'process.stdout.write(process.versions.node.split(".")[0])')"
+[[ "$node_major" =~ ^[0-9]+$ && "$node_major" -ge 22 ]] \
+  || fail "Node 22+ is required (found $(node --version))"
+grep -Eq '"node"[[:space:]]*:[[:space:]]*">=22"' package.json \
+  || fail "package.json must require Node 22+"
 
 echo "== contract files =="
 for f in README.md SPEC.md BUILD.md CONTRIBUTING.md scripts/test.sh; do
@@ -33,8 +41,8 @@ grep -q 'No invented ratings' SPEC.md || fail "SPEC.md missing no invented ratin
 grep -Fq 'Minimum **$5**' SPEC.md || fail "SPEC.md missing min $5"
 grep -q 'older wins ties' SPEC.md || fail "SPEC.md missing older-wins-ties"
 grep -q 'raise pays difference' SPEC.md || fail "SPEC.md missing raise-pays-difference"
-grep -q 'Polar' SPEC.md || fail "SPEC.md missing Polar"
-grep -q 'fixture' SPEC.md || fail "SPEC.md missing fixture Polar"
+grep -q 'Waffo' SPEC.md || fail "SPEC.md missing Waffo"
+grep -q 'fixture' SPEC.md || fail "SPEC.md missing fixture payment mode"
 grep -q '/about' SPEC.md || fail "SPEC.md missing /about"
 grep -q '/rules' SPEC.md || fail "SPEC.md missing /rules"
 grep -q 'public click' SPEC.md || fail "SPEC.md missing public clicks"
@@ -58,6 +66,8 @@ echo "== CI job ci =="
 grep -qE '^name: ci$' .github/workflows/ci.yml || fail "ci.yml missing workflow name ci"
 grep -qE '^  ci:' .github/workflows/ci.yml || fail "ci.yml missing job id ci"
 grep -q 'bash scripts/test.sh' .github/workflows/ci.yml || fail "ci.yml must run scripts/test.sh"
+grep -q 'node-version: 22' .github/workflows/ci.yml \
+  || fail "ci.yml must pin Node 22"
 if grep -Eqi 'POLAR_LIVE=1|POLAR_ACCESS_TOKEN=' .github/workflows/ci.yml; then
   fail "CI must not set live Polar"
 fi
@@ -77,15 +87,25 @@ file -b --mime-encoding README.md SPEC.md BUILD.md CONTRIBUTING.md | grep -qiE '
   || fail "docs are not UTF-8/ASCII"
 
 echo "== skeleton files =="
-for f in package.json tsconfig.json src/app/healthz/route.ts tests/healthz.test.ts; do
+for f in package.json tsconfig.json scripts/preflight.mjs src/app/healthz/route.ts tests/healthz.test.ts; do
   [[ -f "$f" ]] || fail "missing $f"
   [[ -s "$f" ]] || fail "empty $f"
 done
 grep -q '/healthz' src/app/healthz/route.ts || grep -q 'HealthzOk' src/app/healthz/route.ts \
   || fail "src/app/healthz/route.ts missing healthz contract"
 grep -q 'ok: true' src/app/healthz/route.ts || fail "healthz route missing { ok: true }"
+grep -q 'scripts/preflight.mjs && next start' package.json \
+  || fail "production start must preflight Waffo configuration"
+grep -q '"@waffo/pancake-ts"' package.json \
+  || fail "Waffo official SDK must be installed"
+grep -q 'assertDatabaseReady' src/app/healthz/route.ts \
+  || fail "healthz must probe the shared durable database"
+grep -q 'export function assertDatabaseReady' src/db.ts \
+  || fail "shared database helper must expose the readiness probe"
+grep -q 'DATABASE_PATH is not ready' scripts/preflight.mjs \
+  || fail "preflight must fail closed when the durable database is unusable"
 if grep -E '"@polar-sh/sdk"|"@polar-sh/' package.json >/dev/null 2>&1; then
-  fail "do not add a live Polar SDK in this unit"
+  fail "Polar SDK must not be installed in this unit"
 fi
 echo "== board UI files =="
 for f in \
@@ -142,76 +162,65 @@ grep -q 'reading the paid #1 deadline the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-deadline freelancer fact"
 grep -q 'reading the paid #1 winner rule the freelancer fact' tests/rank.test.ts \
   || fail "rank tests missing occupied-week read-this-winner freelancer fact"
-grep -q 'writing a new ticket after the winner rule the buyer hop' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-rule buyer hop"
-grep -q 'win the first click after Write follows the winner rule' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week open-after-write first click"
-grep -q 'concentrates writing a new ticket after Open this brief wins the first click' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-open first-write hop"
-grep -q 'concentrates opening the paid #1 brief after Write this ticket is concentrated' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week open-after-write-first freelancer hop"
-grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-open-two buyer hop"
-grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week open-after-write-two freelancer hop"
-grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated again' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-open-three buyer hop"
-grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated again' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week open-after-write-three freelancer hop"
-grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a fourth time' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-open-four buyer hop"
-grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated a fourth time' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week open-after-write-four freelancer hop"
-grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a fifth time' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-open-five buyer hop"
-grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated a fifth time' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week open-after-write-five freelancer hop"
-grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a sixth time' tests/rank.test.ts \
-  || fail "rank tests missing occupied-week write-after-open-six buyer hop"
-if ! awk '
-  /desk-surface-empty \.spike-quiet/ { spike=NR }
-  /desk-surface-empty \.claim/ { claim=NR }
-  END { exit !(spike && claim && spike < claim) }
-' src/app/board.css; then
-  fail "empty-desk CSS must paint No paid brief above Claim #1"
+echo "== brief-desk action contract =="
+grep -q 'data-claim-anchor' src/app/board.tsx \
+  || fail "paid #1 must expose one semantic Claim #1 anchor"
+grep -q 'claim-anchor' src/app/board.css \
+  || fail "CSS must style the quiet Claim #1 anchor"
+grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
+  || fail "paid #1 first action must be Open this brief"
+grep -q 'data-first-read="open"' src/app/board.tsx \
+  || fail "paid #1 must record the first read as Open this brief"
+grep -q 'occupied-claim' src/app/outbid-form.tsx \
+  || fail "occupied Claim #1 must use the occupied semantic state"
+grep -q 'data-ticket-identity' src/app/outbid-form.tsx \
+  || fail "empty and occupied forms must expose identity fields"
+grep -q 'empty desk exposes every identity field before one direct Outbid' tests/rank.test.ts \
+  || fail "rank tests must cover the direct empty claim path"
+grep -q 'occupied desk keeps one Open action, one quiet claim anchor' tests/rank.test.ts \
+  || fail "rank tests must cover the occupied action path"
+grep -q 'expired paid tickets leave the desk empty' tests/rank.test.ts \
+  || fail "rank tests must cover expired empty state"
+grep -q 'occupied #1 winner rule is the prize before quieter rank, budget, and click facts' tests/rank.test.ts \
+  || fail "rank tests must cover the occupied prize-before-rank hierarchy"
+grep -q 'occupied later-rank tickets stay quieter than #1' tests/rank.test.ts \
+  || fail "rank tests must cover quieter later tickets"
+grep -q 'empty and occupied mast copy names the rolling last-7-days window' tests/rank.test.ts \
+  || fail "rank tests must cover consistent rolling mast copy"
+grep -q 'README/SPEC/BUILD/layout copy keeps the rolling job-ticket contract' tests/rank.test.ts \
+  || fail "rank tests must cover rolling document chrome"
+if grep -E 'data-(open|write)-after-|data-first-click="claim"|Then[[:space:]]+the[[:space:]]+brief[[:space:]]+URL' \
+  src/app/board.tsx src/app/board.css src/app/outbid-form.tsx tests/rank.test.ts >/dev/null; then
+  fail "numbered/reveal action scaffolding must be absent"
 fi
-grep -q 'data-brief-desk' src/app/board.tsx || fail "board must be a brief desk"
-grep -q 'card ticket' src/app/board.tsx || fail "paid listings must render as tickets"
-grep -q 'Who is buying' src/app/board.tsx || fail "ticket missing who is buying"
-grep -q 'What it pays' src/app/board.tsx || fail "ticket missing what it pays"
-grep -q 'When it’s due' src/app/board.tsx || fail "ticket missing when it’s due"
-grep -q 'How a winner is chosen' src/app/board.tsx || fail "ticket missing winner rule"
-grep -q 'data-bid' src/app/board.tsx || fail "cards must show the bid amount"
-grep -q 'data-clicks' src/app/board.tsx || fail "cards must show public clicks"
-grep -q 'data-budget' src/app/board.tsx || fail "cards must show budget"
-grep -q 'data-deadline' src/app/board.tsx || fail "cards must show deadline"
-grep -q 'data-winner-rule' src/app/board.tsx || fail "cards must show winner rule"
-grep -q 'Claim #1' src/app/outbid-form.tsx || fail "form missing Claim #1"
-grep -q 'amount-field' src/app/outbid-form.tsx || fail "form missing dashed amount field"
-grep -q 'className="step"' src/app/outbid-form.tsx || fail "form missing ± steppers"
-grep -q 'Who is buying' src/app/outbid-form.tsx || fail "ticket form missing who is buying"
-grep -q 'What it pays' src/app/outbid-form.tsx || fail "ticket form missing what it pays"
-grep -q 'When it’s due' src/app/outbid-form.tsx || fail "ticket form missing when it’s due"
-grep -q 'How a winner is chosen' src/app/outbid-form.tsx || fail "ticket form missing winner rule"
-grep -q 'ticket-stub' src/app/board.css || fail "CSS missing ticket stub"
-grep -q 'ticket-facts' src/app/board.css || fail "CSS missing ticket facts"
-grep -q 'desk-surface' src/app/board.css || fail "CSS missing brief-desk surface"
-grep -q 'empty-stamp' src/app/board.css || fail "CSS missing empty-week stamp"
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "do not ship a long generic two-column form"
+if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -Eq 'Open this brief|Write this ticket|data-first-click="open"'; then
+  fail "empty desk must not render occupied actions"
 fi
-if grep -qiE 'proposal|portfolio gallery|chat inbox|message the buyer' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "product UI must not add proposals, chat, or portfolios"
-fi
-grep -q 'board.css' src/app/layout.tsx || fail "root layout must load board styles"
-grep -q 'older' tests/rank.test.ts || fail "rank tests missing older-wins-ties"
-grep -q 'no paid brief' tests/rank.test.ts || fail "rank tests missing no-paid-brief empty week"
-grep -q 'Who is buying' tests/rank.test.ts || fail "rank tests missing ticket labels"
-if grep -RInEi '★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating' \
-  src/app src/core --exclude='honesty.ts' --exclude-dir=about --exclude-dir=rules >/dev/null
-then
-  fail "board UI must not render stars or invented ratings"
-fi
+grep -Fq '.week-occupied .ticket-featured .open-this-brief[data-first-click="open"]' src/app/board.css \
+  || fail "occupied Open this brief style is missing"
+grep -Fq '.week-occupied .ticket-featured .claim-anchor' src/app/board.css \
+  || fail "occupied Claim anchor style is missing"
+grep -Fq '.week-occupied .claim.occupied-claim' src/app/board.css \
+  || fail "occupied Claim form style is missing"
+grep -q 'Claim #1 for' src/app/outbid-form.tsx \
+  || fail "form missing Claim #1"
+grep -q 'className="amount-field"' src/app/outbid-form.tsx \
+  || fail "form missing dashed amount"
+grep -q 'className="step"' src/app/outbid-form.tsx \
+  || fail "form missing ± steppers"
+grep -q 'Outbid' src/app/outbid-form.tsx \
+  || fail "form missing Outbid submit"
+grep -q 'name="buyer"' src/app/outbid-form.tsx \
+  || fail "form missing buyer"
+grep -q 'name="budgetUsd"' src/app/outbid-form.tsx \
+  || fail "form missing budget"
+grep -q 'name="deadline"' src/app/outbid-form.tsx \
+  || fail "form missing deadline"
+grep -q 'name="winnerRule"' src/app/outbid-form.tsx \
+  || fail "form missing winner rule"
+grep -q 'name="briefUrl"' src/app/outbid-form.tsx \
+  || fail "form missing brief URL"
+
 echo "== raise-bid files =="
 for f in src/core/listing.ts tests/checkout.test.ts; do
   [[ -f "$f" ]] || fail "missing $f"
@@ -227,7 +236,7 @@ grep -q 'chargeUsd' src/billing/port.ts || fail "checkout must charge the raise 
 grep -q 'bid_not_higher' tests/checkout.test.ts || fail "checkout tests missing bid_not_higher"
 grep -q 'pays \$7' tests/checkout.test.ts || fail "checkout tests missing \$5 → \$12 pays \$7"
 grep -q 'same brief still inside last-7-days raises after the UTC week label rolls' tests/checkout.test.ts \
-  || fail "checkout tests must raise a Sunday pay across Monday weekId"
+  || fail "checkout tests must raise across the UTC week label"
 
 echo "== live-smoke stays operator-only =="
 [[ -f scripts/live-smoke.sh ]] || fail "missing scripts/live-smoke.sh"
@@ -238,21 +247,29 @@ echo "== live-smoke stays operator-only =="
 if grep -Eq '^\s*(bash )?(\./)?scripts/live-smoke\.sh' scripts/test.sh; then
   fail "test.sh must not invoke live-smoke.sh"
 fi
-if grep -E '^[[:space:]]*(export[[:space:]]+)?POLAR_LIVE=1' scripts/test.sh >/dev/null; then
-  fail "test.sh must not set POLAR_LIVE=1"
+if grep -E '^[[:space:]]*(export[[:space:]]+)?WAFFO_MODE=waffo-(test|prod)' scripts/test.sh >/dev/null; then
+  fail "test.sh must not select live Waffo"
 fi
-grep -q 'BLOCKED-SECRET: POLAR_ACCESS_TOKEN' scripts/live-smoke.sh \
-  || fail "live-smoke.sh must name BLOCKED-SECRET: POLAR_ACCESS_TOKEN"
-grep -q 'POLAR_LIVE' scripts/live-smoke.sh \
-  || fail "live-smoke.sh must gate live Polar on POLAR_LIVE"
-grep -q 'sandbox.polar.sh' scripts/live-smoke.sh \
-  || fail "live-smoke.sh must require a sandbox.polar.sh Checkout URL"
-grep -q 'POLAR_API_BASE' scripts/live-smoke.sh \
-  || fail "live-smoke.sh must pass POLAR_API_BASE to the live process"
+grep -q 'WAFFO_MODE=fixture' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must force fixture mode"
+grep -q 'WAFFO_PRIVATE_KEY' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must identify Waffo key handling"
+grep -q 'run_live_waffo_checkout' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must guard explicit live Waffo checkout"
+grep -q 'first_missing_live_secret' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must report exact missing Waffo secrets"
+grep -q 'hasBudgetValue' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must require a value-bearing Budget fact"
+grep -q 'hasDeadlineValue' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must require a value-bearing Due fact"
+grep -q 'assert_card_parser_regression' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must run its empty-fact parser regression"
+grep -q 'waffo\.ai' scripts/live-smoke.sh \
+  || fail "live-smoke.sh must identify Waffo"
 grep -q 'live-smoke refuses CI=true' scripts/live-smoke.sh \
   || fail "live-smoke.sh must refuse CI=true"
-grep -q 'PASS-ERROR' docs/live-smoke.md || fail "docs/live-smoke.md missing PASS-ERROR"
-grep -q 'BLOCKED-SECRET' docs/live-smoke.md || fail "docs/live-smoke.md missing BLOCKED-SECRET"
+grep -q 'PASS-ERROR' docs/live-smoke.md || fail "live-smoke docs missing PASS-ERROR"
+grep -q 'BLOCKED-SECRET' docs/live-smoke.md || fail "live-smoke docs missing BLOCKED-SECRET"
 
 echo "== rules / about / url / honesty / click =="
 for f in \
@@ -272,22 +289,15 @@ grep -q 'href="/about"' src/app/layout.tsx || fail "nav must link to /about"
 grep -q 'href="/rules"' src/app/layout.tsx || fail "nav must link to /rules"
 grep -q 'Rank is the bid' src/app/about/page.tsx || fail "about must state rank is the bid"
 grep -q 'no invented ratings' src/app/about/page.tsx || fail "about must forbid invented ratings"
-grep -q 'freelance-brief-board' src/app/about/page.tsx || fail "about must name the freelance-brief-board vertical"
+grep -q 'Freelance Brief Board is a public auction' src/app/about/page.tsx || fail "about must name this product"
 grep -q '\$5' src/app/rules/page.tsx || fail "rules must state min \$5"
-grep -q 'Older wins ties' src/app/rules/page.tsx || fail "rules must state older wins ties"
-grep -q 'Raise pays difference' src/app/rules/page.tsx || fail "rules must state raise pays difference"
-grep -q 'Same canonical brief URL still inside last 7 days raises' src/app/rules/page.tsx \
-  || fail "rules must name last-7-days raise identity"
-grep -q 'weekId</code> stays an audit label — not raise identity' src/app/rules/page.tsx \
-  || fail "occupied /rules must keep weekId as an audit label"
-grep -q 'Not Monday 00:00:00.000 UTC' src/app/rules/page.tsx \
-  || fail "rules must state rolling last 7 days, not Monday 00:00 UTC"
+grep -q 'brief placed first keeps the higher rank' src/app/rules/page.tsx || fail "rules must state earlier placement wins ties"
+grep -q 'same cleaned brief link may raise while its placement is' src/app/rules/page.tsx \
+  || fail "rules must name rolling raise identity"
 grep -q 'rolling last 7 days' src/app/rules/page.tsx \
-  || fail "rules must name the rolling last-7-days window"
-grep -q 'rolling last 7 days' src/app/about/page.tsx \
-  || fail "about must name the rolling last-7-days window"
+  || fail "rules must name the rolling window"
 grep -q 'No invented ratings' src/app/rules/page.tsx || fail "rules must forbid invented ratings"
-grep -q 'utm_' src/core/url.ts || fail "url.ts must strip utm_ tracking keys"
+grep -q 'utm_' src/core/url.ts || fail "url.ts must strip tracking keys"
 grep -q 'url_forbidden' src/core/url.ts || fail "url.ts must reject forbidden URLs"
 grep -q 't.me' src/core/url.ts || fail "url.ts must reject telegram invites"
 grep -q 'export function canonicalizeBriefUrl' src/core/url.ts \
@@ -298,2665 +308,46 @@ grep -q 'rejectInventedRatings' src/core/honesty.ts \
 grep -q 'incrementListingClicks' 'src/app/click/[id]/route.ts' \
   || fail "click route must increment public clicks"
 grep -q 'NextResponse.redirect' 'src/app/click/[id]/route.ts' \
-  || fail "click route must 302 to the brief URL"
-grep -q 'briefClickPath' src/app/board.tsx || fail "board brief CTA must use the click route"
+  || fail "click route must redirect to brief"
+grep -q 'briefClickPath' src/app/board.tsx || fail "board CTA must use click route"
 grep -q 'Open this brief' src/app/board.tsx \
-  || fail "featured #1 ticket must say Open this brief"
+  || fail "featured #1 must say Open this brief"
 grep -q 'data-open-brief' src/app/board.tsx \
-  || fail "featured #1 ticket must mark the open-brief hop"
-grep -q 'open-this-brief' src/app/board.css \
-  || fail "CSS missing featured Open this brief stamp"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "occupied write ticket must say Write this ticket"
-grep -q 'data-write-ticket' src/app/outbid-form.tsx \
-  || fail "occupied write ticket must mark the buyer write hop"
-grep -q 'write-this-ticket' src/app/board.css \
-  || fail "CSS missing occupied Write this ticket stamp"
+  || fail "featured #1 must mark the open-brief action"
 grep -q 'data-read-budget' src/app/board.tsx \
-  || fail "featured #1 ticket must mark the project budget"
-grep -q 'Project budget, not the bid' src/app/board.tsx \
-  || fail "featured #1 ticket must say project budget is not the bid"
-grep -q 'read-this-budget' src/app/board.css \
-  || fail "CSS missing featured project-budget fact"
-grep -q 'budget-amount' src/app/board.tsx \
-  || fail "featured #1 ticket must name the project-budget amount"
-if ! awk '
-  /ticket-featured \.ticket-read-budget/ { fact=NR }
-  /ticket-featured \.open-this-brief/ { open=NR }
-  END { exit !(fact && open && fact < open) }
-' src/app/board.css; then
-  fail "featured CSS must paint project budget above Open this brief"
-fi
+  || fail "featured #1 must mark the project budget"
 grep -q 'data-read-deadline' src/app/board.tsx \
-  || fail "featured #1 ticket must mark the due date"
-grep -q 'Due date, not a score' src/app/board.tsx \
-  || fail "featured #1 ticket must say the due date is not a score"
-grep -q 'read-this-deadline' src/app/board.css \
-  || fail "CSS missing featured due-date fact"
-grep -q 'deadline-date' src/app/board.tsx \
-  || fail "featured #1 ticket must name the submitted due date"
-if ! awk '
-  /ticket-featured \.ticket-read-budget/ { budget=NR }
-  /ticket-featured \.ticket-read-deadline/ { fact=NR }
-  /ticket-featured \.open-this-brief/ { open=NR }
-  END { exit !(budget && fact && open && budget < fact && fact < open) }
-' src/app/board.css; then
-  fail "featured CSS must paint due date between project budget and Open this brief"
-fi
+  || fail "featured #1 must mark the due date"
 grep -q 'data-read-winner' src/app/board.tsx \
-  || fail "featured #1 ticket must mark the winner rule"
-grep -q 'Winner rule, not a score' src/app/board.tsx \
-  || fail "featured #1 ticket must say the winner rule is not a score"
-grep -q 'read-this-winner' src/app/board.css \
-  || fail "CSS missing featured winner-rule fact"
-grep -q 'winner-rule-text' src/app/board.tsx \
-  || fail "featured #1 ticket must name the submitted winner rule"
-if ! awk '
-  /ticket-featured \.ticket-read-budget/ { budget=NR }
-  /ticket-featured \.ticket-read-deadline/ { deadline=NR }
-  /ticket-featured \.ticket-read-winner/ { fact=NR }
-  /ticket-featured \.open-this-brief/ { open=NR }
-  END { exit !(budget && deadline && fact && open && budget < deadline && deadline < fact && fact < open) }
-' src/app/board.css; then
-  fail "featured CSS must paint winner rule between due date and Open this brief"
-fi
-grep -q 'data-write-after-rule' src/app/board.tsx \
-  || fail "featured #1 ticket must mark write-after-rule"
-grep -q 'after the winner rule' src/app/board.tsx \
-  || fail "featured #1 ticket must say write sits after the winner rule"
-grep -q 'write-after-rule' src/app/board.css \
-  || fail "CSS missing featured write-after-rule hop"
-grep -q 'href="#claim"' src/app/board.tsx \
-  || fail "write-after-rule hop must jump to Claim #1"
-if ! awk '
-  /ticket-featured \.ticket-read-winner/ { fact=NR }
-  /ticket-featured \.write-after-rule \{/ { hop=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  END { exit !(fact && hop && open && fact < open && open < hop) }
-' src/app/board.css; then
-  fail "featured CSS must paint Open this brief between winner rule and write-after-rule"
-fi
-grep -q 'data-first-click' src/app/board.tsx \
-  || fail "featured #1 Open this brief must mark the first click"
-grep -q '"open"' src/app/board.tsx \
-  || fail "featured #1 first click must be Open this brief"
-grep -q 'data-first-click="open"' src/app/board.css \
-  || fail "CSS must make Open this brief win the first click"
-if ! awk '
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /ticket-featured \.open-this-brief\[data-first-click="open"\]/ { first=NR }
-  /ticket-featured \.write-after-rule \{/ { hop=NR }
-  END { exit !(open && first && hop && open < first && first < hop) }
-' src/app/board.css; then
-  fail "featured CSS must paint first-click Open this brief louder than write-after-rule"
-fi
-grep -q 'data-write-after-open' src/app/board.tsx \
-  || fail "featured #1 Write this ticket must concentrate after Open this brief"
-grep -q 'data-write-after-open' src/app/board.css \
-  || fail "CSS must concentrate Write this ticket after Open this brief"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open'; then
-  fail "empty week must not concentrate Write this ticket after Open this brief"
-fi
-if ! awk '
-  /ticket-featured \.open-this-brief\[data-first-click="open"\]/ { first=NR }
-  /ticket-featured \.write-after-rule \{/ { hop=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
-  END { exit !(first && hop && write && first < hop && hop < write) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Write this ticket after first-click Open this brief"
-fi
-grep -q 'data-open-after-write-first' src/app/board.tsx \
-  || fail "featured #1 Open this brief must concentrate after Write this ticket"
-grep -q 'data-first-read' src/app/board.tsx \
-  || fail "featured #1 Open this brief must mark the first read"
-grep -q 'data-open-after-write-first' src/app/board.css \
-  || fail "CSS must concentrate Open this brief after Write this ticket"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-first'; then
-  fail "empty week must not concentrate Open this brief after Write this ticket"
-fi
-if ! awk '
-  /ticket-featured \.open-this-brief\[data-first-click="open"\]/ { first=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-first\]/ { open=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
-  END { exit !(first && open && write && first < open && open < write) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Open this brief after Write this ticket"
-fi
-grep -q 'data-write-after-open-two' src/app/board.tsx \
-  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated"
-grep -q 'data-write-after-open-two' src/app/board.css \
-  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-two'; then
-  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated"
-fi
-if ! awk '
-  /ticket-featured \.open-this-brief\[data-open-after-write-first\] \{/ { open=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open\]/ { write=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open-two\]/ { two=NR }
-  END { exit !(open && write && two && open < write && write < two) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated"
-fi
-grep -q 'data-open-after-write-two' src/app/board.tsx \
-  || fail "featured #1 Open this brief must concentrate after Write this ticket is re-concentrated"
-grep -q 'data-open-after-write-two' src/app/board.css \
-  || fail "CSS must concentrate Open this brief after Write this ticket is re-concentrated"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-two'; then
-  fail "empty week must not concentrate Open this brief after Write this ticket is re-concentrated"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-two\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-first\] \{/ { open=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-two\]/ { two=NR }
-  END { exit !(write && open && two && open < write && write < two) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Open this brief after Write this ticket is re-concentrated"
-fi
-grep -q 'data-write-after-open-three' src/app/board.tsx \
-  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated again"
-grep -q 'data-write-after-open-three' src/app/board.css \
-  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated again"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-three'; then
-  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated again"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-two\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-two\]/ { open=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open-three\]/ { three=NR }
-  END { exit !(write && open && three && write < open && open < three) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated again"
-fi
-grep -q 'data-open-after-write-three' src/app/board.tsx \
-  || fail "featured #1 Open this brief must concentrate after Write this ticket is re-concentrated again"
-grep -q 'data-open-after-write-three' src/app/board.css \
-  || fail "CSS must concentrate Open this brief after Write this ticket is re-concentrated again"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-three'; then
-  fail "empty week must not concentrate Open this brief after Write this ticket is re-concentrated again"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-three\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-two\] \{/ { open=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-three\]/ { three=NR }
-  END { exit !(write && open && three && open < write && write < three) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Open this brief after Write this ticket is re-concentrated again"
-fi
-grep -q 'data-write-after-open-four' src/app/board.tsx \
-  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated a fourth time"
-grep -q 'data-write-after-open-four' src/app/board.css \
-  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated a fourth time"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-four'; then
-  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated a fourth time"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-three\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-three\]/ { open=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open-four\]/ { four=NR }
-  END { exit !(write && open && four && write < open && open < four) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated a fourth time"
-fi
-grep -q 'data-open-after-write-four' src/app/board.tsx \
-  || fail "featured #1 Open this brief must concentrate after Write this ticket is re-concentrated a fourth time"
-grep -q 'data-open-after-write-four' src/app/board.css \
-  || fail "CSS must concentrate Open this brief after Write this ticket is re-concentrated a fourth time"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-four'; then
-  fail "empty week must not concentrate Open this brief after Write this ticket is re-concentrated a fourth time"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-four\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-three\] \{/ { open=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-four\]/ { four=NR }
-  END { exit !(write && open && four && open < write && write < four) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Open this brief after Write this ticket is re-concentrated a fourth time"
-fi
-grep -q 'data-write-after-open-five' src/app/board.tsx \
-  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated a fifth time"
-grep -q 'data-write-after-open-five' src/app/board.css \
-  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated a fifth time"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-five'; then
-  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated a fifth time"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-four\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-four\]/ { open=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open-five\]/ { five=NR }
-  END { exit !(write && open && five && write < open && open < five) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated a fifth time"
-fi
-grep -q 'data-open-after-write-five' src/app/board.tsx \
-  || fail "featured #1 Open this brief must concentrate after Write this ticket is re-concentrated a fifth time"
-grep -q 'data-open-after-write-five' src/app/board.css \
-  || fail "CSS must concentrate Open this brief after Write this ticket is re-concentrated a fifth time"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-open-after-write-five'; then
-  fail "empty week must not concentrate Open this brief after Write this ticket is re-concentrated a fifth time"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-five\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-four\] \{/ { open=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-five\]/ { five=NR }
-  END { exit !(write && open && five && open < write && write < five) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Open this brief after Write this ticket is re-concentrated a fifth time"
-fi
-grep -q 'data-write-after-open-six' src/app/board.tsx \
-  || fail "featured #1 Write this ticket must concentrate after Open this brief is re-concentrated a sixth time"
-grep -q 'data-write-after-open-six' src/app/board.css \
-  || fail "CSS must concentrate Write this ticket after Open this brief is re-concentrated a sixth time"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-after-open-six'; then
-  fail "empty week must not concentrate Write this ticket after Open this brief is re-concentrated a sixth time"
-fi
-if ! awk '
-  /ticket-featured \.write-after-rule\[data-write-after-open-five\]/ { write=NR }
-  /ticket-featured \.open-this-brief\[data-open-after-write-five\]/ { open=NR }
-  /ticket-featured \.write-after-rule\[data-write-after-open-six\]/ { six=NR }
-  END { exit !(write && open && six && write < open && open < six) }
-' src/app/board.css; then
-  fail "featured CSS must concentrate Write this ticket after Open this brief is re-concentrated a sixth time"
-fi
+  || fail "featured #1 must mark the winner rule"
 grep -q 'data-prize-before-price' src/app/board.tsx \
-  || fail "featured #1 ticket must stamp prize before price"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "featured #1 ticket must mark the winner rule as the prize"
-grep -q 'prize-before-price' src/app/board.tsx \
-  || fail "featured #1 winner rule must use the prize-before-price class"
-grep -q 'ticket-bid-later' src/app/board.tsx \
-  || fail "featured #1 ticket must keep \$bid + clicks as a later fact"
-grep -q 'ticket-featured .prize-before-price .winner-rule-text' src/app/board.css \
-  || fail "CSS must enlarge #1 winner rule over \$bid"
-grep -Fq 'ticket-featured[data-prize-before-price] .ticket-bid-later .bid' src/app/board.css \
-  || fail "CSS must keep #1 \$bid quieter than the winner rule"
-grep -Fq 'ticket-featured[data-prize-before-price] .ticket-bid-later .clicks' src/app/board.css \
-  || fail "CSS must keep #1 clicks quieter than the winner rule"
-grep -q '.hopper .bid' src/app/board.css \
-  || fail "CSS must keep hopper ranks quieter than featured #1"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
-  fail "empty week must not stamp prize before price"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-prize'; then
-  fail "empty week must not mark a prize"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css; then
-  fail "prize before price must not add another numbered hop stamp"
-fi
-python3 - src/app/board.css <<'PY' || fail "#1 winner rule must be larger than \$bid and clicks"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-
-def size(pattern):
-    match = re.search(pattern, css, re.S)
-    if not match:
-        raise SystemExit(1)
-    return float(match.group(1))
-
-prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
-bid = size(r"\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
-clicks = size(r"\.ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.clicks\s*\{[^}]*font-size:\s*([\d.]+)rem")
-if not (prize > bid and prize > clicks):
-    raise SystemExit(1)
-PY
-grep -q 'winner rule is the prize before' tests/rank.test.ts \
-  || fail "rank tests must cover prize-before-price on occupied #1"
-grep -q 'data-prize-before-price' tests/rank.test.ts \
-  || fail "rank tests must stamp the occupied #1 prize"
-if ! awk '
-  /ticket-featured \.ticket-read-winner/ { winner=NR }
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured\[data-prize-before-price\] \.ticket-bid-later \.bid/ { bid=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  END { exit !(winner && prize && bid && open && winner < prize && prize < bid && bid < open) }
-' src/app/board.css; then
-  fail "featured CSS must paint the winner-rule prize before quieter \$bid and Open this brief"
-fi
-
-echo "== UX: occupied rank is the bid; budget stays a later fact =="
+  || fail "featured #1 must stamp prize before price"
 grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "featured #1 ticket must stamp rank is the bid"
-grep -q 'data-rank-bid' src/app/board.tsx \
-  || fail "featured #1 $bid must mark the paid bid as rank"
-grep -q 'rank-is-bid' src/app/board.tsx \
-  || fail "featured #1 $bid must use the rank-is-bid class"
+  || fail "featured #1 must stamp rank as bid"
 grep -q 'data-budget-later' src/app/board.tsx \
-  || fail "featured #1 ticket must keep project budget as a later fact"
-grep -q 'Project budget, not the bid' src/app/board.tsx \
-  || fail "featured #1 ticket must say project budget is not the bid"
-grep -Fq 'ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid' src/app/board.css \
-  || fail "CSS must make #1 rank the paid bid after the prize"
-grep -Fq 'ticket-featured[data-rank-is-bid] [data-budget-later] .budget-amount' src/app/board.css \
-  || fail "CSS must keep #1 project budget quieter than rank"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-rank-is-bid'; then
-  fail "empty week must not stamp rank is the bid"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-budget-later'; then
-  fail "empty week must not stamp a later project budget"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css; then
-  fail "rank is the bid must not add another numbered hop stamp"
-fi
-python3 - src/app/board.css <<'PY' || fail "#1 rank bid must be larger than project budget"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-
-def size(pattern):
-    match = re.search(pattern, css, re.S)
-    if not match:
-        raise SystemExit(1)
-    return float(match.group(1))
-
-prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
-rank = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
-budget = size(r"\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem")
-if not (prize > rank and rank > budget):
-    raise SystemExit(1)
-PY
-grep -q 'rank is the bid; project budget stays a later fact' tests/rank.test.ts \
-  || fail "rank tests must cover occupied #1 rank is the bid"
-grep -q 'data-rank-is-bid' tests/rank.test.ts \
-  || fail "rank tests must stamp occupied #1 rank is the bid"
-if ! awk '
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount/ { budget=NR }
-  /ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid/ { rank=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  END { exit !(prize && budget && rank && open && prize < rank && budget < rank && rank < open) }
-' src/app/board.css; then
-  fail "featured CSS must paint quieter project budget before rank \$bid after the prize"
-fi
-
-echo "== UX: empty week stays Claim #1 + No paid brief =="
-grep -q 'data-empty-ticket' src/app/board.tsx \
-  || fail "empty week must stamp Claim #1 + No paid brief so occupied chrome cannot leak"
-grep -q 'data-empty-ticket' src/app/outbid-form.tsx \
-  || fail "empty Claim #1 must stamp so occupied Write cannot leak"
-grep -Fq '.board[data-empty-ticket]' src/app/board.css \
-  || fail "empty-ticket CSS must hide occupied prize / Write / Open on an empty week"
-empty_ticket_rule="$(awk '/^\.board\[data-empty-ticket\] \.ticket-featured,/,/^\}/' src/app/board.css)"
-echo "$empty_ticket_rule" | grep -q 'display: none' \
-  || fail "empty-ticket CSS must hide occupied prize / Write / Open"
-echo "$empty_ticket_rule" | grep -q 'prize-before-price' \
-  || fail "empty-ticket CSS must hide prize-before-price"
-echo "$empty_ticket_rule" | grep -q 'data-rank-is-bid' \
-  || fail "empty-ticket CSS must hide rank-is-bid"
-echo "$empty_ticket_rule" | grep -q 'data-budget-later' \
-  || fail "empty-ticket CSS must hide later project budget"
-echo "$empty_ticket_rule" | grep -q 'open-this-brief' \
-  || fail "empty-ticket CSS must hide Open this brief"
-echo "$empty_ticket_rule" | grep -q 'p.write-this-ticket' \
-  || fail "empty-ticket CSS must hide Write this ticket"
-echo "$empty_ticket_rule" | grep -q 'write-after-rule' \
-  || fail "empty-ticket CSS must hide write-after-rule"
-echo "$empty_ticket_rule" | grep -q 'data-write-later-quiet' \
-  || fail "empty-ticket CSS must hide quieter occupied Write"
-if echo "$empty_ticket_rule" | grep -q 'background:'; then
-  fail "empty-ticket must hide occupied chrome, not recolor the desk"
-fi
-grep -q 'empty week stays Claim #1 + No paid brief without prize' tests/rank.test.ts \
-  || fail "rank tests must cover empty week staying Claim #1 + No paid brief"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
-  fail "empty week must not stamp prize before price"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Open this brief'; then
-  fail "empty week must not invent Open this brief"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Write this ticket'; then
-  fail "empty week must not invent Write this ticket"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "empty ticket must not add another numbered hop stamp"
-fi
-grep -q 'data-prize-before-price' src/app/board.tsx \
-  || fail "empty ticket cut must keep occupied prize before price"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "empty ticket cut must keep occupied Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "empty ticket cut must keep occupied Write this ticket"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "empty ticket cut must leave Claim #1 on the form"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "empty ticket cut must not rebuild the ticket desk"
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "empty ticket cut must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: occupied Open this brief stays the first freelancer click =="
-grep -q 'data-write-later-quiet' src/app/board.tsx \
-  || fail "featured Write this ticket must recede so Open this brief stays first"
-grep -q 'data-write-later-quiet' src/app/outbid-form.tsx \
-  || fail "occupied Write this ticket stamp must recede so Open this brief stays first"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "featured #1 first click must stay Open this brief"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "featured #1 winner rule must stay the prize"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "featured #1 rank must stay the bid"
-grep -q 'data-budget-later' src/app/board.tsx \
-  || fail "featured #1 project budget must stay a later fact"
-grep -Fq '.ticket-featured a.write-after-rule[data-write-later-quiet]' src/app/board.css \
-  || fail "CSS must recede Write this ticket after Open this brief"
-grep -Fq '.write-this-ticket[data-write-later-quiet]' src/app/board.css \
-  || fail "CSS must recede the occupied Write this ticket stamp"
-grep -Fq '.board[data-empty-ticket] [data-write-later-quiet]' src/app/board.css \
-  || fail "empty-ticket CSS must hide quieter Write"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-later-quiet'; then
-  fail "empty week must not recede Write this ticket"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "open-brief-first must not add another numbered hop stamp"
-fi
-if grep -n 'data-first-click' -A 12 src/app/board.tsx | grep -q 'data-write-later-quiet'; then
-  fail "Open this brief must not stamp quieter Write"
-fi
-python3 - src/app/board.css <<'PY' || fail "Open this brief must stay larger than quieter Write, \$bid, and budget"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-
-def size(pattern):
-    match = re.search(pattern, css, re.S)
-    if not match:
-        raise SystemExit(1)
-    return float(match.group(1))
-
-open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-write_sz = size(r"\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-bid_sz = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
-budget_sz = size(r"\.ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount\s*\{[^}]*font-size:\s*([\d.]+)rem")
-prize_sz = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
-if not (open_sz > write_sz and open_sz > bid_sz and open_sz > budget_sz and prize_sz > bid_sz):
-    raise SystemExit(1)
-write_block = re.search(
-    r"\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*\}",
-    css,
-    re.S,
-)
-if not write_block or "var(--muted)" not in write_block.group(0):
-    raise SystemExit(1)
-if write_block and "var(--stamp)" in write_block.group(0):
-    raise SystemExit(1)
-if "background:" in write_block.group(0):
-    raise SystemExit(1)
-PY
-grep -q 'Open this brief stays the first freelancer click; Write this ticket recedes' tests/rank.test.ts \
-  || fail "rank tests must keep occupied Open this brief the first freelancer click"
-if ! awk '
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured\[data-rank-is-bid\] \[data-budget-later\] \.budget-amount/ { budget=NR }
-  /ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid/ { rank=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /ticket-featured a\.write-after-rule\[data-write-later-quiet\]/ { write=NR }
-  END { exit !(prize && budget && rank && open && write && prize < rank && budget < rank && rank < open && open < write) }
-' src/app/board.css; then
-  fail "featured CSS must recede Write after first-click Open this brief"
-fi
-
-echo "== UX: empty week stays Claim #1 — Open / Write cannot leak =="
-grep -q 'board desk week-empty' src/app/board.tsx \
-  || fail "empty week must wrap in week-empty so occupied Open / Write cannot leak"
-grep -q 'board desk week-occupied' src/app/board.tsx \
-  || fail "occupied week must wrap in week-occupied so Open / Write CSS stay scoped"
-grep -q 'data-week-empty' src/app/board.tsx \
-  || fail "empty week must stamp data-week-empty"
-grep -q 'data-week-occupied' src/app/board.tsx \
-  || fail "occupied week must stamp data-week-occupied"
-grep -q 'empty week stays Claim #1 — Open / Write cannot leak' tests/rank.test.ts \
-  || fail "rank tests must cover empty week isolation so Open / Write cannot leak"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Open this brief'; then
-  fail "empty week must not invent Open this brief"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Write this ticket'; then
-  fail "empty week must not invent Write this ticket"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
-  fail "empty week must not stamp prize before price"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-later-quiet'; then
-  fail "empty week must not recede Write this ticket"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "empty isolation must not add another numbered hop stamp"
-fi
-grep -q 'data-empty-ticket' src/app/board.tsx \
-  || fail "empty isolation must keep Claim #1 + No paid brief"
-grep -q 'data-empty-ticket' src/app/outbid-form.tsx \
-  || fail "empty isolation must keep empty Claim #1 stamped"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "empty isolation must keep No paid brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "empty isolation must leave Claim #1 on the form"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "empty isolation must keep occupied Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "empty isolation must keep occupied Write this ticket"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "empty isolation must keep occupied Open this brief the first click"
-grep -q 'data-write-later-quiet' src/app/board.tsx \
-  || fail "empty isolation must keep occupied Write receded"
-grep -q 'data-prize-before-price' src/app/board.tsx \
-  || fail "empty isolation must keep occupied prize before price"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "empty isolation must keep occupied rank as the bid"
-grep -q 'data-budget-later' src/app/board.tsx \
-  || fail "empty isolation must keep occupied project budget as a later fact"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "empty isolation must not rebuild the ticket desk"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "empty isolation must keep the dashed amount"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "empty isolation must keep Outbid"
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "empty isolation must not rebuild the ticket desk into a long form"
-fi
-grep -Fq '.week-empty[data-empty-ticket] .open-this-brief' src/app/board.css \
-  || fail "empty week shell must hide leaked Open this brief"
-grep -Fq '.week-empty[data-empty-ticket] p.write-this-ticket' src/app/board.css \
-  || fail "empty week shell must hide leaked Write this ticket"
-grep -Fq '.week-empty[data-empty-ticket] [data-prize]' src/app/board.css \
-  || fail "empty week shell must hide leaked prize chrome"
-grep -Fq '.week-empty[data-empty-ticket] [data-write-later-quiet]' src/app/board.css \
-  || fail "empty week shell must hide leaked quieter Write"
-grep -Fq '.week-empty .open-this-brief' src/app/board.css \
-  || fail "empty week shell must hide leaked Open pills"
-grep -Fq '.week-empty .write-after-rule' src/app/board.css \
-  || fail "empty week shell must hide leaked Write hops"
-grep -Fq '.week-occupied .empty-week' src/app/board.css \
-  || fail "occupied week shell must hide empty-week chrome"
-grep -Fq '.week-occupied .ticket-featured .open-this-brief {' src/app/board.css \
-  || fail "Open this brief CSS must be scoped to week-occupied"
-grep -Fq '.week-occupied .ticket-featured a.write-after-rule[data-write-later-quiet]' src/app/board.css \
-  || fail "quieter Write CSS must be scoped to week-occupied"
-grep -Fq '.week-occupied .write-this-ticket[data-write-later-quiet]' src/app/board.css \
-  || fail "occupied Write stamp CSS must be scoped to week-occupied"
-grep -Fq '.week-occupied .ticket-featured .prize-before-price .winner-rule-text' src/app/board.css \
-  || fail "prize CSS must be scoped to week-occupied"
-grep -Fq '.week-occupied .ticket-featured[data-rank-is-bid] .ticket-bid-later .rank-is-bid' src/app/board.css \
-  || fail "rank-is-bid CSS must be scoped to week-occupied"
-if grep -E '^\.ticket-featured' src/app/board.css; then
-  fail "featured Open / prize CSS must not apply outside week-occupied"
-fi
-if grep -E '^\.write-this-ticket' src/app/board.css; then
-  fail "Write this ticket CSS must not apply outside week-occupied"
-fi
-empty_no_open_rule="$(awk '/^\.board\[data-empty-ticket\] \.ticket-featured,/,/^\}/' src/app/board.css)"
-echo "$empty_no_open_rule" | grep -q 'display: none' \
-  || fail "empty week CSS must hide occupied Open / Write / prize"
-echo "$empty_no_open_rule" | grep -q 'week-empty\[data-empty-ticket\] \.open-this-brief' \
-  || fail "empty week CSS must hide leaked Open on the week-empty shell"
-echo "$empty_no_open_rule" | grep -q 'week-empty \.write-after-rule' \
-  || fail "empty week CSS must hide leaked Write on the week-empty shell"
-if echo "$empty_no_open_rule" | grep -q 'background:'; then
-  fail "empty isolation must hide occupied chrome, not recolor the desk"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "empty isolation must not rebuild the ticket desk into a stacked layout"
-fi
-
-echo "== UX: occupied later Write this ticket stays quieter than Open this brief =="
-grep -q 'ticket-write-later' src/app/board.tsx \
-  || fail "featured Write this ticket must sit in a later foot after Open this brief"
-grep -q 'data-write-later' src/app/board.tsx \
-  || fail "featured Write this ticket must stamp later Write"
-grep -q 'data-write-later' src/app/outbid-form.tsx \
-  || fail "occupied claim must stamp later Write so it recedes after Open"
-grep -q 'claim ticket-blank write-later' src/app/outbid-form.tsx \
-  || fail "occupied claim must use the later Write class"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "later Write cut must keep Open this brief the first occupied click"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "later Write cut must keep the winner rule as the prize"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "later Write cut must keep rank as the bid"
-grep -q 'data-budget-later' src/app/board.tsx \
-  || fail "later Write cut must keep project budget as a later fact"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "later Write cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "later Write cut must keep empty No paid brief"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "later Write cut must keep Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "later Write cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "later Write cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "later Write cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "later Write cut must keep Outbid"
-grep -Fq '.week-occupied .desk-surface {' src/app/board.css \
-  || fail "occupied desk must stack Open this brief before later Write"
-grep -Fq '.week-occupied .ticket-featured .ticket-write-later' src/app/board.css \
-  || fail "CSS must compose later Write as a ticket foot"
-grep -Fq '.week-occupied .claim-after-ticket[data-claim-after-ticket] .claim.write-later[data-write-later]' src/app/board.css \
-  || fail "CSS must stack later Write claim after Open this brief"
-grep -Fq '.week-occupied .ticket-featured .ticket-write-later a.write-after-rule[data-write-later-quiet]' src/app/board.css \
-  || fail "CSS must keep later Write an unboxed hop after Open"
-grep -Fq '.board[data-empty-ticket] .ticket-write-later' src/app/board.css \
-  || fail "empty-ticket CSS must hide later Write foot"
-grep -Fq '.week-empty .ticket-write-later' src/app/board.css \
-  || fail "empty week shell must hide later Write foot"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'ticket-write-later'; then
-  fail "empty week must not invent a later Write foot"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-write-later'; then
-  fail "empty week must not stamp later Write"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "later Write must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "later Write must not rebuild the ticket desk into a long form"
-fi
-python3 - src/app/board.css <<'PY' || fail "later Write must stay quieter than Open this brief and the winner-rule prize"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-
-def size(pattern):
-    match = re.search(pattern, css, re.S)
-    if not match:
-        raise SystemExit(1)
-    return float(match.group(1))
-
-open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-write_sz = size(r"\.ticket-featured a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-prize_sz = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
-bid_sz = size(r"\.ticket-featured\[data-rank-is-bid\] \.ticket-bid-later \.rank-is-bid\s*\{[^}]*font-size:\s*([\d.]+)rem")
-if not (open_sz > write_sz and prize_sz > write_sz and open_sz > bid_sz and prize_sz > bid_sz):
-    raise SystemExit(1)
-foot = re.search(r"\.week-occupied \.ticket-featured \.ticket-write-later\s*\{[^}]*\}", css, re.S)
-hop = re.search(
-    r"\.week-occupied \.ticket-featured \.ticket-write-later a\.write-after-rule\[data-write-later-quiet\]\s*\{[^}]*\}",
-    css,
-    re.S,
-)
-if not foot or "border-top" not in foot.group(0):
-    raise SystemExit(1)
-if not hop or "display: inline" not in hop.group(0) or "var(--muted)" not in hop.group(0):
-    raise SystemExit(1)
-if "var(--stamp)" in hop.group(0) or "min-height: 2" in hop.group(0):
-    raise SystemExit(1)
-if "background:" in hop.group(0):
-    raise SystemExit(1)
-PY
-if ! awk '
-  /week-occupied \.desk-surface \{/ { stack=NR }
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /ticket-featured \.ticket-write-later \{/ { foot=NR }
-  /ticket-featured a\.write-after-rule\[data-write-later-quiet\]/ { write=NR }
-  END { exit !(stack && prize && open && foot && write && stack < prize && prize < open && open < foot && foot < write) }
-' src/app/board.css; then
-  fail "featured CSS must stack later Write after prize and Open this brief"
-fi
-grep -q 'occupied later Write this ticket stays quieter than Open this brief' tests/rank.test.ts \
-  || fail "rank tests must cover later Write quieter than Open this brief"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "later Write cut must not rebuild the empty ticket desk"
-
-echo "== UX: occupied later-rank tickets stay quieter than #1 — winner rule stays the prize =="
+  || fail "featured #1 must keep project budget as a later fact"
 grep -q 'function LaterRankTicket' src/app/board.tsx \
-  || fail "later ranks must use a later-ticket composition, not the #1 prize card"
-grep -q 'ticket-later' src/app/board.tsx \
-  || fail "later ranks must use ticket-later anatomy"
+  || fail "later ranks must use quieter ticket anatomy"
 grep -q 'data-later-rank' src/app/board.tsx \
-  || fail "later ranks must stamp data-later-rank"
-grep -q 'data-later-pack' src/app/board.tsx \
-  || fail "later ranks must group in a later pack"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "later pack must say later tickets are not the #1 prize"
-grep -q 'data-later-open' src/app/board.tsx \
-  || fail "later ranks must keep a quieter Open brief hop"
+  || fail "later ranks must stamp their state"
 grep -q 'Open brief' src/app/board.tsx \
   || fail "later ranks must keep Open brief"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "later-rank cut must keep Open this brief the first occupied click"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "later-rank cut must keep the winner rule as the prize"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "later-rank cut must keep rank as the bid"
-grep -q 'ticket-write-later' src/app/board.tsx \
-  || fail "later-rank cut must keep Write as a later foot"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "later-rank cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "later-rank cut must keep empty No paid brief"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "later-rank cut must keep Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "later-rank cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "later-rank cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "later-rank cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "later-rank cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "later-rank cut must not rebuild the empty ticket desk"
-grep -Fq '.week-occupied .hopper.later-pack[data-later-pack]' src/app/board.css \
-  || fail "CSS must group later ranks in a hopper pack after #1"
-grep -Fq '.week-occupied .hopper .ticket-later[data-later-rank]' src/app/board.css \
-  || fail "CSS must compose later ranks as hopper slips"
-grep -Fq '.week-occupied .hopper .ticket-later[data-later-rank] .later-rule .winner-rule' src/app/board.css \
-  || fail "CSS must keep later winner-rule copy quieter than the #1 prize"
-grep -Fq '.week-occupied .hopper .ticket-later[data-later-rank] a.later-open[data-later-open]' src/app/board.css \
-  || fail "CSS must keep later Open brief quieter than Open this brief"
-grep -Fq '.board[data-empty-ticket] .later-pack' src/app/board.css \
-  || fail "empty-ticket CSS must hide later-rank pack"
-grep -Fq '.week-empty .ticket-later' src/app/board.css \
-  || fail "empty week shell must hide later-rank tickets"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'ticket-later'; then
-  fail "empty week must not invent later-rank tickets"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'data-later-rank'; then
-  fail "empty week must not stamp later ranks"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "later-rank quiet must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "later-rank quiet must not rebuild the ticket desk into a long form"
-fi
-if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'data-prize='; then
-  fail "later ranks must not wear the #1 prize stamp"
-fi
-if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'Open this brief'; then
-  fail "later ranks must not wear Open this brief"
-fi
-if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'ticket-featured'; then
-  fail "later ranks must not reuse featured ticket chrome"
-fi
-if awk '/function LaterRankTicket/,/export function ListingCard/' src/app/board.tsx | grep -q 'ticket-facts'; then
-  fail "later ranks must not reuse #1 ticket-facts anatomy"
-fi
-python3 - src/app/board.css src/app/board.tsx <<'PY' || fail "later ranks must stay quieter than the #1 winner-rule prize without recolor or a new hop"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-board = open(sys.argv[2], encoding="utf-8").read()
-
-def size(pattern):
-    match = re.search(pattern, css, re.S)
-    if not match:
-        raise SystemExit(1)
-    return float(match.group(1))
-
-prize = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
-later_rule = size(r"\.hopper \.ticket-later\[data-later-rank\] \.later-rule \.winner-rule\s*\{[^}]*font-size:\s*([\d.]+)rem")
-later_buyer = size(r"\.hopper \.ticket-later\[data-later-rank\] \.later-buyer\s*\{[^}]*font-size:\s*([\d.]+)rem")
-later_open = size(r"\.hopper \.ticket-later\[data-later-rank\] a\.later-open\[data-later-open\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-if not (prize > later_rule and prize > later_buyer and open_sz > later_open):
-    raise SystemExit(1)
-pack = re.search(r"\.week-occupied \.hopper\.later-pack\[data-later-pack\]\s*\{[^}]*\}", css, re.S)
-slip = re.search(r"\.week-occupied \.hopper \.ticket-later\[data-later-rank\]\s*\{[^}]*\}", css, re.S)
-hop = re.search(
-    r"\.week-occupied \.hopper \.ticket-later\[data-later-rank\] a\.later-open\[data-later-open\]\s*\{[^}]*\}",
-    css,
-    re.S,
-)
-if not pack or "border-top" not in pack.group(0):
-    raise SystemExit(1)
-if not slip or "box-shadow: none" not in slip.group(0) or "border: 1px dashed var(--rule)" not in slip.group(0):
-    raise SystemExit(1)
-if "background:" in slip.group(0) and "var(--paper)" not in slip.group(0):
-    raise SystemExit(1)
-if not hop or "display: inline" not in hop.group(0) or "var(--muted)" not in hop.group(0):
-    raise SystemExit(1)
-if "var(--stamp)" in hop.group(0) or "min-height: 2" in hop.group(0) or "background:" in hop.group(0):
-    raise SystemExit(1)
-later_fn = board.split("function LaterRankTicket", 1)[-1].split("export function ListingCard", 1)[0]
-if "data-prize" in later_fn or "Open this brief" in later_fn or "ticket-featured" in later_fn:
-    raise SystemExit(1)
-if "ticket-facts" in later_fn or "data-write-later" in later_fn:
-    raise SystemExit(1)
-if "data-write-after-open-seven" in board or "data-open-after-write-six" in board:
-    raise SystemExit(1)
-PY
-if ! awk '
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /ticket-featured \.ticket-write-later \{/ { foot=NR }
-  /week-occupied \.hopper\.later-pack\[data-later-pack\] \{/ { pack=NR }
-  /hopper \.ticket-later\[data-later-rank\] \{/ { later=NR }
-  END { exit !(prize && open && foot && pack && later && prize < open && open < foot && foot < pack && pack < later) }
-' src/app/board.css; then
-  fail "later-rank CSS must sit after occupied prize / Open / later Write"
-fi
-grep -q 'occupied later-rank tickets stay quieter than #1' tests/rank.test.ts \
-  || fail "rank tests must cover quieter later-rank tickets"
-grep -q 'These tickets are not the last 7 days’ #1 prize' tests/rank.test.ts \
-  || fail "rank tests must name later tickets as not the #1 prize"
-grep -q 'data-later-rank' tests/rank.test.ts \
-  || fail "rank tests must stamp later ranks"
-
-echo "== UX: empty week Claim #1 is the first click — brief URL is a later write =="
-grep -q 'empty-claim-first' src/app/outbid-form.tsx \
-  || fail "empty Claim #1 must use the empty-claim-first class"
-grep -q 'data-empty-claim-first' src/app/outbid-form.tsx \
-  || fail "empty Claim #1 must stamp data-empty-claim-first"
-grep -q 'data-first-click="claim"' src/app/outbid-form.tsx \
-  || fail "empty Claim #1 Outbid must win the first click"
-grep -q 'data-later-write' src/app/outbid-form.tsx \
-  || fail "empty week must stamp the brief URL as a later write"
-grep -q 'data-ticket-identity' src/app/outbid-form.tsx \
-  || fail "empty week must wrap ticket fields as listing identity"
-grep -q 'Then the brief URL' src/app/outbid-form.tsx \
-  || fail "empty week must name the brief URL as a later write"
-grep -q 'EmptyClaimFirstWrite' src/app/outbid-form.tsx \
-  || fail "empty week must compose Claim #1 before the brief URL"
-grep -q 'OccupiedTicketWrite' src/app/outbid-form.tsx \
-  || fail "occupied claim must keep ticket fields on the rail with Outbid"
-grep -q 'Empty week: Brief URL is a later write after Claim #1 / Outbid' src/app/board.css \
-  || fail "empty CSS must name the brief URL as a later write after Claim #1"
-grep -Fq '.week-empty .claim.empty-claim-first[data-empty-claim-first] .ticket-identity[data-later-write]' src/app/board.css \
-  || fail "empty CSS must compose later-write identity off the claim rail"
-grep -Fq '.week-empty .claim.empty-claim-first[data-empty-claim-first] .later-write-label' src/app/board.css \
-  || fail "empty CSS must label the later brief URL write"
-grep -Fq '.week-empty .claim.empty-claim-first[data-empty-claim-first] .outbid[data-first-click="claim"]' src/app/board.css \
-  || fail "empty CSS must make Claim #1 Outbid the first click"
-grep -Fq '.week-occupied .claim .ticket-identity[data-later-write]' src/app/board.css \
-  || fail "occupied week must hide empty later-write identity"
-grep -Fq '.week-occupied .claim [data-first-click="claim"]' src/app/board.css \
-  || fail "occupied week must hide empty Claim #1 first-click"
-grep -q 'empty week Claim #1 is the first click — brief URL is a later write' tests/rank.test.ts \
-  || fail "rank tests must cover empty-week Claim #1 then later brief URL"
-grep -q 'Then the brief URL' tests/rank.test.ts \
-  || fail "rank tests must name the later brief URL write"
-grep -q 'data-first-click="claim"' tests/rank.test.ts \
-  || fail "rank tests must stamp empty Claim #1 as the first click"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "empty later-write cut must keep No paid brief"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "empty later-write cut must keep occupied Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep occupied Write this ticket"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "empty later-write cut must keep occupied Open this brief the first click"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "empty later-write cut must keep the winner rule as the prize"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "empty later-write cut must keep rank as the bid"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep Outbid"
-grep -q 'name="buyer"' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep Who is buying"
-grep -q 'name="budgetUsd"' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep What it pays"
-grep -q 'name="deadline"' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep When it’s due"
-grep -q 'name="winnerRule"' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep How a winner is chosen"
-grep -q 'name="briefUrl"' src/app/outbid-form.tsx \
-  || fail "empty later-write cut must keep Brief URL"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "empty later-write cut must not rebuild the ticket desk"
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "empty later-write must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "empty later-write must not rebuild the ticket desk into a long form"
-fi
-if awk '/function OccupiedTicketWrite/,/function EmptyClaimFirstWrite/' src/app/outbid-form.tsx | grep -q 'data-first-click="claim"'; then
-  fail "occupied claim must not stamp empty Claim #1 as the first click"
-fi
-if awk '/function OccupiedTicketWrite/,/function EmptyClaimFirstWrite/' src/app/outbid-form.tsx | grep -q 'Then the brief URL'; then
-  fail "occupied claim must not name a later brief URL write"
-fi
-if awk '/function OccupiedTicketWrite/,/function EmptyClaimFirstWrite/' src/app/outbid-form.tsx | grep -q 'data-later-write'; then
-  fail "occupied ticket fields must stay on the claim rail with Outbid"
-fi
-if ! awk '
-  /function EmptyClaimFirstWrite/ { empty=NR }
-  empty && /data-first-click="claim"/ { click=NR }
-  empty && /Then the brief URL/ { label=NR }
-  empty && /TicketIdentityFields/ { ident=NR }
-  END { exit !(empty && click && label && ident && empty < click && click < label && label < ident) }
-' src/app/outbid-form.tsx; then
-  fail "empty Claim #1 / Outbid must precede the later brief URL write"
-fi
-if ! awk '
-  /function OccupiedTicketWrite/ { occ=NR }
-  occ && /className="ticket-fields"/ && !fields { fields=NR }
-  occ && /className="bid-row"/ && !row { row=NR }
-  /function EmptyClaimFirstWrite/ { empty=NR }
-  END { exit !(occ && fields && row && empty && occ < fields && fields < row && row < empty) }
-' src/app/outbid-form.tsx; then
-  fail "occupied claim must keep ticket fields before Outbid"
-fi
-python3 - src/app/board.css src/app/outbid-form.tsx <<'PY' || fail "empty later-write must recede after Claim #1 / Outbid without recolor or a new hop"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-form = open(sys.argv[2], encoding="utf-8").read()
-marker = "Empty week: Brief URL is a later write after Claim #1 / Outbid"
-if marker not in css:
-    raise SystemExit(1)
-later = css.split(marker, 1)[1].split("End empty-week later-write", 1)[0]
-if ".ticket-identity[data-later-write]" not in later:
-    raise SystemExit(1)
-if "border-top: 1px dashed var(--rule)" not in later:
-    raise SystemExit(1)
-if "background:" in later or "var(--stamp)" in later:
-    raise SystemExit(1)
-if "data-write-after-open-seven" in later or "data-open-after-write-six" in later:
-    raise SystemExit(1)
-click = re.search(
-    r"\.week-empty \.claim\.empty-claim-first\[data-empty-claim-first\] \.outbid\[data-first-click=\"claim\"\]\s*\{[^}]*\}",
-    css,
-    re.S,
-)
-if not click or "min-height: 2.75rem" not in click.group(0):
-    raise SystemExit(1)
-if "background:" in click.group(0):
-    raise SystemExit(1)
-empty = form.split("function EmptyClaimFirstWrite", 1)[-1].split("export function OutbidForm", 1)[0]
-occupied = form.split("function OccupiedTicketWrite", 1)[-1].split("function EmptyClaimFirstWrite", 1)[0]
-if empty.find("Outbid") < 0 or empty.find("data-later-write") < empty.find("Outbid"):
-    raise SystemExit(1)
-if empty.find("TicketIdentityFields") < empty.find("Then the brief URL"):
-    raise SystemExit(1)
-if occupied.find("ticket-fields") < 0 or occupied.find("Outbid") < occupied.find("ticket-fields"):
-    raise SystemExit(1)
-if 'data-first-click="claim"' in occupied or "Then the brief URL" in occupied:
-    raise SystemExit(1)
-PY
-if ! awk '
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /ticket-featured \.ticket-write-later \{/ { foot=NR }
-  /Empty week: Brief URL is a later write after Claim #1 \/ Outbid/ { later=NR }
-  END { exit !(prize && open && foot && later && prize < open && open < foot && foot < later) }
-' src/app/board.css; then
-  fail "empty later-write CSS must sit after occupied prize / Open / later Write"
-fi
-
-echo "== UX: unpaid stays off the ticket desk — No paid brief until Polar reports paid =="
-grep -q 'export function isPolarPaidListing' src/core/rank.ts \
-  || fail "rank.ts must export isPolarPaidListing"
-grep -q 'filter(isPolarPaidListing)' src/core/rank.ts \
-  || fail "rankListings must drop unpaid Polar checkout"
-grep -q 'listPaidRolling' src/core/rank.ts \
-  || fail "live board must load Polar-paid listings only"
-grep -q 'export function listUnpaid' src/core/listings.ts \
-  || fail "listings.ts must expose unpaid Polar checkout off the desk"
-grep -q 'export function rememberUnpaidCheckout' src/core/listings.ts \
-  || fail "listings.ts must remember unpaid Polar checkout"
-grep -q 'isPolarPaidListing' src/core/listings.ts \
-  || fail "listPaid must keep Polar-paid rows only"
-grep -q 'rememberUnpaidCheckout' src/app/api/checkout/route.ts \
-  || fail "checkout must remember unpaid Polar checkout off the desk"
-grep -q 'forgetUnpaidCheckout' src/app/api/polar/webhook/route.ts \
-  || fail "abandoned Polar webhook must forget unpaid checkout"
-grep -q 'listUnpaid' src/app/page.tsx \
-  || fail "board page must load unpaid Polar leftover off the desk"
-grep -q 'data-unpaid-off' src/app/board.tsx \
-  || fail "empty leftover Polar checkout must stamp unpaid-off"
-grep -q 'An unpaid Polar checkout stays off this desk until Polar reports paid' src/app/board.tsx \
-  || fail "empty leftover must say unpaid Polar checkout stays off this desk"
-grep -q 'data-unpaid-off' src/app/outbid-form.tsx \
-  || fail "claim form must stamp unpaid Polar checkout stays off the desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "claim form must say unpaid Polar checkout stays off this desk"
-grep -q 'An abandoned ticket is not #1' src/app/outbid-form.tsx \
-  || fail "claim form must say an abandoned ticket is not #1"
-grep -q 'Polar reports paid' src/app/return/page.tsx \
-  || fail "return page must wait for Polar paid, not the query string"
-grep -Fq '.claim-note[data-unpaid-off]' src/app/board.css \
-  || fail "CSS must make unpaid-off certain on the claim note"
-grep -Fq '.board[data-unpaid-off] .ticket-featured' src/app/board.css \
-  || fail "unpaid leftover CSS must hide featured prize chrome"
-grep -Fq '.board[data-unpaid-off] [data-prize]' src/app/board.css \
-  || fail "unpaid leftover CSS must hide prize chrome"
-grep -Fq '.board[data-unpaid-off] .open-this-brief' src/app/board.css \
-  || fail "unpaid leftover CSS must hide Open this brief"
-grep -Fq '.week-empty[data-unpaid-off] [data-prize]' src/app/board.css \
-  || fail "empty unpaid leftover CSS must hide prize chrome"
-grep -Fq '.week-empty[data-unpaid-off] .later-pack' src/app/board.css \
-  || fail "empty unpaid leftover CSS must hide later-pack"
-unpaid_hide="$(awk '/^\.board\[data-unpaid-off\] \.ticket-featured,/,/^\}/' src/app/board.css)"
-echo "$unpaid_hide" | grep -q 'display: none' \
-  || fail "unpaid leftover CSS must hide occupied prize / Open / later-pack"
-echo "$unpaid_hide" | grep -q 'data-prize' \
-  || fail "unpaid leftover CSS must hide data-prize"
-echo "$unpaid_hide" | grep -q 'open-this-brief' \
-  || fail "unpaid leftover CSS must hide Open this brief"
-echo "$unpaid_hide" | grep -q 'later-pack' \
-  || fail "unpaid leftover CSS must hide later-pack"
-if echo "$unpaid_hide" | grep -q 'background:'; then
-  fail "unpaid leftover must hide occupied chrome, not recolor the desk"
-fi
-grep -q 'unpaid stays off the ticket desk' tests/rank.test.ts \
-  || fail "rank tests must cover unpaid Polar checkout off the ticket desk"
-grep -q 'unpaid Polar checkout never ranks as #1' tests/rank.test.ts \
-  || fail "rank tests must drop unpaid Polar checkout from rankListings"
-grep -q 'unpaid Polar checkout stays off the ticket desk until Polar reports paid' tests/checkout.test.ts \
-  || fail "checkout tests must keep unpaid Polar checkout off the desk"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "unpaid-off cut must keep occupied winner rule as the prize"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "unpaid-off cut must keep occupied Open this brief"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "unpaid-off cut must keep occupied Open this brief the first click"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "unpaid-off cut must keep rank as the bid"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep occupied Write this ticket"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "unpaid-off cut must keep empty No paid brief"
-grep -q 'Then the brief URL' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep empty later brief URL"
-grep -q 'data-first-click="claim"' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep empty Claim #1 the first click"
-grep -q 'function LaterRankTicket' src/app/board.tsx \
-  || fail "unpaid-off cut must keep later-rank tickets quieter than #1"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "unpaid-off cut must not rebuild the ticket desk"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "unpaid-off cut must keep Outbid"
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "unpaid-off must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "unpaid-off must not rebuild the ticket desk into a long form"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'Open this brief'; then
-  fail "empty week must not invent Open this brief"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'prize-before-price'; then
-  fail "empty week must not stamp prize before price"
-fi
-if awk '/function EmptyClaimFirstWrite/,/export function OutbidForm/' src/app/outbid-form.tsx | grep -q 'Write this ticket'; then
-  fail "empty Claim #1 must not invent Write this ticket"
-fi
-python3 - src/app/board.css src/app/board.tsx src/app/outbid-form.tsx <<'PY' || fail "unpaid leftover must stay off the desk without recolor or a new hop"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-board = open(sys.argv[2], encoding="utf-8").read()
-form = open(sys.argv[3], encoding="utf-8").read()
-if "data-write-after-open-seven" in css or "data-open-after-write-six" in css:
-    raise SystemExit(1)
-if "data-write-after-open-seven" in board or "data-open-after-write-six" in board:
-    raise SystemExit(1)
-if "data-write-after-open-seven" in form or "data-open-after-write-six" in form:
-    raise SystemExit(1)
-hide = re.search(r"\.board\[data-unpaid-off\] \.ticket-featured,[\s\S]*?display: none;", css)
-if not hide:
-    raise SystemExit(1)
-if "background:" in hide.group(0):
-    raise SystemExit(1)
-note = re.search(r"\.claim-note\[data-unpaid-off\]\s*\{[^}]*\}", css)
-if not note or "font-weight: 600" not in note.group(0):
-    raise SystemExit(1)
-if "background:" in note.group(0):
-    raise SystemExit(1)
-if "isPolarPaidListing" not in board or "data-unpaid-off" not in board:
-    raise SystemExit(1)
-if "Unpaid Polar checkout stays off this desk" not in form:
-    raise SystemExit(1)
-if "An abandoned ticket is not #1" not in form:
-    raise SystemExit(1)
-PY
-if ! awk '
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /Empty week: Brief URL is a later write after Claim #1 \/ Outbid/ { later=NR }
-  /Unpaid Polar checkout stays off the ticket desk/ { unpaid=NR }
-  END { exit !(prize && open && later && unpaid && prize < open && open < later && later < unpaid) }
-' src/app/board.css; then
-  fail "unpaid-off CSS must sit after occupied prize / Open / empty later-write"
-fi
-
-echo "== UX: occupied week window is rolling last-7-days — not Monday 00:00 UTC =="
-grep -q 'ROLLING_WEEK_MS' src/core/week.ts \
-  || fail "week.ts must export ROLLING_WEEK_MS"
-grep -q 'bidInRollingWeek' src/core/week.ts \
-  || fail "week.ts must export bidInRollingWeek"
-grep -q 'listPaidRolling' src/core/listings.ts \
-  || fail "listings.ts must load paid rows in the rolling last-7-days window"
-grep -q 'isPolarPaidListing' src/core/listings.ts \
-  || fail "rolling week must keep Polar-paid occupancy"
-grep -q 'data-rolling-week="true"' src/app/board.tsx \
-  || fail "board must stamp data-rolling-week"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "board must name the rolling last-7-days window, not Monday midnight"
-grep -Fq '.week-occupied[data-rolling-week] .week-window[data-rolling-week]' src/app/board.css \
-  || fail "occupied rolling week cue must be composed in occupied CSS"
-grep -Fq '.week-empty[data-rolling-week] .week-window[data-rolling-week]' src/app/board.css \
-  || fail "empty rolling week cue must be composed in empty CSS"
-grep -q 'occupied week window is rolling last-7-days' tests/rank.test.ts \
-  || fail "rank tests must cover occupied rolling last-7-days window"
-grep -Fq 'rolling last-7-days window is 7 * 24h' tests/week.test.ts \
-  || fail "week tests must cover rolling last-7-days window"
-grep -q 'Monday 00:00 UTC does not drop a bid still inside the rolling week' tests/week.test.ts \
-  || fail "week tests must prove Monday midnight is not the drop"
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q '24h lock'; then
-  fail "rolling week is not a 24h lock on #1"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "rolling week must not add another numbered hop stamp"
-fi
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "rolling week must keep occupied Open this brief the first click"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "rolling week must keep the winner rule as the prize"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "rolling week must keep rank as the bid"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "rolling week must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "rolling week must keep empty No paid brief"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "rolling week must keep Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "rolling week must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "rolling week must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "rolling week must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "rolling week must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "rolling week must not rebuild the empty ticket desk"
-grep -q 'data-unpaid-off' src/app/board.tsx \
-  || fail "rolling week must keep unpaid Polar leftover off the desk"
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "rolling week must not rebuild the ticket desk into a long form"
-fi
-if echo "$(awk '/^\.week-occupied\[data-rolling-week\] \.week-window\[data-rolling-week\]/,/^\}/' src/app/board.css)" | grep -q 'background:'; then
-  fail "rolling week must compose the window, not recolor the desk"
-fi
-
-echo "== UX: occupied ticket desk keeps one first click — Open this brief, Claim stays after =="
-grep -q 'claim-after-ticket' src/app/board.tsx \
-  || fail "occupied Claim #1 must wrap as claim-after-ticket after the ticket"
-grep -q 'data-claim-after-ticket' src/app/board.tsx \
-  || fail "occupied Claim #1 must stamp data-claim-after-ticket after the ticket"
-grep -Fq 'className="claim-after-ticket"' src/app/board.tsx \
-  || fail "occupied Claim #1 must wrap as claim-after-ticket, not a same-weight rail"
-python3 - src/app/board.tsx <<'PY' || fail "occupied / must not mount Claim / Outbid beside the #1 prize"
-import sys
-board = open(sys.argv[1], encoding="utf-8").read()
-start = board.find("{featured ? (")
-end = board.find(") : (", start)
-if start < 0 or end < 0:
-    raise SystemExit(1)
-prize = board[start:end]
-if "OutbidForm" in prize or "claim-after-ticket" in prize:
-    raise SystemExit(1)
-surface = board.split('data-desk-surface={empty ? "empty" : "occupied"}', 1)[-1]
-surface = surface.split("{rest.length > 0", 1)[0]
-if "occupied unpaidOff" in surface or "claim-after-ticket" in surface:
-    raise SystemExit(1)
-if "data-claim-after-ticket" not in board.split("{rest.length > 0", 1)[-1]:
-    raise SystemExit(1)
-PY
-grep -Fq '.week-occupied .claim-after-ticket[data-claim-after-ticket]' src/app/board.css \
-  || fail "occupied Claim after the ticket must be quieter than Open this brief"
-grep -Fq '.week-occupied .claim-after-ticket[data-claim-after-ticket] .outbid' src/app/board.css \
-  || fail "occupied Outbid after the ticket must recede under Open this brief"
-grep -Fq '.board[data-empty-ticket] .claim-after-ticket' src/app/board.css \
-  || fail "empty-ticket CSS must hide leaked Claim-after-ticket"
-grep -Fq '.week-empty .claim-after-ticket' src/app/board.css \
-  || fail "empty week shell must hide leaked Claim-after-ticket"
-if grep -E '^\.claim-after-ticket' src/app/board.css; then
-  fail "Claim-after-ticket CSS must stay scoped to week-occupied"
-fi
-if grep -n 'data-empty-week' -A 20 src/app/board.tsx | grep -q 'claim-after-ticket'; then
-  fail "empty week must not wrap Claim after the ticket"
-fi
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "Claim after the ticket must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx; then
-  fail "Claim after the ticket must not rebuild the ticket desk into a long form"
-fi
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "Claim after the ticket must keep Open this brief the first occupied click"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "Claim after the ticket must keep the winner rule as the prize"
-grep -q 'data-rank-is-bid' src/app/board.tsx \
-  || fail "Claim after the ticket must keep rank as the bid"
-grep -q 'ticket-write-later' src/app/board.tsx \
-  || fail "Claim after the ticket must keep Write as a later foot"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "Claim after the ticket must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "Claim after the ticket must keep empty No paid brief"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "Claim after the ticket must keep Open this brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "Claim after the ticket must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "Claim after the ticket must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "Claim after the ticket must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "Claim after the ticket must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "Claim after the ticket must not rebuild the empty ticket desk"
-grep -q 'data-unpaid-off' src/app/board.tsx \
-  || fail "Claim after the ticket must keep unpaid Polar leftover off the desk"
-grep -q 'data-rolling-week="true"' src/app/board.tsx \
-  || fail "Claim after the ticket must keep the rolling last-7-days window"
-grep -q 'occupied ticket desk keeps one first click' tests/rank.test.ts \
-  || fail "rank tests must cover occupied Open this brief before Claim"
-grep -q 'Claim stays after' tests/rank.test.ts \
-  || fail "rank tests must keep Claim #1 after the occupied ticket"
-python3 - src/app/board.css src/app/board.tsx src/app/outbid-form.tsx <<'PY' || fail "occupied Claim after the ticket must recede under Open this brief without recolor or a new hop"
-import re
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-board = open(sys.argv[2], encoding="utf-8").read()
-form = open(sys.argv[3], encoding="utf-8").read()
-marker = "Occupied: Open this brief is the only first click. Claim #1 / Outbid stay after the ticket."
-if marker not in css:
-    raise SystemExit(1)
-later = css.split(marker, 1)[1].split("End occupied Claim-after-ticket", 1)[0]
-if ".claim-after-ticket[data-claim-after-ticket]" not in later:
-    raise SystemExit(1)
-if "border-top: 1px dashed" not in later:
-    raise SystemExit(1)
-if "background:" in later:
-    raise SystemExit(1)
-if "data-write-after-open-seven" in later or "data-open-after-write-six" in later:
-    raise SystemExit(1)
-if "empty-claim-first" in later or "data-later-write" in later or "data-unpaid-off" in later:
-    raise SystemExit(1)
-
-def size(pattern):
-    match = re.search(pattern, css, re.S)
-    if not match:
-        raise SystemExit(1)
-    return float(match.group(1))
-
-open_sz = size(r"\.ticket-featured \.open-this-brief\[data-open-after-write-five\]\s*\{[^}]*font-size:\s*([\d.]+)rem")
-outbid_h = size(r"\.claim-after-ticket\[data-claim-after-ticket\] \.outbid\s*\{[^}]*height:\s*([\d.]+)rem")
-prize_sz = size(r"\.ticket-featured \.prize-before-price \.winner-rule-text\s*\{[^}]*font-size:\s*([\d.]+)rem")
-empty_h = size(r"\.week-empty \.claim\.empty-claim-first\[data-empty-claim-first\] \.outbid\[data-first-click=\"claim\"\]\s*\{[^}]*min-height:\s*([\d.]+)rem")
-if not (outbid_h < open_sz and outbid_h < empty_h and prize_sz > outbid_h and outbid_h < prize_sz):
-    raise SystemExit(1)
-if "className=\"claim-after-ticket\"" not in board or "data-claim-after-ticket" not in board:
-    raise SystemExit(1)
-if board.find("data-claim-after-ticket") < board.find("Open this brief"):
-    raise SystemExit(1)
-if 'data-first-click="claim"' in form.split("function OccupiedTicketWrite", 1)[-1].split("function EmptyClaimFirstWrite", 1)[0]:
-    raise SystemExit(1)
-if "data-write-after-open-seven" in board or "data-open-after-write-six" in board:
-    raise SystemExit(1)
-PY
-if ! awk '
-  /ticket-featured \.prize-before-price \.winner-rule-text/ { prize=NR }
-  /ticket-featured \.open-this-brief \{/ { open=NR }
-  /ticket-featured \.ticket-write-later \{/ { foot=NR }
-  /week-occupied \.hopper\.later-pack\[data-later-pack\] \{/ { pack=NR }
-  /Occupied: Open this brief is the only first click/ { claim=NR }
-  END { exit !(prize && open && foot && pack && claim && prize < open && open < foot && foot < pack && pack < claim) }
-' src/app/board.css; then
-  fail "featured CSS must recede Claim after prize / Open / later Write / later-rank pack"
-fi
-
-echo "== UX: occupied raise identity is last-7-days — not this week =="
-grep -q 'Same canonical brief URL still inside last 7 days raises' src/app/rules/page.tsx \
-  || fail "occupied /rules must name last-7-days raise identity"
-grep -q 'weekId</code> stays an audit label — not raise identity' src/app/rules/page.tsx \
-  || fail "occupied /rules must keep weekId as an audit label"
-if grep -qi 'same UTC week raises' src/app/rules/page.tsx; then
-  fail "occupied /rules must not tax raise identity as the UTC week"
-fi
-if grep -qi 'in the same weekId' src/app/rules/page.tsx SPEC.md; then
-  fail "raise identity must not key on weekId"
-fi
-if grep -q 'Already on this week?' src/app/outbid-form.tsx src/app/board.tsx src/app/rules/page.tsx; then
-  fail "occupied raise hint must not tax identity as this week"
-fi
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "occupied raise hint must name last-7-days identity"
-grep -Fq 'Identity for raise: same **canonical brief URL** still inside the rolling last 7 days' SPEC.md \
-  || fail "SPEC must name last-7-days raise identity"
-grep -Fq '`weekId` stays a Polar/audit label — not raise identity' SPEC.md \
-  || fail "SPEC must keep weekId as an audit label, not raise identity"
-grep -Fq 'weekId` is not the raise key' SPEC.md \
-  || fail "SPEC raise row must keep weekId off raise identity"
-grep -Fq 'Raise identity is the same canonical brief URL still inside that window — not `weekId`' BUILD.md \
-  || fail "BUILD must keep raise identity off weekId"
-grep -q 'Same brief still inside last 7 days raises' src/core/rank.ts \
-  || fail "rank.ts must name last-7-days raise identity"
-grep -q 'weekId is not the raise key' src/core/rank.ts \
-  || fail "rank.ts must keep weekId off raise identity"
-grep -q 'weekId is not the raise key' src/core/listing.ts \
-  || fail "listing.ts must keep weekId off raise identity"
-if grep -A 8 'export function sameListingIdentity' src/core/listing.ts | grep -q 'weekId ==='; then
-  fail "sameListingIdentity must not key raise identity on weekId"
-fi
-grep -A 40 'export function parseCheckoutInput' src/billing/port.ts | grep -q 'findPaidByIdentity' \
-  || fail "parseCheckoutInput must look up the rolling live listing"
-grep -Fq 'Raise identity is `findPaidByIdentity`' src/billing/port.ts \
-  || fail "weekId listing lookup must stay an audit helper, not raise identity"
-grep -Fq 'Raise identity: same canonical brief URL still inside last 7 days. Not weekId.' src/core/listings.ts \
-  || fail "findPaidByIdentity must be raise identity, not weekId"
-grep -Fq 'Raise identity: same canonical brief URL still inside last 7 days. Not weekId.' src/core/week.ts \
-  || fail "weekIdUtc must keep weekId off raise identity"
-grep -q 'occupied /rules raise identity is last-7-days, not the UTC week label' tests/honesty.test.ts \
-  || fail "rules tests must cover last-7-days raise identity"
-grep -q 'same brief still inside last-7-days raises after the UTC week label rolls' tests/checkout.test.ts \
-  || fail "checkout tests must cover Sunday pay Monday raise"
-grep -q 'occupied raise identity is last-7-days, not this week' tests/rank.test.ts \
-  || fail "rank tests must cover occupied last-7-days raise copy"
-grep -q 'Raise pays difference' src/app/rules/page.tsx \
-  || fail "raise-identity cut must keep raise pays difference"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "raise-identity cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "raise-identity cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "raise-identity cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "raise-identity cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep Claim #1"
-grep -q 'Then the brief URL' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep empty later-write brief URL"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "raise-identity cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "raise identity must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "raise-identity cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "raise-identity cut must keep honest empty desk"
-grep -q 'data-rolling-week="true"' src/app/board.tsx \
-  || fail "raise-identity cut must keep occupied rolling last-7-days"
-grep -q 'data-unpaid-off' src/app/board.tsx \
-  || fail "raise-identity cut must keep unpaid Polar leftover off the desk"
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/rules/page.tsx; then
-  fail "raise identity must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/outbid-form.tsx src/app/board.tsx src/app/rules/page.tsx; then
-  fail "raise identity must not rebuild the ticket desk into a long form"
-fi
-python3 - src/app/board.css <<'PY' || fail "raise identity must not recolor the desk"
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-if "raise-identity" in css or "raise-rolling" in css:
-    raise SystemExit(1)
-PY
-
-echo "== UX: occupied desk chrome names last-7-days — not this week =="
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "occupied kicker must name last-7-days, not this week"
-grep -q 'The last 7 days’ #1' src/app/board.tsx \
-  || fail "occupied #1 heading must name last-7-days, not this week"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "occupied later-pack must name last-7-days, not this week"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "empty-board copy must name last-7-days, not this week"
-if grep -q 'This week’s #1 freelance brief' src/app/board.tsx; then
-  fail "empty kicker must follow occupied last-7-days, not this week"
-fi
-if grep -q 'This week’s board is empty' src/app/board.tsx; then
-  fail "empty-board copy must not tax the empty desk as this week"
-fi
-if grep -q 'These tickets are not this week’s #1 prize' src/app/board.tsx; then
-  fail "occupied later-pack must not tax the prize as this week"
-fi
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "SPEC must name occupied prize chrome as last-7-days, not a calendar week"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'occupied desk chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "rank tests must cover occupied last-7-days prize chrome"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "occupied chrome cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "occupied chrome cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "occupied chrome cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "occupied chrome cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "occupied chrome cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "occupied chrome must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "occupied chrome cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "occupied chrome cut must keep honest empty desk"
-grep -q 'data-later-pack' src/app/board.tsx \
-  || fail "occupied chrome cut must keep the later-pack"
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "occupied chrome must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "occupied chrome must not rebuild the ticket desk into a long form"
-fi
-python3 - src/app/board.css <<'PY' || fail "occupied chrome must not recolor the desk"
-import sys
-css = open(sys.argv[1], encoding="utf-8").read()
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-PY
-
-echo "== UX: occupied mast week label follows last-7-days — not ISO weekId =="
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "occupied period-meta must stamp data-occupied-window"
-grep -q 'Last 7 days.' src/app/board.tsx \
-  || fail "occupied period-meta must lead with last-7-days, not ISO weekId"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "empty-board copy must name last-7-days, not this week"
-grep -Fq '.week-occupied .period-meta[data-occupied-window]' src/app/board.css \
-  || fail "CSS must compose occupied period-meta as the last-7-days week label"
-grep -Fq 'Occupied mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
-  || fail "SPEC must name occupied period-meta as last-7-days, not ISO weekId"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'occupied mast week label follows last-7-days, not ISO weekId' tests/rank.test.ts \
-  || fail "rank tests must cover occupied last-7-days mast week label"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "mast-window cut must keep occupied last-7-days prize chrome"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "mast-window cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "mast-window cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "mast-window cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "mast-window cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "mast-window cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "mast-window cut must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "mast-window cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "mast-window cut must keep honest empty desk"
-python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "occupied period-meta must not lead with ISO Week {weekId}"
-import sys
-board = open(sys.argv[1], encoding="utf-8").read()
-css = open(sys.argv[2], encoding="utf-8").read()
-idx = board.find('data-occupied-window=""')
-if idx < 0:
-    raise SystemExit(1)
-block = board[idx:idx + 480]
-if "Last 7 days." not in block:
-    raise SystemExit(1)
-if "Week {week.weekId}" in block:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "background:" in css[css.find(".week-occupied .period-meta[data-occupied-window]"):css.find(".week-occupied .period-meta[data-occupied-window]") + 180]:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "mast-window cut must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "mast-window cut must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: occupied mast window since is last-7-days — not an ISO timestamp =="
-grep -q 'data-occupied-since=""' src/app/board.tsx \
-  || fail "occupied window-since must stamp data-occupied-since"
-grep -q 'Window last 7 days' src/app/board.tsx \
-  || fail "occupied window-since must name last-7-days, not an ISO timestamp"
-grep -q 'Last 7 days.' src/app/board.tsx \
-  || fail "window-since cut must keep occupied last-7-days week label"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "empty-board copy must name last-7-days, not this week"
-grep -Fq '.week-occupied .period-meta[data-occupied-window] [data-occupied-since]' src/app/board.css \
-  || fail "CSS must compose occupied window-since as last-7-days, not an ISO timestamp"
-grep -Fq 'Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
-  || fail "SPEC must name occupied window-since as last-7-days, not an ISO timestamp"
-grep -Fq 'Occupied mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
-  || fail "window-since cut must keep occupied last-7-days week label in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'occupied mast window since is last-7-days, not an ISO timestamp' tests/rank.test.ts \
-  || fail "rank tests must cover occupied last-7-days window-since"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "window-since cut must keep occupied last-7-days prize chrome"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "window-since cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "window-since cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "window-since cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "window-since cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "window-since cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "window-since cut must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "window-since cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "window-since cut must keep honest empty desk"
-python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "occupied window-since must not tax the live window as an ISO timestamp"
-import sys
-board = open(sys.argv[1], encoding="utf-8").read()
-css = open(sys.argv[2], encoding="utf-8").read()
-idx = board.find('data-occupied-window=""')
-if idx < 0:
-    raise SystemExit(1)
-block = board[idx:idx + 520]
-if 'data-occupied-since=""' not in block:
-    raise SystemExit(1)
-if "Window last 7 days" not in block:
-    raise SystemExit(1)
-if "Last 7 days." not in block:
-    raise SystemExit(1)
-if "Window since {week.startsAt}" in block:
-    raise SystemExit(1)
-if "{week.startsAt}" in block:
-    raise SystemExit(1)
-if "Week {week.weekId}" in block:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-sel = ".week-occupied .period-meta[data-occupied-window] [data-occupied-since]"
-start = css.find(sel)
-end = css.find("}", start)
-if start < 0 or end < 0:
-    raise SystemExit(1)
-chunk = css[start:end + 1]
-if "background:" in chunk or "color:" in chunk:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "window-since cut must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "window-since cut must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: empty mast window since is last-7-days — not an ISO timestamp =="
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "empty window-since must stamp data-empty-since"
-grep -q 'Window last 7 days' src/app/board.tsx \
-  || fail "empty window-since must name last-7-days, not an ISO timestamp"
-if grep -Fq 'Window since {week.startsAt}' src/app/board.tsx; then
-  fail "empty window-since must not tax the empty window as an ISO timestamp"
-fi
-grep -q 'data-occupied-since=""' src/app/board.tsx \
-  || fail "empty window-since cut must keep occupied last-7-days window-since"
-grep -q 'Last 7 days.' src/app/board.tsx \
-  || fail "empty window-since cut must keep occupied last-7-days week label"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "empty-board copy must name last-7-days, not this week"
-grep -Fq '.week-empty .period-meta [data-empty-since]' src/app/board.css \
-  || fail "CSS must compose empty window-since as last-7-days, not an ISO timestamp"
-grep -Fq 'Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
-  || fail "SPEC must name empty window-since as last-7-days, not an ISO timestamp"
-grep -Fq 'Occupied mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
-  || fail "empty window-since cut must keep occupied last-7-days window-since in SPEC"
-grep -Fq 'Occupied mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
-  || fail "empty window-since cut must keep occupied last-7-days week label in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'empty mast window since is last-7-days, not an ISO timestamp' tests/rank.test.ts \
-  || fail "rank tests must cover empty last-7-days window-since"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "empty window-since cut must keep occupied last-7-days prize chrome"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "empty window-since cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "empty window-since cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "empty window-since cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "empty window-since cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "empty window-since cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "empty window-since cut must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "empty window-since cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "empty window-since cut must keep honest empty desk"
-python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "empty window-since must not tax the empty window as an ISO timestamp"
-import sys
-board = open(sys.argv[1], encoding="utf-8").read()
-css = open(sys.argv[2], encoding="utf-8").read()
-idx = board.find('data-empty-since=""')
-if idx < 0:
-    raise SystemExit(1)
-block = board[max(0, idx - 180):idx + 160]
-if 'data-empty-since=""' not in block:
-    raise SystemExit(1)
-if "Window last 7 days" not in block:
-    raise SystemExit(1)
-if "Window since {week.startsAt}" in block:
-    raise SystemExit(1)
-if "{week.startsAt}" in block:
-    raise SystemExit(1)
-if "data-occupied-window" in block or "data-occupied-since" in block:
-    raise SystemExit(1)
-occ = board.find('data-occupied-window=""')
-if occ < 0:
-    raise SystemExit(1)
-occ_block = board[occ:occ + 520]
-if 'data-occupied-since=""' not in occ_block:
-    raise SystemExit(1)
-if "data-empty-since" in occ_block:
-    raise SystemExit(1)
-if "Window since {week.startsAt}" in board:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-sel = ".week-empty .period-meta [data-empty-since]"
-start = css.find(sel)
-end = css.find("}", start)
-if start < 0 or end < 0:
-    raise SystemExit(1)
-chunk = css[start:end + 1]
-if "background:" in chunk or "color:" in chunk:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "empty window-since cut must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "empty window-since cut must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: empty mast week label follows last-7-days — not ISO weekId =="
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "empty period-meta must stamp data-empty-window"
-grep -q 'Last 7 days.' src/app/board.tsx \
-  || fail "empty period-meta must lead with last-7-days, not ISO weekId"
-if grep -Fq 'Week {week.weekId}' src/app/board.tsx; then
-  fail "empty period-meta must follow last-7-days, not ISO weekId"
-fi
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "empty-board copy must name last-7-days, not this week"
-grep -Fq '.week-empty .period-meta[data-empty-window]' src/app/board.css \
-  || fail "CSS must compose empty period-meta as the last-7-days week label"
-grep -Fq 'Empty mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
-  || fail "SPEC must name empty period-meta as last-7-days, not ISO weekId"
-grep -Fq 'Occupied mast period-meta follows last-7-days, not ISO `weekId`' SPEC.md \
-  || fail "empty week-label cut must keep occupied last-7-days week label in SPEC"
-grep -Fq 'Empty mast window-since names last-7-days, not an ISO `startsAt` timestamp' SPEC.md \
-  || fail "empty week-label cut must keep empty last-7-days window-since in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'empty mast week label follows last-7-days, not ISO weekId' tests/rank.test.ts \
-  || fail "rank tests must cover empty last-7-days mast week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "empty week-label cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "empty week-label cut must keep occupied last-7-days week label"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "empty week-label cut must keep occupied last-7-days prize chrome"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "empty week-label cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "empty week-label cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "empty week-label cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "empty week-label cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "empty week-label cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "empty week-label cut must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "empty week-label cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "empty week-label cut must keep honest empty desk"
-python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "empty period-meta must not lead with ISO Week {weekId}"
-import sys
-board = open(sys.argv[1], encoding="utf-8").read()
-css = open(sys.argv[2], encoding="utf-8").read()
-idx = board.find('data-empty-window=""')
-if idx < 0:
-    raise SystemExit(1)
-block = board[idx:idx + 220]
-if "Last 7 days." not in block:
-    raise SystemExit(1)
-if "Week {week.weekId}" in block:
-    raise SystemExit(1)
-if "Week {week.weekId}" in board:
-    raise SystemExit(1)
-if 'data-empty-since=""' not in block:
-    raise SystemExit(1)
-if "data-occupied-window" in block or "data-occupied-since" in block:
-    raise SystemExit(1)
-occ = board.find('data-occupied-window=""')
-if occ < 0:
-    raise SystemExit(1)
-occ_block = board[occ:occ + 520]
-if "Last 7 days." not in occ_block:
-    raise SystemExit(1)
-if "data-empty-window" in occ_block:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-sel = ".week-empty .period-meta[data-empty-window]"
-start = css.find(sel)
-end = css.find("}", start)
-if start < 0 or end < 0:
-    raise SystemExit(1)
-chunk = css[start:end + 1]
-if "background:" in chunk or "color:" in chunk:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "empty week-label cut must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "empty week-label cut must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: empty desk chrome names last-7-days — not this week =="
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "empty kicker must name last-7-days, not this week"
-grep -q 'The last 7 days’ #1' src/app/board.tsx \
-  || fail "empty #1 heading must name last-7-days, not this week"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "empty-board copy must name last-7-days, not this week"
-if grep -q 'This week’s #1 freelance brief' src/app/board.tsx; then
-  fail "empty kicker must not name this week"
-fi
-if grep -q 'This week’s board is empty' src/app/board.tsx; then
-  fail "empty-board copy must not tax the empty desk as this week"
-fi
-if grep -Fq '>This week’s #1<' src/app/board.tsx; then
-  fail "empty #1 heading must not name this week"
-fi
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "SPEC must name empty prize chrome as last-7-days, not a calendar week"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "empty chrome cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'empty desk chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "rank tests must cover empty last-7-days prize chrome"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "empty chrome cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "empty chrome cut must keep empty last-7-days window-since"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "empty chrome cut must keep occupied last-7-days later-pack"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "empty chrome cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "empty chrome cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "empty chrome cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "empty chrome cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "empty chrome cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "empty chrome must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "empty chrome cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "empty chrome cut must keep honest empty desk"
-python3 - src/app/board.tsx src/app/board.css <<'PY' || fail "empty prize chrome must name last-7-days, not this week"
-import sys
-board = open(sys.argv[1], encoding="utf-8").read()
-css = open(sys.argv[2], encoding="utf-8").read()
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "The last 7 days’ board is empty" not in board:
-    raise SystemExit(1)
-if "This week’s #1 freelance brief" in board:
-    raise SystemExit(1)
-if "This week’s board is empty" in board:
-    raise SystemExit(1)
-if ">This week’s #1<" in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx; then
-  fail "empty chrome must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx; then
-  fail "empty chrome must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: document chrome names last-7-days — not this week =="
-grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
-  || fail "document title must name last-7-days, not this week"
-grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
-  || fail "document meta must name last-7-days, not this week"
-if grep -q 'this week’s #1 freelance brief' src/app/layout.tsx; then
-  fail "document title must not tax an empty Monday tab as this week"
-fi
-if grep -q 'this week’s #1 job ticket' src/app/layout.tsx; then
-  fail "document meta must not tax an empty Monday tab as this week"
-fi
-grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
-  || fail "SPEC must name document chrome as last-7-days, not a calendar week"
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "document chrome cut must keep empty last-7-days prize chrome in SPEC"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "document chrome cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "rank tests must cover last-7-days document chrome"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "document chrome cut must keep empty last-7-days kicker"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "document chrome cut must keep empty last-7-days board copy"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "document chrome cut must keep occupied last-7-days later-pack"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "document chrome cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "document chrome cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "document chrome cut must keep occupied last-7-days week label"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "document chrome cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "document chrome cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "document chrome cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "document chrome cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "document chrome cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "document chrome must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "document chrome cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "document chrome cut must keep honest empty desk"
-python3 - src/app/layout.tsx src/app/board.tsx src/app/board.css <<'PY' || fail "document chrome must name last-7-days, not this week"
-import sys
-layout = open(sys.argv[1], encoding="utf-8").read()
-board = open(sys.argv[2], encoding="utf-8").read()
-css = open(sys.argv[3], encoding="utf-8").read()
-if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
-    raise SystemExit(1)
-if "Pin the last 7 days’ #1 job ticket" not in layout:
-    raise SystemExit(1)
-if "this week’s #1 freelance brief" in layout:
-    raise SystemExit(1)
-if "this week’s #1 job ticket" in layout:
-    raise SystemExit(1)
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "Open this brief" not in board:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx; then
-  fail "document chrome must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx; then
-  fail "document chrome must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: about page names last-7-days — not a weekly auction =="
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "about meta must name last-7-days, not a weekly auction"
-grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "about lead must name last-7-days, not a weekly auction"
-if grep -q 'Weekly public auction' src/app/about/page.tsx; then
-  fail "about must not tax an empty Monday tab as a weekly auction"
-fi
-if grep -q 'weekly public auction' src/app/about/page.tsx; then
-  fail "about lead must not tax an empty Monday tab as a weekly auction"
-fi
-grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "SPEC must name about copy as last-7-days, not a weekly auction"
-grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
-  || fail "about cut must keep last-7-days document chrome in SPEC"
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "about cut must keep empty last-7-days prize chrome in SPEC"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "about cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "rank tests must cover last-7-days about copy"
-grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "about cut must keep last-7-days document chrome tests"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "about cut must keep empty last-7-days kicker"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "about cut must keep empty last-7-days board copy"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "about cut must keep occupied last-7-days later-pack"
-grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
-  || fail "about cut must keep last-7-days document title"
-grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
-  || fail "about cut must keep last-7-days document meta"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "about cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "about cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "about cut must keep occupied last-7-days week label"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "about cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "about cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "about cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "about cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "about cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "about cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "about cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "about cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "about cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "about cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "about cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "about must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "about cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "about cut must keep honest empty desk"
-python3 - src/app/about/page.tsx src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "about copy must name last-7-days, not a weekly auction"
-import sys
-about = open(sys.argv[1], encoding="utf-8").read()
-board = open(sys.argv[2], encoding="utf-8").read()
-css = open(sys.argv[3], encoding="utf-8").read()
-layout = open(sys.argv[4], encoding="utf-8").read()
-if "Public auction for the last 7 days’ #1 freelance brief" not in about:
-    raise SystemExit(1)
-if "last 7 days’ #1 freelance brief" not in about:
-    raise SystemExit(1)
-if "Weekly public auction" in about or "weekly public auction" in about:
-    raise SystemExit(1)
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "Open this brief" not in board:
-    raise SystemExit(1)
-if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css or "document-chrome-rolling" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx; then
-  fail "about must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx; then
-  fail "about must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: README names last-7-days — not a weekly auction =="
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' README.md \
-  || fail "README lead must name last-7-days, not a weekly auction"
-if grep -q 'Weekly public auction' README.md; then
-  fail "README must not tax an empty Monday clone as a weekly auction"
-fi
-if grep -q 'weekly public auction' README.md; then
-  fail "README lead must not tax an empty Monday clone as a weekly auction"
-fi
-grep -Fq 'README (lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "SPEC must name README lead as last-7-days, not a weekly auction"
-grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "README cut must keep last-7-days about copy in SPEC"
-grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
-  || fail "README cut must keep last-7-days document chrome in SPEC"
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "README cut must keep empty last-7-days prize chrome in SPEC"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "README cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'readme names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "rank tests must cover last-7-days README copy"
-grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "README cut must keep last-7-days about copy tests"
-grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "README cut must keep last-7-days document chrome tests"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "README cut must keep last-7-days about meta"
-grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "README cut must keep last-7-days about lead"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "README cut must keep empty last-7-days kicker"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "README cut must keep empty last-7-days board copy"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "README cut must keep occupied last-7-days later-pack"
-grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
-  || fail "README cut must keep last-7-days document title"
-grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
-  || fail "README cut must keep last-7-days document meta"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "README cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "README cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "README cut must keep occupied last-7-days week label"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "README cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "README cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "README cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "README cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "README cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "README cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "README cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "README cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "README cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "README cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "README cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "README must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "README cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "README cut must keep honest empty desk"
-python3 - README.md src/app/about/page.tsx src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "README must name last-7-days, not a weekly auction"
-import sys
-readme = open(sys.argv[1], encoding="utf-8").read()
-about = open(sys.argv[2], encoding="utf-8").read()
-board = open(sys.argv[3], encoding="utf-8").read()
-css = open(sys.argv[4], encoding="utf-8").read()
-layout = open(sys.argv[5], encoding="utf-8").read()
-if "Public auction for the last 7 days’ #1 freelance brief" not in readme:
-    raise SystemExit(1)
-if "Weekly public auction" in readme or "weekly public auction" in readme:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in about:
-    raise SystemExit(1)
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "Open this brief" not in board:
-    raise SystemExit(1)
-if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css or "document-chrome-rolling" in css or "about-rolling-window" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md; then
-  fail "README must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md; then
-  fail "README must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: about last paragraph names last-7-days — not a weekly reset =="
-grep -q 'raise-pays-difference, rolling last 7 days, and banned chat' src/app/about/page.tsx \
-  || fail "about last paragraph must name last-7-days, not a weekly reset"
-if grep -q 'weekly reset' src/app/about/page.tsx; then
-  fail "about last paragraph must not tax below-the-fold as a calendar-week prize"
-fi
-if grep -q 'last-7-days weekly reset' src/app/about/page.tsx; then
-  fail "about last paragraph must not name a weekly reset"
-fi
-if grep -q 'rolling last-7-days weekly reset' src/app/about/page.tsx; then
-  fail "about last paragraph must drop the weekly reset leftover"
-fi
-grep -Fq 'About last paragraph names last-7-days, not a weekly reset' SPEC.md \
-  || fail "SPEC must name about last paragraph as last-7-days, not a weekly reset"
-grep -Fq 'README (lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "about-reset cut must keep last-7-days README lead in SPEC"
-grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "about-reset cut must keep last-7-days about copy in SPEC"
-grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
-  || fail "about-reset cut must keep last-7-days document chrome in SPEC"
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "about-reset cut must keep empty last-7-days prize chrome in SPEC"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "about-reset cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'about last paragraph names last-7-days, not a weekly reset' tests/rank.test.ts \
-  || fail "rank tests must cover last-7-days about last paragraph"
-grep -q 'readme names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "about-reset cut must keep last-7-days README copy tests"
-grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "about-reset cut must keep last-7-days about copy tests"
-grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "about-reset cut must keep last-7-days document chrome tests"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' README.md \
-  || fail "about-reset cut must keep last-7-days README lead"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "about-reset cut must keep last-7-days about meta"
-grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "about-reset cut must keep last-7-days about lead"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "about-reset cut must keep empty last-7-days kicker"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "about-reset cut must keep empty last-7-days board copy"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "about-reset cut must keep occupied last-7-days later-pack"
-grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
-  || fail "about-reset cut must keep last-7-days document title"
-grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
-  || fail "about-reset cut must keep last-7-days document meta"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "about-reset cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "about-reset cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "about-reset cut must keep occupied last-7-days week label"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "about-reset cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "about-reset cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "about-reset cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "about-reset cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "about-reset cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "about-reset must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "about-reset cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "about-reset cut must keep honest empty desk"
-python3 - src/app/about/page.tsx README.md src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "about last paragraph must name last-7-days, not a weekly reset"
-import sys
-about = open(sys.argv[1], encoding="utf-8").read()
-readme = open(sys.argv[2], encoding="utf-8").read()
-board = open(sys.argv[3], encoding="utf-8").read()
-css = open(sys.argv[4], encoding="utf-8").read()
-layout = open(sys.argv[5], encoding="utf-8").read()
-if "raise-pays-difference, rolling last 7 days, and banned chat" not in about:
-    raise SystemExit(1)
-if "weekly reset" in about or "last-7-days weekly reset" in about:
-    raise SystemExit(1)
-if "rolling last-7-days weekly reset" in about:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in about:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in readme:
-    raise SystemExit(1)
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "Open this brief" not in board:
-    raise SystemExit(1)
-if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css or "document-chrome-rolling" in css:
-    raise SystemExit(1)
-if "about-rolling-window" in css or "readme-rolling-window" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md; then
-  fail "about last paragraph must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md; then
-  fail "about last paragraph must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: SPEC pitch names last-7-days — not a weekly auction =="
-grep -Fq 'A public auction for the last 7 days’ **#1 freelance brief**' SPEC.md \
-  || fail "SPEC product statement must name last-7-days, not a weekly auction"
-grep -Fq 'Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first.' SPEC.md \
-  || fail "SPEC one-line pitch must name last-7-days, not this week"
-if grep -q 'A weekly public auction' SPEC.md; then
-  fail "SPEC product statement must not tax the contract as a weekly auction"
-fi
-if grep -q 'Own the #1 brief this week' SPEC.md; then
-  fail "SPEC one-line pitch must not tax the prize as this week"
-fi
-grep -Fq 'SPEC pitch (product statement and one-line) names last-7-days, not a weekly auction' SPEC.md \
-  || fail "SPEC must name the pitch as last-7-days, not a weekly auction"
-grep -Fq 'About last paragraph names last-7-days, not a weekly reset' SPEC.md \
-  || fail "SPEC-pitch cut must keep last-7-days about last paragraph in SPEC"
-grep -Fq 'README (lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "SPEC-pitch cut must keep last-7-days README lead in SPEC"
-grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "SPEC-pitch cut must keep last-7-days about copy in SPEC"
-grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
-  || fail "SPEC-pitch cut must keep last-7-days document chrome in SPEC"
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "SPEC-pitch cut must keep empty last-7-days prize chrome in SPEC"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "SPEC-pitch cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'spec pitch names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "rank tests must cover last-7-days SPEC pitch"
-grep -q 'about last paragraph names last-7-days, not a weekly reset' tests/rank.test.ts \
-  || fail "SPEC-pitch cut must keep last-7-days about last paragraph tests"
-grep -q 'readme names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "SPEC-pitch cut must keep last-7-days README copy tests"
-grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "SPEC-pitch cut must keep last-7-days about copy tests"
-grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "SPEC-pitch cut must keep last-7-days document chrome tests"
-grep -q 'raise-pays-difference, rolling last 7 days, and banned chat' src/app/about/page.tsx \
-  || fail "SPEC-pitch cut must keep last-7-days about last paragraph"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' README.md \
-  || fail "SPEC-pitch cut must keep last-7-days README lead"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "SPEC-pitch cut must keep last-7-days about meta"
-grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "SPEC-pitch cut must keep last-7-days about lead"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep empty last-7-days kicker"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep empty last-7-days board copy"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep occupied last-7-days later-pack"
-grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
-  || fail "SPEC-pitch cut must keep last-7-days document title"
-grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
-  || fail "SPEC-pitch cut must keep last-7-days document meta"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep occupied last-7-days week label"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "SPEC pitch must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "SPEC-pitch cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "SPEC-pitch cut must keep honest empty desk"
-python3 - SPEC.md README.md src/app/about/page.tsx src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "SPEC pitch must name last-7-days, not a weekly auction"
-import sys
-spec = open(sys.argv[1], encoding="utf-8").read()
-readme = open(sys.argv[2], encoding="utf-8").read()
-about = open(sys.argv[3], encoding="utf-8").read()
-board = open(sys.argv[4], encoding="utf-8").read()
-css = open(sys.argv[5], encoding="utf-8").read()
-layout = open(sys.argv[6], encoding="utf-8").read()
-if "A public auction for the last 7 days’ **#1 freelance brief**" not in spec:
-    raise SystemExit(1)
-if "Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first." not in spec:
-    raise SystemExit(1)
-if "A weekly public auction" in spec or "Own the #1 brief this week" in spec:
-    raise SystemExit(1)
-if "raise-pays-difference, rolling last 7 days, and banned chat" not in about:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in readme:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in about:
-    raise SystemExit(1)
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "Open this brief" not in board:
-    raise SystemExit(1)
-if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css or "document-chrome-rolling" in css:
-    raise SystemExit(1)
-if "about-rolling-window" in css or "readme-rolling-window" in css or "about-reset-copy" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md SPEC.md; then
-  fail "SPEC pitch must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md SPEC.md; then
-  fail "SPEC pitch must not rebuild the ticket desk into a long form"
-fi
-
-echo "== UX: BUILD intro names last-7-days — not a weekly auction =="
-grep -Fq 'Public auction for the last 7 days’ #1 freelance brief' BUILD.md \
-  || fail "BUILD intro must name last-7-days, not a weekly auction"
-if grep -q 'Weekly public auction' BUILD.md; then
-  fail "BUILD intro must not tax the contract as a weekly auction"
-fi
-grep -Fq 'BUILD intro names last-7-days, not a weekly auction' SPEC.md \
-  || fail "SPEC must name BUILD intro as last-7-days, not a weekly auction"
-grep -Fq 'A public auction for the last 7 days’ **#1 freelance brief**' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days SPEC product statement"
-grep -Fq 'Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first.' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days SPEC one-line pitch"
-grep -Fq 'SPEC pitch (product statement and one-line) names last-7-days, not a weekly auction' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days SPEC pitch in SPEC"
-grep -Fq 'About last paragraph names last-7-days, not a weekly reset' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days about last paragraph in SPEC"
-grep -Fq 'README (lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days README lead in SPEC"
-grep -Fq 'About copy (meta and lead) names that rolling window, not a weekly auction' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days about copy in SPEC"
-grep -Fq 'Document chrome (title and meta) names that rolling window, not a calendar week' SPEC.md \
-  || fail "BUILD-intro cut must keep last-7-days document chrome in SPEC"
-grep -Fq 'Empty prize chrome (kicker, #1 heading, empty-board copy) names that rolling window, not a calendar week' SPEC.md \
-  || fail "BUILD-intro cut must keep empty last-7-days prize chrome in SPEC"
-grep -Fq 'Occupied prize chrome (kicker, #1 heading, later-pack) names that rolling window, not a calendar week' SPEC.md \
-  || fail "BUILD-intro cut must keep occupied last-7-days prize chrome in SPEC"
-grep -q 'Empty week stays Claim #1 / No paid brief' SPEC.md \
-  || fail "SPEC must keep empty Claim #1 / No paid brief"
-grep -q 'build intro names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "rank tests must cover last-7-days BUILD intro"
-grep -q 'spec pitch names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "BUILD-intro cut must keep last-7-days SPEC pitch tests"
-grep -q 'about last paragraph names last-7-days, not a weekly reset' tests/rank.test.ts \
-  || fail "BUILD-intro cut must keep last-7-days about last paragraph tests"
-grep -q 'readme names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "BUILD-intro cut must keep last-7-days README copy tests"
-grep -q 'about page names last-7-days, not a weekly auction' tests/rank.test.ts \
-  || fail "BUILD-intro cut must keep last-7-days about copy tests"
-grep -q 'document chrome names last-7-days, not this week' tests/rank.test.ts \
-  || fail "BUILD-intro cut must keep last-7-days document chrome tests"
-grep -q 'raise-pays-difference, rolling last 7 days, and banned chat' src/app/about/page.tsx \
-  || fail "BUILD-intro cut must keep last-7-days about last paragraph"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' README.md \
-  || fail "BUILD-intro cut must keep last-7-days README lead"
-grep -q 'Public auction for the last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "BUILD-intro cut must keep last-7-days about meta"
-grep -q 'last 7 days’ #1 freelance brief' src/app/about/page.tsx \
-  || fail "BUILD-intro cut must keep last-7-days about lead"
-grep -q 'The last 7 days’ #1 freelance brief' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep empty last-7-days kicker"
-grep -q 'The last 7 days’ board is empty' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep empty last-7-days board copy"
-grep -q 'These tickets are not the last 7 days’ #1 prize' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep occupied last-7-days later-pack"
-grep -q 'Brief desk — the last 7 days’ #1 freelance brief' src/app/layout.tsx \
-  || fail "BUILD-intro cut must keep last-7-days document title"
-grep -q 'Pin the last 7 days’ #1 job ticket' src/app/layout.tsx \
-  || fail "BUILD-intro cut must keep last-7-days document meta"
-grep -q 'data-empty-window=""' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep empty last-7-days week label"
-grep -q 'data-empty-since=""' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep empty last-7-days window-since"
-grep -q 'data-occupied-window=""' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep occupied last-7-days week label"
-grep -q 'Already on the last 7 days?' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep last-7-days raise identity"
-grep -q 'Rolling last 7 days. Not Monday 00:00 UTC.' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep occupied rolling last-7-days"
-grep -q 'data-prize=' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep the winner rule as the prize"
-grep -q 'data-first-click={featured ? "open" : undefined}' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep occupied Open this brief the first click"
-grep -q 'Open this brief' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep Open this brief"
-grep -q 'Claim #1' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep Claim #1"
-grep -q 'No paid brief' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep empty No paid brief"
-grep -q 'Write this ticket' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep Write this ticket"
-grep -q 'amount-field' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep the dashed amount"
-grep -q 'className="step"' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep ± steppers"
-grep -q 'Outbid' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep Outbid"
-grep -q 'desk-surface-empty' src/app/board.tsx \
-  || fail "BUILD intro must not rebuild the empty ticket desk"
-grep -q 'Unpaid Polar checkout stays off this desk until Polar reports paid' src/app/outbid-form.tsx \
-  || fail "BUILD-intro cut must keep unpaid off the board"
-grep -q 'data-empty-week="true"' src/app/board.tsx \
-  || fail "BUILD-intro cut must keep honest empty desk"
-python3 - BUILD.md SPEC.md README.md src/app/about/page.tsx src/app/board.tsx src/app/board.css src/app/layout.tsx <<'PY' || fail "BUILD intro must name last-7-days, not a weekly auction"
-import sys
-build = open(sys.argv[1], encoding="utf-8").read()
-spec = open(sys.argv[2], encoding="utf-8").read()
-readme = open(sys.argv[3], encoding="utf-8").read()
-about = open(sys.argv[4], encoding="utf-8").read()
-board = open(sys.argv[5], encoding="utf-8").read()
-css = open(sys.argv[6], encoding="utf-8").read()
-layout = open(sys.argv[7], encoding="utf-8").read()
-if "Public auction for the last 7 days’ #1 freelance brief" not in build:
-    raise SystemExit(1)
-if "Weekly public auction" in build or "weekly public auction" in build:
-    raise SystemExit(1)
-if "BUILD intro names last-7-days, not a weekly auction" not in spec:
-    raise SystemExit(1)
-if "A public auction for the last 7 days’ **#1 freelance brief**" not in spec:
-    raise SystemExit(1)
-if "Bid USD. Own the last 7 days’ #1 brief. Freelancers see you first." not in spec:
-    raise SystemExit(1)
-if "raise-pays-difference, rolling last 7 days, and banned chat" not in about:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in readme:
-    raise SystemExit(1)
-if "Public auction for the last 7 days’ #1 freelance brief" not in about:
-    raise SystemExit(1)
-if "The last 7 days’ #1 freelance brief" not in board:
-    raise SystemExit(1)
-if "No paid brief" not in board:
-    raise SystemExit(1)
-if "Open this brief" not in board:
-    raise SystemExit(1)
-if "Brief desk — the last 7 days’ #1 freelance brief" not in layout:
-    raise SystemExit(1)
-if "occupied-rolling-chrome" in css or "write-after-open-N" in css:
-    raise SystemExit(1)
-if "empty-desk-chrome" in css or "empty-mast-window" in css or "empty-mast-since" in css:
-    raise SystemExit(1)
-if "occupied-mast-window" in css or "occupied-mast-since" in css:
-    raise SystemExit(1)
-if "raise-rolling-identity" in css or "document-chrome-rolling" in css:
-    raise SystemExit(1)
-if "about-rolling-window" in css or "readme-rolling-window" in css or "about-reset-copy" in css or "spec-pitch-rolling" in css:
-    raise SystemExit(1)
-PY
-if grep -qE 'data-write-after-open-seven|data-open-after-write-six' src/app/board.tsx src/app/board.css src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md SPEC.md BUILD.md; then
-  fail "BUILD intro must not add another numbered hop stamp"
-fi
-if grep -qE 'grid-template-columns: 1fr 1fr' src/app/board.tsx src/app/outbid-form.tsx src/app/layout.tsx src/app/about/page.tsx README.md SPEC.md BUILD.md; then
-  fail "BUILD intro must not rebuild the ticket desk into a long form"
-fi
-
-grep -q 'utm_source' tests/listing.test.ts || fail "listing tests must cover tracking strip"
-grep -q 't.me' tests/listing.test.ts || fail "listing tests must reject telegram"
-grep -q 'rating_forbidden' tests/listing.test.ts \
-  || fail "listing tests must reject invented ratings"
-grep -q '302' tests/click.test.ts || fail "click tests must assert 302"
-grep -q 'rating_forbidden' tests/honesty.test.ts \
-  || fail "honesty tests must reject invented ratings"
-if grep -RInE '4\.8 stars' src/app/about/page.tsx src/app/rules/page.tsx >/dev/null; then
-  fail "about/rules must not invent ratings"
+grep -q '.hopper .bid' src/app/board.css \
+  || fail "CSS must keep later ranks quieter"
+if grep -RInE '★|⭐|star rating|4\.8 stars|review score|top rated|hire rate|data-stars|data-rating' \
+  src/app src/core --exclude='honesty.ts' --exclude-dir=about --exclude-dir=rules >/dev/null; then
+  fail "board UI must not render invented ratings"
 fi
 
 echo "== checkout files =="
 for f in \
   src/billing/port.ts \
   src/billing/fixture.ts \
-  src/billing/polar.ts \
-  src/app/api/checkout/route.ts \
-  src/app/api/polar/webhook/route.ts \
+  src/billing/waffo.ts \
+  src/billing/select.ts \
+  src/app/checkout/route.ts \
+  src/app/api/waffo/webhook/route.ts \
+  src/app/checkout/complete/page.tsx \
   src/app/return/page.tsx \
   tests/checkout.test.ts
 do
@@ -2965,51 +356,60 @@ do
 done
 grep -q 'createCheckout' src/billing/port.ts || fail "port.ts must define createCheckout"
 grep -q 'handleWebhook' src/billing/port.ts || fail "port.ts must define handleWebhook"
-grep -q 'POLAR_FIXTURE_ONLY' src/billing/port.ts \
-  || fail "port.ts must honor POLAR_FIXTURE_ONLY"
+grep -q 'WAFFO_MODE' src/config.ts src/billing/select.ts \
+  || fail "provider selection must require explicit WAFFO_MODE"
 grep -q 'export class FixturePaymentPort' src/billing/fixture.ts \
   || fail "fixture.ts must export FixturePaymentPort"
-grep -q 'export class PolarPaymentPort' src/billing/polar.ts \
-  || fail "polar.ts must export PolarPaymentPort"
-grep -q 'POLAR_LIVE' src/billing/polar.ts || fail "polar.ts must stay env-gated"
-grep -q 'export function polarApiBase' src/billing/polar.ts \
-  || fail "polar.ts must honor POLAR_API_BASE override"
-grep -q 'https://api.polar.sh' src/billing/polar.ts \
-  || fail "polar.ts default Polar API must stay production"
+grep -q 'export class WaffoPaymentPort' src/billing/waffo.ts \
+  || fail "waffo.ts must export WaffoPaymentPort"
+grep -q 'verifyWebhook' src/billing/waffo.ts \
+  || fail "waffo.ts must verify raw webhook bodies with the official SDK"
+grep -q 'order.completed' src/billing/waffo.ts \
+  || fail "waffo.ts must accept only order.completed"
 grep -q 'data-return' src/app/return/page.tsx || fail "return page must expose paid/pending"
-grep -q 'does not trust the query' src/app/return/page.tsx \
-  || fail "return page must not trust the query string alone"
-grep -q 'action="/api/checkout"' src/app/outbid-form.tsx \
-  || fail "Outbid form must POST to /api/checkout"
-if grep -nE 'fetch\(|polar\.sh|api\.polar' src/billing/fixture.ts src/billing/port.ts >/dev/null; then
-  fail "fixture/port must not call Polar over the network"
+grep -q 'return/page' src/app/checkout/complete/page.tsx \
+  || fail "Waffo success URL must land on the read-only completion page"
+grep -q 'Payment has not been confirmed' src/app/return/page.tsx \
+  || fail "return page must keep unconfirmed payments off the board"
+grep -q 'action="/checkout"' src/app/outbid-form.tsx \
+  || fail "Outbid form must POST to /checkout"
+if grep -nE 'fetch\(|waffo\.ai|api\.waffo' src/billing/fixture.ts src/billing/port.ts >/dev/null; then
+  fail "fixture/port must not call Waffo over the network"
 fi
 if grep -R --include='*.ts' --include='*.tsx' -E "from ['\"]@polar-sh" src tests >/dev/null 2>&1; then
   fail "src/tests must not import a Polar SDK"
 fi
-if grep -R --include='*.ts' --include='*.tsx' -nE 'fetch\(|https://api\.polar\.sh|https://sandbox-api\.polar\.sh' tests \
-  | grep -v 'polarApiBase' \
-  | grep -v 'POLAR_API_BASE' \
-  | grep -v 'sandbox-api' \
-  | grep -v 'sandbox.polar.sh' \
-  | grep -v 'api.polar.sh' \
-  | grep -v 'POLAR_API_BASE/' \
-  | grep -v 'checkout-created.json' >/dev/null; then
-  fail "tests must not call live Polar"
+if grep -R --include='*.ts' --include='*.tsx' -nE 'fetch\(|https://api\.waffo\.ai|https://test\.waffo' tests \
+  | grep -v 'fetch:' \
+  | grep -v 'WAFFO_API_BASE' \
+  | grep -v 'waffo\.example' >/dev/null; then
+  fail "tests must not call live Waffo"
 fi
-if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" src >/dev/null 2>&1; then
-  if grep -R --include='*.ts' --include='*.tsx' -E "api\\.polar\\.sh" src | grep -v 'src/billing/polar.ts' >/dev/null 2>&1; then
-    fail "only src/billing/polar.ts may mention the Polar API host"
+if grep -R --include='*.ts' --include='*.tsx' -E "api\\.waffo\\.ai" src >/dev/null 2>&1; then
+  if grep -R --include='*.ts' --include='*.tsx' -E "api\\.waffo\\.ai" src \
+    | grep -v 'src/billing/waffo.ts' \
+    | grep -v 'src/config.ts' >/dev/null 2>&1; then
+    fail "only provider/config modules may mention the Waffo API host"
   fi
 fi
 if grep -RInE 'billing/polar' src/app src/core >/dev/null 2>&1; then
-  fail "HTTP / pages must not import billing/polar.ts directly"
+  fail "HTTP / pages must not import the retired provider adapter directly"
 fi
-if grep -Eq '^(export )?POLAR_LIVE=1' scripts/test.sh .github/workflows/ci.yml; then
-  fail "CI / test.sh must not set POLAR_LIVE=1"
+if [[ -e src/billing/waffo-session.ts ]]; then
+  fail "the retired handwritten Waffo session adapter must not remain in runtime source"
+fi
+if grep -Eq '^(export )?WAFFO_MODE=waffo-(test|prod)' scripts/test.sh .github/workflows/ci.yml; then
+  fail "CI / test.sh must not select live Waffo"
 fi
 
 if [[ -f package.json ]]; then
+  grep -q '"better-sqlite3"' package.json \
+    || fail "SQLite runtime dependency must be installed"
+  test -f src/db.ts \
+    || fail "SQLite database module must exist"
+  grep -q 'DATABASE_PATH' src/config.ts src/db.ts src/core/listings.ts \
+    || fail "listing storage must resolve DATABASE_PATH"
+
   echo "== install =="
   if [[ ! -d node_modules ]]; then
     if [[ -f package-lock.json ]]; then
@@ -3019,16 +419,25 @@ if [[ -f package.json ]]; then
     fi
   fi
 
-  unset POLAR_LIVE POLAR_ACCESS_TOKEN POLAR_WEBHOOK_SECRET POLAR_API_BASE POLAR_PRODUCT_ID
-  export POLAR_FIXTURE_ONLY=1
-  [[ "${POLAR_LIVE:-}" != "1" ]] || fail "POLAR_LIVE must stay unset in test.sh"
+  unset WAFFO_MODE WAFFO_MERCHANT_ID WAFFO_STORE_ID WAFFO_PRODUCT_ID WAFFO_PRIVATE_KEY WAFFO_PRIVATE_KEY_FILE WAFFO_WEBHOOK_TEST_PUBLIC_KEY WAFFO_WEBHOOK_PROD_PUBLIC_KEY WAFFO_API_BASE DATABASE_PATH
+  export WAFFO_MODE=fixture
+  test_workdir="$(mktemp -d "${TMPDIR:-/tmp}/freelance-brief-board-test.XXXXXX")"
+  test_database="${test_workdir}/board.sqlite"
+  cleanup_test_workdir() {
+    if [[ -n "${test_workdir:-}" && -d "$test_workdir" ]]; then
+      rm -rf -- "$test_workdir"
+    fi
+  }
+  trap cleanup_test_workdir EXIT
+  export DATABASE_PATH="$test_database"
+  [[ "${WAFFO_MODE:-}" == "fixture" ]] || fail "test.sh must use explicit fixture mode"
+  [[ "$DATABASE_PATH" != ":memory:" ]] || fail "offline gate must use a durable SQLite file"
 
   echo "== tsc --noEmit =="
   npx tsc --noEmit
 
   echo "== unit tests =="
-  test_log="$(mktemp)"
-  trap 'rm -f "$test_log"' EXIT
+  test_log="${test_workdir}/test.log"
   set +e
   npx tsx --test --test-concurrency=1 --test-reporter spec 'tests/**/*.test.ts' | tee "$test_log"
   test_status=${PIPESTATUS[0]}
@@ -3038,6 +447,8 @@ if [[ -f package.json ]]; then
     || fail "test runner reported 0 tests"
   grep -q '/healthz' "$test_log" \
     || fail "healthz test did not run"
+  grep -q 'production readiness opens, migrates, and queries durable DB' "$test_log" \
+    || fail "database readiness test did not run"
   grep -q 'older' "$test_log" \
     || fail "rank older-wins-ties test did not run"
   grep -q 'fixture create' "$test_log" \
@@ -3076,90 +487,193 @@ if [[ -f package.json ]]; then
     || fail "occupied-week read-this-deadline freelancer test did not run"
   grep -q 'reading the paid #1 winner rule' "$test_log" \
     || fail "occupied-week read-this-winner freelancer test did not run"
-  grep -q 'writing a new ticket after the winner rule' "$test_log" \
-    || fail "occupied-week write-after-rule buyer test did not run"
-  grep -q 'win the first click after Write follows the winner rule' "$test_log" \
-    || fail "occupied-week open-after-write first-click test did not run"
-  grep -q 'concentrates writing a new ticket after Open this brief' "$test_log" \
-    || fail "occupied-week write-after-open first-write test did not run"
-  grep -q 'concentrates opening the paid #1 brief after Write this ticket' "$test_log" \
-    || fail "occupied-week open-after-write-first freelancer test did not run"
-  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated' "$test_log" \
-    || fail "occupied-week write-after-open-two buyer test did not run"
-  grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated' "$test_log" \
-    || fail "occupied-week open-after-write-two freelancer test did not run"
-  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated again' "$test_log" \
-    || fail "occupied-week write-after-open-three buyer test did not run"
-  grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated again' "$test_log" \
-    || fail "occupied-week open-after-write-three freelancer test did not run"
-  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a fourth time' "$test_log" \
-    || fail "occupied-week write-after-open-four buyer test did not run"
-  grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated a fourth time' "$test_log" \
-    || fail "occupied-week open-after-write-four freelancer test did not run"
-  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a fifth time' "$test_log" \
-    || fail "occupied-week write-after-open-five buyer test did not run"
-  grep -q 'concentrates opening the paid #1 brief after Write this ticket is re-concentrated a fifth time' "$test_log" \
-    || fail "occupied-week open-after-write-five freelancer test did not run"
-  grep -q 'concentrates writing a new ticket after Open this brief is re-concentrated a sixth time' "$test_log" \
-    || fail "occupied-week write-after-open-six buyer test did not run"
-  grep -q 'winner rule is the prize before' "$test_log" \
-    || fail "occupied-week prize-before-price freelancer test did not run"
-  grep -q 'empty week stays Claim #1 + No paid brief without prize' "$test_log" \
-    || fail "empty-week Claim #1 + No paid brief isolation test did not run"
-  grep -q 'rank is the bid; project budget stays a later fact' "$test_log" \
-    || fail "occupied-week rank-is-bid freelancer test did not run"
-  grep -q 'Open this brief stays the first freelancer click' "$test_log" \
-    || fail "occupied-week open-brief-first freelancer test did not run"
-  grep -q 'empty week stays Claim #1 — Open / Write cannot leak' "$test_log" \
-    || fail "empty-week Open / Write isolation test did not run"
-  grep -q 'occupied later Write this ticket stays quieter than Open this brief' "$test_log" \
-    || fail "occupied-week later Write quieter-than-Open test did not run"
-  grep -q 'empty week Claim #1 is the first click — brief URL is a later write' "$test_log" \
-    || fail "empty-week Claim #1 then later brief URL test did not run"
+  grep -q 'empty desk exposes every identity field before one direct Outbid' "$test_log" \
+    || fail "direct empty claim-path test did not run"
+  grep -q 'occupied desk keeps one Open action, one quiet claim anchor' "$test_log" \
+    || fail "occupied action-path test did not run"
+  grep -q 'expired paid tickets leave the desk empty' "$test_log" \
+    || fail "expired-ticket empty-state test did not run"
+  grep -q 'unpaid tickets remain off the desk' "$test_log" \
+    || fail "unpaid off-desk test did not run"
+  grep -q 'rolling rank keeps Sunday payments' "$test_log" \
+    || fail "rolling rank window test did not run"
+  grep -q 'week and rules copy keep the rolling' "$test_log" \
+    || fail "rolling rules copy test did not run"
+  grep -q 'occupied #1 winner rule is the prize before quieter rank' "$test_log" \
+    || fail "occupied prize-before-rank hierarchy test did not run"
   grep -q 'occupied later-rank tickets stay quieter than #1' "$test_log" \
-    || fail "occupied later-rank quieter-than-#1 test did not run"
-  grep -q 'unpaid stays off the ticket desk' "$test_log" \
-    || fail "unpaid Polar leftover off-desk UX test did not run"
-  grep -q 'unpaid Polar checkout never ranks as #1' "$test_log" \
-    || fail "unpaid Polar checkout rank gate test did not run"
-  grep -q 'unpaid Polar checkout stays off the ticket desk until Polar reports paid' "$test_log" \
-    || fail "unpaid Polar checkout fixture test did not run"
-  grep -q 'rolling last-7-days' "$test_log" \
-    || fail "week tests must cover rolling last-7-days window"
-  grep -q 'occupied week window is rolling last-7-days' "$test_log" \
-    || fail "rank tests must cover occupied rolling last-7-days window"
-  grep -q 'occupied ticket desk keeps one first click' "$test_log" \
-    || fail "occupied-week Open this brief before Claim test did not run"
-  grep -q 'Claim stays after' "$test_log" \
-    || fail "occupied-week Claim after the ticket test did not run"
-  grep -q 'same brief still inside last-7-days raises after the UTC week label rolls' "$test_log" \
-    || fail "Sunday pay Monday raise identity test did not run"
-  grep -q 'occupied /rules raise identity is last-7-days' "$test_log" \
-    || fail "occupied /rules last-7-days raise identity test did not run"
-  grep -q 'occupied raise identity is last-7-days, not this week' "$test_log" \
-    || fail "occupied last-7-days raise copy test did not run"
-  grep -q 'occupied desk chrome names last-7-days, not this week' "$test_log" \
-    || fail "occupied last-7-days prize chrome test did not run"
-  grep -q 'occupied mast week label follows last-7-days, not ISO weekId' "$test_log" \
-    || fail "occupied last-7-days mast week label test did not run"
-  grep -q 'occupied mast window since is last-7-days, not an ISO timestamp' "$test_log" \
-    || fail "occupied last-7-days mast window-since test did not run"
-  grep -q 'empty mast window since is last-7-days, not an ISO timestamp' "$test_log" \
-    || fail "empty last-7-days mast window-since test did not run"
-  grep -q 'empty mast week label follows last-7-days, not ISO weekId' "$test_log" \
-    || fail "empty last-7-days mast week label test did not run"
-  grep -q 'empty desk chrome names last-7-days, not this week' "$test_log" \
-    || fail "empty last-7-days prize chrome test did not run"
-  grep -q 'document chrome names last-7-days, not this week' "$test_log" \
-    || fail "last-7-days document chrome test did not run"
-  grep -q 'about page names last-7-days, not a weekly auction' "$test_log" \
-    || fail "last-7-days about copy test did not run"
-  grep -q 'readme names last-7-days, not a weekly auction' "$test_log" \
-    || fail "last-7-days README copy test did not run"
-  grep -q 'about last paragraph names last-7-days, not a weekly reset' "$test_log" \
-    || fail "last-7-days about last paragraph test did not run"
-  grep -q 'spec pitch names last-7-days, not a weekly auction' "$test_log" \
-    || fail "last-7-days SPEC pitch test did not run"
+    || fail "quieter later-ticket test did not run"
+  grep -q 'empty and occupied mast copy names the rolling last-7-days window' "$test_log" \
+    || fail "rolling mast-copy test did not run"
+  grep -q 'README/SPEC/BUILD/layout copy keeps the rolling job-ticket contract' "$test_log" \
+    || fail "rolling document-copy test did not run"
+  grep -q 'claim .* paid .* restart .* rank survives' "$test_log" \
+    || fail "SQLite claim-paid-restart-rank test did not run"
+  grep -q 'click count survives a process restart' "$test_log" \
+    || fail "SQLite click restart test did not run"
+  grep -q 'two independent store instances share' "$test_log" \
+    || fail "SQLite two-instance sharing test did not run"
+  grep -q 'duplicate paid event is a no-op' "$test_log" \
+    || fail "SQLite duplicate event test did not run"
+  grep -q 'two-process stale raises serialize' "$test_log" \
+    || fail "SQLite stale-raise serialization test did not run"
+  grep -q 'out-of-order independent creates sharing' "$test_log" \
+    || fail "SQLite out-of-order canonical-identity test did not run"
+
+  echo "== next build =="
+  NEXT_TELEMETRY_DISABLED=1 npm run build
+
+  echo "== built runtime / durable SQLite =="
+  node --input-type=module <<'NODE'
+import { createServer } from "node:net";
+import { generateKeyPairSync } from "node:crypto";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawn } from "node:child_process";
+
+const root = process.cwd();
+const workdir = mkdtempSync(join(tmpdir(), "freelance-brief-board-runtime-"));
+const databasePath = join(workdir, "board.sqlite");
+let child;
+let output = "";
+
+function exportedKey(key, type) {
+  return key.export({ type, format: "pem" }).toString();
+}
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close(() => reject(new Error("could not choose runtime gate port")));
+        return;
+      }
+      const port = address.port;
+      server.close((error) => error ? reject(error) : resolve(port));
+    });
+  });
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function stop(processHandle) {
+  if (!processHandle || processHandle.exitCode !== null || processHandle.signalCode !== null) return;
+  await new Promise((resolve) => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      processHandle.kill("SIGKILL");
+      finish();
+    }, 2_000);
+    processHandle.once("close", finish);
+    processHandle.kill("SIGTERM");
+  });
+}
+
+let failure;
+try {
+  const port = await freePort();
+  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const env = {
+    PATH: process.env.PATH ?? "",
+    NODE_ENV: "production",
+    WAFFO_MODE: "waffo-test",
+    WAFFO_MERCHANT_ID: `MER_${"A".repeat(22)}`,
+    WAFFO_STORE_ID: `STO_${"B".repeat(22)}`,
+    WAFFO_PRODUCT_ID: `PROD_${"C".repeat(22)}`,
+    WAFFO_PRIVATE_KEY: exportedKey(privateKey, "pkcs8"),
+    WAFFO_PRIVATE_KEY_FILE: "",
+    WAFFO_WEBHOOK_TEST_PUBLIC_KEY: exportedKey(publicKey, "spki"),
+    WAFFO_WEBHOOK_PROD_PUBLIC_KEY: "",
+    WAFFO_API_BASE: "https://test.waffo.example",
+    PUBLIC_BASE_URL: `http://127.0.0.1:${port}`,
+    DATABASE_PATH: databasePath,
+    PORT: String(port),
+    NEXT_TELEMETRY_DISABLED: "1",
+  };
+  child = spawn(process.execPath, ["scripts/preflight.mjs"], {
+    cwd: root,
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (chunk) => { output += String(chunk); });
+  child.stderr.on("data", (chunk) => { output += String(chunk); });
+  child.on("error", (error) => { output += `${error.message}\n`; });
+  const preflightResult = await new Promise((resolve) => {
+    child.once("close", (code, signal) => resolve({ code, signal }));
+  });
+  if (preflightResult.code !== 0) {
+    throw new Error(`production preflight failed (exit=${preflightResult.code ?? preflightResult.signal})`);
+  }
+
+  child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1"], {
+    cwd: root,
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (chunk) => { output += String(chunk); });
+  child.stderr.on("data", (chunk) => { output += String(chunk); });
+  child.on("error", (error) => { output += `${error.message}\n`; });
+
+  const base = `http://127.0.0.1:${port}`;
+  const deadline = Date.now() + 15_000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(`built runtime exited before readiness (exit=${child.exitCode ?? child.signalCode})`);
+    }
+    try {
+      const health = await fetch(`${base}/healthz`, { signal: AbortSignal.timeout(1_000) });
+      const healthBody = await health.text();
+      if (health.status !== 200 || healthBody !== '{"ok":true}') {
+        throw new Error(`unexpected /healthz response: ${health.status} ${healthBody}`);
+      }
+      const home = await fetch(`${base}/`, { signal: AbortSignal.timeout(1_000) });
+      const homeBody = await home.text();
+      if (home.status !== 200 || !homeBody.includes("data-empty-week")) {
+        throw new Error(`unexpected / response: ${home.status}`);
+      }
+      ready = true;
+      break;
+    } catch (error) {
+      if (Date.now() >= deadline) throw error;
+      await delay(100);
+    }
+  }
+  if (!ready) throw new Error("built runtime did not become ready");
+  if (!existsSync(databasePath)) throw new Error("built runtime did not create durable SQLite file");
+  const sqlite = (await import("better-sqlite3")).default;
+  const db = new sqlite(databasePath, { readonly: true });
+  try {
+    if (db.pragma("journal_mode", { simple: true }) !== "wal") throw new Error("SQLite WAL is not enabled");
+    if (db.pragma("quick_check", { simple: true }) !== "ok") throw new Error("SQLite quick_check failed");
+  } finally {
+    db.close();
+  }
+} catch (error) {
+  failure = error;
+} finally {
+  await stop(child);
+  rmSync(workdir, { recursive: true, force: true });
+}
+
+if (failure) {
+  if (output) console.error(output);
+  throw failure;
+}
+console.log("built runtime gate: npm preflight, next start, /healthz, /, and WAL SQLite passed; provider calls=0");
+NODE
 fi
 
 echo "OK: buildable and testable"

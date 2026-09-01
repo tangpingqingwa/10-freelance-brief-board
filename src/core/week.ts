@@ -28,7 +28,7 @@ export function nextResetUtc(now: Date = new Date()): Date {
 }
 
 /**
- * Polar-paid bid is live if `paidAt` is inside `[now - 7d, now]`.
+ * A paid bid is live if `paidAt` is inside `[now - 7d, now]`.
  * Monday 00:00 UTC is not the drop.
  */
 export function bidInRollingWeek(

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { incrementListingClicks } from "../../../core/listings";
 
-export const CLICK_PATH = "/click" as const;
-
 type ClickContext = {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 };
 
 /** Public brief-URL hop. Clicks are not a rating. */
@@ -12,7 +10,7 @@ export async function GET(
   _request: Request,
   context: ClickContext,
 ): Promise<Response> {
-  const params = await Promise.resolve(context.params);
+  const params = await context.params;
   const id = params.id?.trim() ?? "";
   const listing = incrementListingClicks(id);
   if (!listing) {

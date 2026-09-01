@@ -1,7 +1,7 @@
 import { MIN_BID_USD, type Listing } from "./rank";
 import { canonicalizeBriefUrl, UrlError } from "./url";
 
-/** Raise identity: same canonical brief URL still inside last 7 days. Not weekId. `weekId` stays a Polar/audit label. */
+/** Raise identity: same canonical brief URL still inside last 7 days. Not weekId. `weekId` stays an audit label. */
 
 export class ListingError extends Error {
   constructor(

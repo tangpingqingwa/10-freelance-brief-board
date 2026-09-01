@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { POST as checkoutPost } from "../src/app/api/checkout/route";
+import { POST as checkoutPost } from "../src/app/checkout/route";
 import { resetPaymentPort } from "../src/billing/select";
 import { CheckoutError, parseCheckoutInput } from "../src/billing/port";
 import { ListingError, canonicalBriefUrl } from "../src/core/listing";
@@ -35,7 +35,7 @@ function draft(overrides: Record<string, unknown> = {}): Record<string, unknown>
 
 async function postJson(payload: Record<string, unknown>): Promise<Response> {
   return checkoutPost(
-    new Request("http://localhost/api/checkout", {
+    new Request("http://localhost/checkout", {
       method: "POST",
       headers: {
         "content-type": "application/json",

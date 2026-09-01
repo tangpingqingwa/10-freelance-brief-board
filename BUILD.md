@@ -15,8 +15,8 @@ Pay-to-rank clone of outbid.lol. Public auction for the last 7 days’ #1 freela
 | Runtime | Node 22, TypeScript `strict` |
 | App | Next.js App Router (outbid-like public board) + Route Handlers |
 | DB | SQLite via `better-sqlite3` (weeks, listings, payments, clicks) |
-| Payments | `PaymentPort`. Adapter `fixture` in tests; live Polar when `POLAR_LIVE=1` |
-| Tests | `node:test` + `tsx` + fixture Polar. No live Polar in CI |
+| Payments | `PaymentPort`. Explicit `fixture`, `waffo-test`, or `waffo-prod` mode |
+| Tests | `node:test` + `tsx` + explicit fixture/Waffo contract tests. No live Waffo in CI |
 | Process | `next dev` locally; `next start` in prod. `/healthz` on the same process |
 
 **Out of stack:** Prisma, Redis, Kubernetes, a ratings engine, a marketplace inbox, a second ranking algorithm.
@@ -29,7 +29,7 @@ Pay-to-rank clone of outbid.lol. Public auction for the last 7 days’ #1 freela
 weeks (id pk, starts_at, ends_at)          -- rolling last 7 days; weekId is a label
 listings (id, week_id, brief_key, buyer, budget_usd, deadline, winner_rule,
           brief_url, bid_usd, first_paid_at, clicks)
-payments (id, listing_id, polar_session, amount_usd, kind create|raise)
+payments (id, listing_id, provider checkout session, amount_usd, kind create|raise)
 ```
 
 Board query (rolling last 7 days only):
@@ -65,8 +65,8 @@ Identity key for raise: canonical `briefUrl` still inside the rolling last-7-day
       about/page.tsx
       rules/page.tsx
       return/page.tsx
-      api/checkout/route.ts
-      api/polar/webhook/route.ts
+      checkout/route.ts
+      api/waffo/webhook/route.ts
       click/[id]/route.ts
       healthz/route.ts
     core/
@@ -78,7 +78,7 @@ Identity key for raise: canonical `briefUrl` still inside the rolling last-7-day
     billing/
       port.ts
       fixture.ts
-      polar.ts                 # live, env-gated
+      waffo.ts                 # live, env-gated
     db.ts
     config.ts
   tests/
@@ -92,7 +92,7 @@ Identity key for raise: canonical `briefUrl` still inside the rolling last-7-day
   .github/workflows/ci.yml
 ```
 
-HTTP / pages call `core/*` only. They do not import `billing/polar.ts` directly.
+HTTP / pages call `core/*` only. They do not import the retired provider adapter directly.
 
 No application `src/` in this docs PR.
 
@@ -108,9 +108,9 @@ No application `src/` in this docs PR.
 | listing | buyer + budget + deadline + brief URL required; rating field rejected |
 | url | `utm_source` stripped; telegram invite → `url_forbidden` |
 | honesty | board HTML has no stars / review scores; `rating_forbidden` on submit |
-| polar fixture | unpaid checkout does not list; paid fixture event lists |
+| payment fixture | unpaid checkout does not list; paid fixture event lists |
 | clicks | GET click route 302 + increments public brief-URL clicks |
-| live gate | unset / `0` / `true` stay fixture; `POLAR_FIXTURE_ONLY=1` wins |
+| provider gate | only explicit `WAFFO_MODE` selects a provider; legacy flags are inert |
 
 `scripts/test.sh` stays offline. Once `package.json` exists it runs `tsc --noEmit` and `node:test`. It must never call `scripts/live-smoke.sh`.
 
@@ -133,10 +133,10 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 - **Acceptance:** Empty week renders the form and no #1 brief. Cards show money not ratings. Sort matches SPEC. Listing shape is buyer + budget + deadline + brief URL.
 
 ### PR 3: checkout
-- **Description:** `PaymentPort.createCheckout`. Fixture adapter for tests. Live Polar behind `POLAR_LIVE=1`. Rank changes only on paid webhook / fixture event. Min $5. Underbid still lists.
-- **Files:** `src/billing/port.ts`, `src/billing/fixture.ts`, `src/billing/polar.ts`, `src/app/api/checkout/route.ts`, `src/app/api/polar/webhook/route.ts`, `src/app/return/page.tsx`, `tests/checkout.test.ts`
+- **Description:** `PaymentPort.createCheckout`. Explicit fixture adapter for tests and official Waffo Pancake for live modes. Rank changes only on a verified paid webhook / fixture event. Min $5. Underbid still lists.
+- **Files:** `src/billing/port.ts`, `src/billing/fixture.ts`, `src/billing/waffo.ts`, `src/app/checkout/route.ts`, `src/app/api/waffo/webhook/route.ts`, `src/app/return/page.tsx`, `tests/checkout.test.ts`
 - **Dependencies:** PR 2
-- **Acceptance:** $5 fixture create lists at #1. Abandoned checkout does not. CI does not set `POLAR_LIVE`.
+- **Acceptance:** $5 fixture create lists at #1. Abandoned checkout does not. CI cannot select a live Waffo mode.
 
 ### PR 4: raise-bid
 - **Description:** Same canonical brief URL still inside last 7 days raises; `weekId` is not the raise key. Different listing pays full amount. `firstPaidAt` unchanged.
@@ -148,10 +148,10 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 - **Description:** `/about`, `/rules`. Strip tracking. Reject chat/NSFW. Reject invented ratings. Public click route on the brief URL.
 - **Files:** `src/app/about/page.tsx`, `src/app/rules/page.tsx`, `src/core/url.ts`, `src/core/honesty.ts`, `src/app/click/[id]/route.ts`, `tests/listing.test.ts`, `tests/click.test.ts`, `tests/honesty.test.ts`
 - **Dependencies:** PR 2
-- **Acceptance:** Rules page states min $5, older wins ties, raise pays difference, weekly UTC reset, no invented ratings. Tracking keys stripped. Click 302s the brief URL.
+- **Acceptance:** Rules page states min $5, older wins ties, raise pays difference, rolling last 7 days, no invented ratings. Tracking keys stripped. Click 302s the brief URL.
 
 ### PR 6: live-smoke
-- **Description:** Operator script walks board, about/rules, checkout (live Polar or `BLOCKED-SECRET`), click, honesty. Not in CI.
+- **Description:** Operator script walks board, about/rules, checkout (live Waffo or `BLOCKED-SECRET`), click, honesty. Not in CI.
 - **Files:** `scripts/live-smoke.sh`, `docs/live-smoke.md`, `tests/live-smoke.test.ts` (offline guards only)
 - **Dependencies:** PR 3, PR 5
 - **Acceptance:** Script is executable. `scripts/test.sh` and `.github/workflows/ci.yml` do not invoke it. Docs record PASS / PASS-ERROR / BLOCKED-SECRET. No invented paid rank. No invented ratings.
@@ -162,15 +162,15 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 
 | Var | Role |
 |---|---|
-| `POLAR_LIVE` | `1` selects live Polar. Unset / `0` / `true` stay fixture or fail-closed |
-| `POLAR_FIXTURE_ONLY` | `1` always wins |
-| `POLAR_ACCESS_TOKEN` | Live Polar. Missing → live-smoke `BLOCKED-SECRET` |
-| `POLAR_WEBHOOK_SECRET` | Live webhook verify |
-| `POLAR_API_BASE` | Optional. Default `https://api.polar.sh`. Sandbox smoke uses `https://sandbox-api.polar.sh`. Never set in `scripts/test.sh` or Actions. |
-| `POLAR_PRODUCT_ID` | Optional Polar product. Sandbox Checkout typically requires it. |
+| `WAFFO_MODE` | Explicit `fixture`, `waffo-test`, or `waffo-prod`; no legacy flag selects a provider |
+| `WAFFO_MERCHANT_ID` / `WAFFO_PRIVATE_KEY` | Required for live Waffo checkout |
+| `WAFFO_STORE_ID` / `WAFFO_PRODUCT_ID` | Mode-specific Waffo store/product |
+| `WAFFO_WEBHOOK_TEST_PUBLIC_KEY` / `WAFFO_WEBHOOK_PROD_PUBLIC_KEY` | Mode-specific signed webhook verification |
+| `WAFFO_API_BASE` | Test-only override; production must use `https://api.waffo.ai` |
+| `DATABASE_PATH` / `PUBLIC_BASE_URL` | Durable store and public checkout callback; production URL must be non-private HTTPS |
 | `DATABASE_PATH` | SQLite file; default `./data/freelance-brief-board.sqlite` |
 
-Dockerfile / runbook may land with a later deploy PR. Image must not set `POLAR_LIVE=1`.
+Dockerfile / runbook may land with a later deploy PR. Image must set an explicit Waffo mode and never enable a legacy provider flag.
 
 ---
 

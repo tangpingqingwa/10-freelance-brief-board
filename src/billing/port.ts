@@ -20,34 +20,66 @@ export type CreateCheckoutInput = {
   listingDraft: ListingDraft;
   amountUsd: number;
   kind: CheckoutKind;
+  /** Local durable intent. Ports create one when called directly. */
+  intentId?: string;
 };
 
 export type CheckoutStart = {
   checkoutUrl: string;
   sessionId: string;
+  intentId?: string;
 };
 
-export type CheckoutStatus = "open" | "complete" | "expired";
+export type CheckoutStatus = "open" | "complete" | "expired" | "failed";
 
 export type CheckoutSession = {
   sessionId: string;
+  intentId?: string;
   status: CheckoutStatus;
   checkoutUrl: string;
   listingDraft: ListingDraft;
   amountUsd: number;
   kind: CheckoutKind;
+  currency?: string;
+  productId?: string;
+  providerOrderId?: string;
+  listingId?: string;
+  failureCode?: string;
 };
 
 export type PaidEvent = {
   sessionId: string;
+  intentId?: string;
+  checkoutId?: string;
+  orderId?: string;
+  webhookId?: string;
   listingDraft: ListingDraft;
   amountUsd: number;
   kind: CheckoutKind;
   paidAt: string;
+  productId?: string;
+  currency?: string;
+  totalAmountCents?: number;
+  metadataHash?: string;
+  payloadHash?: string;
+  eventType?: string;
+  eventId?: string;
+  paymentId?: string;
+  rawBodyHash?: string;
+  intentFingerprint?: string;
+  mode?: string;
+  storeId?: string;
+  taxCategory?: string;
+  subtotal?: string;
+  amount?: string;
+  total?: string;
+  taxAmount?: string;
 };
 
 export type PaymentPort = {
   readonly kind: "fixture" | "live";
+  readonly productId?: string;
+  close?(): void;
   createCheckout(input: CreateCheckoutInput): Promise<CheckoutStart>;
   handleWebhook(
     rawBody: string,
@@ -66,29 +98,7 @@ export class CheckoutError extends Error {
   }
 }
 
-export type PolarEnv = Record<string, string | undefined>;
-
-/** Live Polar only when POLAR_LIVE=1. POLAR_FIXTURE_ONLY=1 always wins. */
-export function polarLiveEnabled(env: PolarEnv = process.env): boolean {
-  if (env.POLAR_FIXTURE_ONLY === "1") return false;
-  return env.POLAR_LIVE === "1";
-}
-
-export function polarAccessToken(env: PolarEnv = process.env): string | undefined {
-  const token = env.POLAR_ACCESS_TOKEN?.trim();
-  return token ? token : undefined;
-}
-
-export function polarWebhookSecret(env: PolarEnv = process.env): string | undefined {
-  const secret = env.POLAR_WEBHOOK_SECRET?.trim();
-  return secret ? secret : undefined;
-}
-
-export function publicBaseUrl(env: PolarEnv = process.env): string {
-  const raw = env.PUBLIC_BASE_URL?.trim();
-  if (raw) return raw.replace(/\/$/, "");
-  return "http://localhost:3000";
-}
+export type PaymentEnv = Record<string, string | undefined>;
 
 /** Raise identity is `findPaidByIdentity` (last 7 days), not weekId. */
 export function parseCheckoutInput(
@@ -169,13 +179,14 @@ function rejectRatings(body: Record<string, unknown>): void {
 
 function parseWholeUsd(raw: unknown): number | undefined {
   if (typeof raw === "number") {
-    if (!Number.isInteger(raw) || raw < 0) return undefined;
+    if (!Number.isSafeInteger(raw) || raw < 0) return undefined;
     return raw;
   }
   if (typeof raw !== "string") return undefined;
   const trimmed = raw.trim().replace(/^\$/, "");
   if (!/^\d+$/.test(trimmed)) return undefined;
-  return Number(trimmed);
+  const value = Number(trimmed);
+  return Number.isSafeInteger(value) ? value : undefined;
 }
 
 function parseDeadline(raw: unknown): string {
