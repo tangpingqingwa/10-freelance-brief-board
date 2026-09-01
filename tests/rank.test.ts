@@ -1873,7 +1873,7 @@ test("README/SPEC/BUILD/layout copy keeps the rolling job-ticket contract", () =
   assert.match(buildSource, /Explicit `fixture`, `waffo-test`, or `waffo-prod` mode/);
   assert.doesNotMatch(buildSource, /weekly public auction/i);
 
-  assert.match(layoutSource, /title: "Brief desk — the last 7 days’ #1 freelance brief"/);
+  assert.match(layoutSource, /default: "Brief desk — the last 7 days’ #1 freelance brief"/);
   assert.match(layoutSource, /last 7 days’ #1 job ticket/);
   assert.match(layoutSource, /Rank is the bid, not the project budget/);
   assert.doesNotMatch(layoutSource, /This week’s #1|weekly public auction/i);

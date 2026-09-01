@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Rules · Freelance Brief Board",
   description:
     "Min $5. Older wins ties. Raise pays the difference. Rolling last 7 days, not Monday 00:00 UTC. No invented ratings.",
+  alternates: { canonical: "/rules" },
 };
 
 export default function RulesPage() {

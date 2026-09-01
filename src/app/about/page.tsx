@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "About · Freelance Brief Board",
   description:
     "Public auction for the last 7 days’ #1 freelance brief. Rank is the bid. No invented ratings.",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Freelance Brief Board job ticket</title>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#3a332c"/>
+  <path d="M13 12h38v9a6 6 0 0 0 0 12v19H13V33a6 6 0 0 0 0-12v-9Z" fill="#e8d3a0"/>
+  <path d="M21 23h22M21 31h14M21 42h22" stroke="#6b6256" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 4"/>
+  <path d="m34 34 5 5 10-13" fill="none" stroke="#b42318" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

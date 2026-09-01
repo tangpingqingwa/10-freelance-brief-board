@@ -1334,6 +1334,9 @@ input {
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
   min-width: max-content;
   color: var(--ink);
   font-family: "DM Sans", "DM Sans Fallback", sans-serif;
@@ -1341,6 +1344,14 @@ input {
   font-weight: 700;
   letter-spacing: -0.045em;
   text-transform: none;
+}
+
+.brand-mark {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 7px;
 }
 
 .logo span {
