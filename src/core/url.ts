@@ -1,4 +1,4 @@
-/** Canonical brief URL: https only, tracking stripped, chat/NSFW/shorteners rejected. */
+/** Canonical brief URL: HTTPS by default, tracking stripped, chat/NSFW/shorteners rejected. */
 
 export class UrlError extends Error {
   constructor(
@@ -171,8 +171,33 @@ function stripTracking(parsed: URL): void {
 }
 
 /**
- * Require https, drop fragment, strip tracking keys, reject chat / NSFW /
- * shorteners / credentials / localhost. Store and click this URL only.
+ * Treat a host/path entered without a scheme as an HTTPS URL. Keep explicit
+ * schemes intact so `http:`, `javascript:`, and `data:` retain their normal
+ * rejection paths. A host followed by a numeric port is the one URI shape
+ * that can look like a scheme to the WHATWG parser.
+ */
+function urlWithHttpsDefault(trimmed: string): string {
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+
+  const scheme = /^([a-z][a-z\d+.-]*):/i.exec(trimmed);
+  if (!scheme) {
+    return `https://${trimmed}`;
+  }
+
+  const schemeName = scheme[1]?.toLowerCase() ?? "";
+  const remainder = trimmed.slice(scheme[0].length);
+  const isBareHostWithPort =
+    (schemeName.includes(".") || schemeName === "localhost") &&
+    /^\d+(?:[/?#]|$)/.test(remainder);
+  return isBareHostWithPort ? `https://${trimmed}` : trimmed;
+}
+
+/**
+ * Default bare host/path input to HTTPS, drop fragment, strip tracking keys,
+ * reject chat / NSFW / shorteners / credentials / localhost. Store and click
+ * this URL only.
  */
 export function canonicalizeBriefUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -182,7 +207,7 @@ export function canonicalizeBriefUrl(raw: string): string {
 
   let parsed: URL;
   try {
-    parsed = new URL(trimmed);
+    parsed = new URL(urlWithHttpsDefault(trimmed));
   } catch {
     throw new UrlError("url_insecure");
   }

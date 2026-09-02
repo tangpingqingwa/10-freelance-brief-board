@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { MIN_BID_USD } from "../core/money";
+import { canonicalizeBriefUrl } from "../core/url";
 
 type OutbidFormProps = {
   defaultAmount: number;
@@ -12,6 +13,16 @@ type OutbidFormProps = {
 function clampAmount(value: number): number {
   if (!Number.isFinite(value)) return MIN_BID_USD;
   return Math.max(MIN_BID_USD, Math.trunc(value));
+}
+
+function isBriefUrlReady(value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    canonicalizeBriefUrl(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 type TicketField = "buyer" | "budgetUsd" | "deadline" | "winnerRule" | "briefUrl";
@@ -73,9 +84,10 @@ function TicketIdentityFields({
         <span className="sr-only">Brief URL</span>
         <input
           name="briefUrl"
-          type="url"
+          type="text"
           required
-          placeholder="https://"
+          placeholder="client.com/brief"
+          inputMode="url"
           autoComplete="url"
           data-slot="url-input"
           value={values.briefUrl}
@@ -169,10 +181,10 @@ function TicketWrite({
           data-slot="claim-button"
           disabled={!ready}
           aria-disabled={!ready}
+          aria-label="Claim rank"
           data-ready={ready ? "true" : "false"}
         >
-          {/* Outbid is the payment action; Claim #1 is the desk position. */}
-          Outbid
+          Claim rank
         </button>
       </div>
     </div>
@@ -207,7 +219,7 @@ export function OutbidForm({
     Number(values.budgetUsd) >= 1 &&
     values.deadline.length > 0 &&
     values.winnerRule.trim().length > 0 &&
-    /^https:\/\//i.test(values.briefUrl.trim());
+    isBriefUrlReady(values.briefUrl);
 
   return (
     <section

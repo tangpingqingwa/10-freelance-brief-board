@@ -113,6 +113,25 @@ test("utm_source and tracking keys are stripped from the stored brief URL", () =
   );
 });
 
+test("bare brief domains default to HTTPS before checkout and storage", () => {
+  assert.equal(
+    canonicalizeBriefUrl("Briefs.Example/client-brief"),
+    "https://briefs.example/client-brief",
+  );
+  assert.equal(
+    canonicalizeBriefUrl("//Briefs.Example/client-brief"),
+    "https://briefs.example/client-brief",
+  );
+
+  const input = parseCheckoutInput(
+    draft({ briefUrl: "client.example:8443/brief" }),
+  );
+  assert.equal(
+    input.listingDraft.briefUrl,
+    "https://client.example:8443/brief",
+  );
+});
+
 test("telegram invite is url_forbidden", () => {
   for (const briefUrl of [
     "https://t.me/foo",

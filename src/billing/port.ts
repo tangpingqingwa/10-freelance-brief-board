@@ -126,7 +126,7 @@ export function parseCheckoutInput(
     throw new CheckoutError("url_forbidden", 400);
   }
 
-  const briefUrl = parseHttpsUrl(body.briefUrl);
+  const briefUrl = parseBriefUrl(body.briefUrl);
   const targetBidUsd = parseWholeUsd(body.amountUsd ?? body.bidUsd);
   if (targetBidUsd === undefined) {
     throw new CheckoutError("bid_not_whole", 400);
@@ -206,22 +206,13 @@ function parseDeadline(raw: unknown): string {
   return value;
 }
 
-function parseHttpsUrl(raw: unknown): string {
+function parseBriefUrl(raw: unknown): string {
   const value = readTrimmed(raw);
   if (!value) {
     throw new CheckoutError("url_insecure", 400);
   }
-  let parsed: URL;
   try {
-    parsed = new URL(value);
-  } catch {
-    throw new CheckoutError("url_insecure", 400);
-  }
-  if (parsed.protocol !== "https:") {
-    throw new CheckoutError("url_insecure", 400);
-  }
-  try {
-    return canonicalBriefUrl(parsed.toString());
+    return canonicalBriefUrl(value);
   } catch (error) {
     if (error instanceof ListingError) {
       throw new CheckoutError(error.code, error.httpStatus);

@@ -239,7 +239,8 @@ test("empty week markup shows the form and no #1 brief", () => {
   assert.match(html, /name="amountUsd"/);
   assert.match(html, /<input form="brief-outbid-form"[^>]*name="amountUsd"/);
   assert.match(html, /<form id="brief-outbid-form"/);
-  assert.match(html, />Outbid</);
+  assert.match(html, />Claim rank</);
+  assert.match(html, /aria-label="Claim rank"/);
   assert.match(html, /Claim #1 for/);
   assert.match(html, /2026-W34/);
   assert.doesNotMatch(html, /data-listing-card/);
@@ -250,7 +251,7 @@ test("empty week markup shows the form and no #1 brief", () => {
   assert.match(formSource, /name="winnerRule"/);
   assert.match(formSource, /name="briefUrl"/);
   assert.match(formSource, /name="amountUsd"/);
-  assert.match(formSource, /Outbid/);
+  assert.match(formSource, /Claim rank/);
   assert.match(formSource, /Claim #1 for/);
   assert.match(formSource, /Who is buying/);
   assert.match(formSource, /What it pays/);
@@ -883,7 +884,7 @@ test("occupied week makes opening the paid #1 brief the freelancer move", () => 
   assert.match(html, /Budget \$/);
   assert.match(html, /\$12/);
   assert.match(html, /Claim #1 for/);
-  assert.match(html, />Outbid</);
+  assert.match(html, />Claim rank</);
 
   const leadStart = html.indexOf('data-listing-id="lst_lead"');
   const hopperStart = html.indexOf('data-listing-id="lst_hopper"');
@@ -927,7 +928,7 @@ test("occupied week makes writing a new ticket the buyer move", () => {
   assert.match(html, /Write this ticket/);
   assert.match(html, /Open this brief/);
   assert.match(html, /Claim #1 for/);
-  assert.match(html, />Outbid</);
+  assert.match(html, />Claim rank</);
   assert.match(html, /\$12/);
   assert.match(html, /Budget \$/);
   assert.match(html, /Rank is the bid, not the project/);
@@ -981,7 +982,7 @@ test("occupied week makes reading the paid #1 budget the freelancer fact", () =>
   assert.match(html, /Open this brief/);
   assert.match(html, /Write this ticket/);
   assert.match(html, /Claim #1 for/);
-  assert.match(html, />Outbid</);
+  assert.match(html, />Claim rank</);
   assert.match(html, /Best portfolio by Friday/);
   assert.match(html, /15 September 2026/);
   assert.match(html, /Due date, not a score/);
@@ -1065,7 +1066,7 @@ test("occupied week makes reading the paid #1 deadline the freelancer fact", () 
   assert.match(html, /Open this brief/);
   assert.match(html, /Write this ticket/);
   assert.match(html, /Claim #1 for/);
-  assert.match(html, />Outbid</);
+  assert.match(html, />Claim rank</);
   assert.match(html, /Project budget, not the bid/);
   assert.equal(formatDeadline("2026-09-15"), "15 September 2026");
 
@@ -1147,7 +1148,7 @@ test("occupied week makes reading the paid #1 winner rule the freelancer fact", 
   assert.match(html, /Open this brief/);
   assert.match(html, /Write this ticket/);
   assert.match(html, /Claim #1 for/);
-  assert.match(html, />Outbid</);
+  assert.match(html, />Claim rank</);
   assert.match(html, /Project budget, not the bid/);
   assert.match(html, /Due date, not a score/);
   assert.match(html, /15 September 2026/);
@@ -1189,7 +1190,7 @@ const ACTION_RESIDUE = new RegExp(
 
 function assertDirectClaimPath(html: string): void {
   const claimAt = html.indexOf('id="claim"');
-  const submitAt = html.indexOf(">Outbid<");
+  const submitAt = html.indexOf(">Claim rank<");
   assert.ok(claimAt >= 0);
   assert.ok(submitAt > claimAt);
   for (const field of ["buyer", "budgetUsd", "deadline", "winnerRule", "briefUrl"]) {
@@ -1198,11 +1199,11 @@ function assertDirectClaimPath(html: string): void {
   }
   assert.ok(html.indexOf('name="amountUsd"') > claimAt);
   assert.equal((html.match(/type="submit"/g) ?? []).length, 1);
-  assert.equal((html.match(/>Outbid</g) ?? []).length, 1);
+  assert.equal((html.match(/>Claim rank</g) ?? []).length, 1);
   assert.doesNotMatch(html, ACTION_RESIDUE);
 }
 
-test("empty desk exposes every identity field before one direct Outbid", () => {
+test("empty desk exposes every identity field before one direct Claim rank", () => {
   const html = renderToStaticMarkup(
     createElement(Board, { week: WEEK_META, listings: [] }),
   );
