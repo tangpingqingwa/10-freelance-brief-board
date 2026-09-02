@@ -6848,3 +6848,27 @@ a:hover {
     width: 4ch;
   }
 }
+
+/* -------------------------------------------------------------------------
+   r32 reviewer blockers
+
+   Occupied claims have older, more specific layout rules. Repeat that
+   specificity here so the shared centered Claim #1 heading wins at every
+   breakpoint.
+   ------------------------------------------------------------------------- */
+
+.week-occupied .claim.occupied-claim h2,
+.week-occupied .claim-after-ticket[data-claim-after-ticket]
+  .claim.occupied-claim h2 {
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+@media (max-width:760px) {
+  .week-occupied .claim.occupied-claim h2,
+  .week-occupied .claim-after-ticket[data-claim-after-ticket]
+    .claim.occupied-claim h2 {
+    justify-content: center;
+  }
+}

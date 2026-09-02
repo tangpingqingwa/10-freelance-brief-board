@@ -132,6 +132,22 @@ test("bare brief domains default to HTTPS before checkout and storage", () => {
   );
 });
 
+test("bare private, link-local, and local brief targets remain forbidden", () => {
+  for (const briefUrl of [
+    "10.0.0.1/brief",
+    "172.16.0.1/brief",
+    "192.168.0.1/brief",
+    "[fe80::1]/brief",
+    "localhost/brief",
+  ]) {
+    assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
+      assert.ok(err instanceof UrlError);
+      assert.equal(err.code, "url_forbidden");
+      return true;
+    });
+  }
+});
+
 test("telegram invite is url_forbidden", () => {
   for (const briefUrl of [
     "https://t.me/foo",
@@ -194,6 +210,16 @@ test("http, javascript, data, shortener, and localhost are rejected", () => {
     assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
       assert.ok(err instanceof UrlError);
       assert.ok(err.code === "url_insecure" || err.code === "url_forbidden");
+      return true;
+    });
+  }
+});
+
+test("numeric javascript and data schemes are not treated as host ports", () => {
+  for (const briefUrl of ["javascript:123", "data:123"]) {
+    assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
+      assert.ok(err instanceof UrlError);
+      assert.equal(err.code, "url_forbidden");
       return true;
     });
   }

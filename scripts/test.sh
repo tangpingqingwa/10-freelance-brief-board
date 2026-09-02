@@ -175,7 +175,7 @@ grep -q 'occupied-claim' src/app/outbid-form.tsx \
   || fail "occupied Claim #1 must use the occupied semantic state"
 grep -q 'data-ticket-identity' src/app/outbid-form.tsx \
   || fail "empty and occupied forms must expose identity fields"
-grep -q 'empty desk exposes every identity field before one direct Outbid' tests/rank.test.ts \
+grep -q 'empty desk exposes every identity field before one direct Claim rank' tests/rank.test.ts \
   || fail "rank tests must cover the direct empty claim path"
 grep -q 'occupied desk keeps one Open action, one quiet claim anchor' tests/rank.test.ts \
   || fail "rank tests must cover the occupied action path"
@@ -487,7 +487,7 @@ if [[ -f package.json ]]; then
     || fail "occupied-week read-this-deadline freelancer test did not run"
   grep -q 'reading the paid #1 winner rule' "$test_log" \
     || fail "occupied-week read-this-winner freelancer test did not run"
-  grep -q 'empty desk exposes every identity field before one direct Outbid' "$test_log" \
+  grep -q 'empty desk exposes every identity field before one direct Claim rank' "$test_log" \
     || fail "direct empty claim-path test did not run"
   grep -q 'occupied desk keeps one Open action, one quiet claim anchor' "$test_log" \
     || fail "occupied action-path test did not run"

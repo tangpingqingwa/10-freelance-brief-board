@@ -142,23 +142,33 @@ export function isShortenerHost(host: string): boolean {
 }
 
 function isUnusableHost(host: string): boolean {
+  const lowered = host.toLowerCase().replace(/\.$/, "");
+  const bracketless = lowered.replace(/^\[/, "").replace(/\]$/, "");
   if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host === "::1" ||
-    host === "[::1]" ||
-    host.startsWith("fe80:")
+    lowered === "localhost" ||
+    lowered.endsWith(".localhost") ||
+    lowered.endsWith(".local") ||
+    bracketless === "::1" ||
+    (bracketless.includes(":") &&
+      /^(?:fe[89a-f][0-9a-f]):/i.test(bracketless))
   ) {
     return true;
   }
-  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  const ipv4 = bracketless.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!ipv4) return false;
   const octets = ipv4.slice(1).map(Number);
   if (octets.some((part) => part > 255)) return false;
   const [a, b] = octets as [number, number, number, number];
-  if (a === 0 || a === 127) return true;
-  if (a === 169 && b === 254) return true;
+  if (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -187,6 +197,9 @@ function urlWithHttpsDefault(trimmed: string): string {
   }
 
   const schemeName = scheme[1]?.toLowerCase() ?? "";
+  if (schemeName === "javascript" || schemeName === "data") {
+    return trimmed;
+  }
   const remainder = trimmed.slice(scheme[0].length);
   const isBareHostWithPort =
     (schemeName.includes(".") || schemeName === "localhost") &&

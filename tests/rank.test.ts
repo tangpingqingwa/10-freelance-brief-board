@@ -1223,6 +1223,18 @@ test("empty desk exposes every identity field before one direct Claim rank", () 
   );
 });
 
+test("occupied Claim rank heading stays centered after legacy overrides", () => {
+  const reviewerFix = cssSource.slice(cssSource.lastIndexOf("r32 reviewer blockers"));
+  assert.match(
+    reviewerFix,
+    /\.week-occupied \.claim\.occupied-claim h2,[\s\S]*?justify-content:\s*center/,
+  );
+  assert.doesNotMatch(
+    reviewerFix,
+    /\.week-occupied \.claim\.occupied-claim h2,[\s\S]*?justify-content:\s*flex-start/,
+  );
+});
+
 test("occupied desk keeps one Open action, one quiet claim anchor, and one form submit", () => {
   const html = renderToStaticMarkup(
     createElement(Board, {
