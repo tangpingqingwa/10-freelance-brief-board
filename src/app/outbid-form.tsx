@@ -15,7 +15,7 @@ function clampAmount(value: number): number {
   return Math.max(MIN_BID_USD, Math.trunc(value));
 }
 
-function isBriefUrlReady(value: string): boolean {
+export function isBriefUrlReady(value: string): boolean {
   if (!value.trim()) return false;
   try {
     canonicalizeBriefUrl(value);

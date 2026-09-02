@@ -138,6 +138,10 @@ test("bare private, link-local, and local brief targets remain forbidden", () =>
     "172.16.0.1/brief",
     "192.168.0.1/brief",
     "[fe80::1]/brief",
+    "[fc00::1]/brief",
+    "[fd12:3456::1]/brief",
+    "[::ffff:127.0.0.1]/brief",
+    "[::ffff:10.0.0.1]/brief",
     "localhost/brief",
   ]) {
     assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
@@ -146,6 +150,60 @@ test("bare private, link-local, and local brief targets remain forbidden", () =>
       return true;
     });
   }
+});
+
+test("brief URL grammar rejects path-only, slash, backslash, and obfuscated inputs", () => {
+  const rejected = [
+    "/path",
+    "///example.com/brief",
+    "////example.com/brief",
+    "//\\evil.com",
+    "//evil.com\\path",
+    "\\path",
+    "\\\\example.com",
+    "/\\example.com",
+    "\\/example.com",
+    "example.com\\brief",
+    "https:\\\\example.com/brief",
+    "https://example.com\\brief",
+    "https://brief.example.com/%5cbrief",
+    "java\nscript:123",
+    "data\t:123",
+    "java%73cript:123",
+    "javascript\\:123",
+  ];
+  for (const briefUrl of rejected) {
+    assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
+      assert.ok(err instanceof UrlError);
+      assert.ok(err.code === "url_insecure" || err.code === "url_forbidden");
+      return true;
+    });
+    assert.throws(
+      () => parseCheckoutInput(draft({ briefUrl })),
+      (err: unknown) => {
+        assert.ok(err instanceof CheckoutError);
+        assert.ok(err.code === "url_insecure" || err.code === "url_forbidden");
+        return true;
+      },
+    );
+  }
+
+  assert.equal(
+    canonicalizeBriefUrl("https://brief.example.com/brief"),
+    "https://brief.example.com/brief",
+  );
+  assert.equal(
+    canonicalizeBriefUrl("//brief.example.com/brief"),
+    "https://brief.example.com/brief",
+  );
+  assert.equal(
+    canonicalizeBriefUrl("brief.example.com/brief"),
+    "https://brief.example.com/brief",
+  );
+  assert.equal(
+    canonicalizeBriefUrl("brief.example.com:8443/brief"),
+    "https://brief.example.com:8443/brief",
+  );
 });
 
 test("telegram invite is url_forbidden", () => {
@@ -217,6 +275,21 @@ test("http, javascript, data, shortener, and localhost are rejected", () => {
 
 test("numeric javascript and data schemes are not treated as host ports", () => {
   for (const briefUrl of ["javascript:123", "data:123"]) {
+    assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
+      assert.ok(err instanceof UrlError);
+      assert.equal(err.code, "url_forbidden");
+      return true;
+    });
+  }
+});
+
+test("denylisted hosts stay forbidden with repeated trailing dots", () => {
+  for (const briefUrl of [
+    "https://t.me../foo",
+    "https://bit.ly.../abc",
+    "https://pornhub.com.../view",
+    "https://onlyfans.com../user",
+  ]) {
     assert.throws(() => canonicalizeBriefUrl(briefUrl), (err: unknown) => {
       assert.ok(err instanceof UrlError);
       assert.equal(err.code, "url_forbidden");

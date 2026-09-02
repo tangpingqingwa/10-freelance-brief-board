@@ -91,12 +91,17 @@ const NSFW_PATH_TOKENS = new Set([
 const NSFW_COPY_RE =
   /\b(porn|porno|xxx|nsfw|onlyfans|fansly|hentai|escort|escorts|camgirl|camgirls|nude|nudes|naked)\b/i;
 
+function normalizePolicyHost(host: string): string {
+  return host.toLowerCase().replace(/\.+$/, "");
+}
+
 function hostMatches(host: string, listed: string): boolean {
-  return host === listed || host.endsWith(`.${listed}`);
+  const normalized = normalizePolicyHost(host);
+  return normalized === listed || normalized.endsWith(`.${listed}`);
 }
 
 function hostnameOf(parsed: URL): string {
-  return parsed.hostname.toLowerCase().replace(/\.$/, "");
+  return normalizePolicyHost(parsed.hostname);
 }
 
 export function isTrackingQueryKey(key: string): boolean {
@@ -119,7 +124,7 @@ export function isChatUrl(parsed: URL): boolean {
 }
 
 export function isNsfwHost(host: string): boolean {
-  const lowered = host.toLowerCase().replace(/\.$/, "");
+  const lowered = normalizePolicyHost(host);
   if (NSFW_HOSTS.some((listed) => hostMatches(lowered, listed))) {
     return true;
   }
@@ -138,38 +143,147 @@ export function isNsfwCopy(raw: string): boolean {
 }
 
 export function isShortenerHost(host: string): boolean {
-  return SHORTENER_HOSTS.some((listed) => hostMatches(host.toLowerCase(), listed));
+  return SHORTENER_HOSTS.some((listed) => hostMatches(host, listed));
+}
+
+const URL_CONTROL_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
+const ENCODED_BACKSLASH_RE = /%5c/i;
+const SCHEME_RE = /^([a-z][a-z\d+.-]*):/i;
+const DNS_LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+
+function stripHostBrackets(host: string): string {
+  return host.replace(/^\[/, "").replace(/\]$/, "");
+}
+
+function parseIpv4(host: string): number[] | undefined {
+  const parts = host.split(".");
+  if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) {
+    return undefined;
+  }
+  const octets = parts.map(Number);
+  return octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
+    ? undefined
+    : octets;
+}
+
+function isRestrictedIpv4(host: string): boolean {
+  const parts = host.split(".");
+  if (parts.some((part) => !/^\d+$/.test(part))) return false;
+  // Numeric shorthand (127.1, 2130706433, etc.) is also a loopback/private
+  // URL form. WHATWG URL normalization expands many of these before this
+  // check, but the remaining numeric shapes still fail closed here.
+  if (parts.length !== 4) return true;
+  const octets = parseIpv4(host);
+  if (!octets) return true;
+  const [a, b, c] = octets as [number, number, number, number];
+  return (
+    a === 0 || // this network / unspecified
+    a === 10 || // RFC1918
+    a === 127 || // loopback
+    (a === 100 && b >= 64 && b <= 127) || // CGNAT
+    (a === 169 && b === 254) || // link-local
+    (a === 172 && b >= 16 && b <= 31) || // RFC1918
+    (a === 192 && b === 0 && c === 0) || // IETF protocol assignments
+    (a === 192 && b === 0 && c === 2) || // TEST-NET-1
+    (a === 192 && b === 168) || // RFC1918
+    (a === 198 && b >= 18 && b <= 19) || // benchmarking
+    (a === 198 && b === 51 && c === 100) || // TEST-NET-2
+    (a === 203 && b === 0 && c === 113) || // TEST-NET-3
+    a >= 224 // multicast and reserved
+  );
+}
+
+function parseIpv6(host: string): number[] | undefined {
+  const halves = host.split("::");
+  if (halves.length > 2) return undefined;
+  const left = parseIpv6Side(halves[0] ?? "");
+  const right = halves.length === 2 ? parseIpv6Side(halves[1] ?? "") : [];
+  if (!left || !right) return undefined;
+  if (halves.length === 1) return left.length === 8 ? left : undefined;
+  const missing = 8 - left.length - right.length;
+  if (missing < 1) return undefined;
+  return [...left, ...new Array<number>(missing).fill(0), ...right];
+}
+
+function parseIpv6Side(side: string): number[] | undefined {
+  if (!side) return [];
+  const groups = side.split(":");
+  const result: number[] = [];
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = groups[index]!;
+    if (group.includes(".")) {
+      if (index !== groups.length - 1) return undefined;
+      const octets = group.split(".").map(Number);
+      if (
+        octets.length !== 4 ||
+        octets.some(
+          (octet) => !Number.isInteger(octet) || octet < 0 || octet > 255,
+        )
+      ) {
+        return undefined;
+      }
+      result.push(((octets[0]! << 8) | octets[1]!) >>> 0);
+      result.push(((octets[2]! << 8) | octets[3]!) >>> 0);
+      continue;
+    }
+    if (!/^[0-9a-f]{1,4}$/i.test(group)) return undefined;
+    result.push(Number.parseInt(group, 16));
+  }
+  return result;
+}
+
+function isRestrictedIpv6(host: string): boolean {
+  if (!host.includes(":")) return false;
+  const words = parseIpv6(host);
+  // A colon-bearing URL host is expected to be a literal. Fail closed if it
+  // cannot be parsed rather than accidentally treating it as a public name.
+  if (!words) return true;
+  if (
+    words.every((word) => word === 0) ||
+    (words.slice(0, 7).every((word) => word === 0) && words[7] === 1)
+  ) {
+    return true;
+  }
+
+  // IPv4-mapped and IPv4-compatible literals can hide loopback/private IPv4
+  // destinations behind URL's normalized hexadecimal form. Treat mapped
+  // forms as non-public regardless of the embedded address.
+  const mapped =
+    words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff;
+  const compatible = words.slice(0, 6).every((word) => word === 0);
+  if (mapped || compatible) return true;
+
+  const first = words[0]!;
+  return (
+    (first & 0xfe00) === 0xfc00 || // fc00::/7 unique-local
+    (first & 0xffc0) === 0xfe80 || // fe80::/10 link-local
+    (first & 0xffc0) === 0xfec0 || // deprecated site-local
+    (first & 0xff00) === 0xff00 // multicast and reserved
+  );
 }
 
 function isUnusableHost(host: string): boolean {
-  const lowered = host.toLowerCase().replace(/\.$/, "");
-  const bracketless = lowered.replace(/^\[/, "").replace(/\]$/, "");
-  if (
+  const lowered = normalizePolicyHost(host);
+  const bracketless = stripHostBrackets(lowered);
+  return (
     lowered === "localhost" ||
     lowered.endsWith(".localhost") ||
     lowered.endsWith(".local") ||
-    bracketless === "::1" ||
-    (bracketless.includes(":") &&
-      /^(?:fe[89a-f][0-9a-f]):/i.test(bracketless))
-  ) {
-    return true;
+    isRestrictedIpv6(bracketless) ||
+    isRestrictedIpv4(bracketless)
+  );
+}
+
+function isPlausiblePublicHost(host: string): boolean {
+  const bracketless = stripHostBrackets(host);
+  if (bracketless.includes(":")) {
+    return parseIpv6(bracketless) !== undefined;
   }
-  const ipv4 = bracketless.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!ipv4) return false;
-  const octets = ipv4.slice(1).map(Number);
-  if (octets.some((part) => part > 255)) return false;
-  const [a, b] = octets as [number, number, number, number];
-  if (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168)
-  ) {
-    return true;
-  }
-  return false;
+  if (parseIpv4(bracketless)) return true;
+  if (!bracketless.includes(".") || bracketless.length > 253) return false;
+  return bracketless
+    .split(".")
+    .every((label) => label.length > 0 && label.length <= 63 && DNS_LABEL_RE.test(label));
 }
 
 function stripTracking(parsed: URL): void {
@@ -186,12 +300,33 @@ function stripTracking(parsed: URL): void {
  * rejection paths. A host followed by a numeric port is the one URI shape
  * that can look like a scheme to the WHATWG parser.
  */
+function authorityPrefix(value: string): string {
+  const scheme = SCHEME_RE.exec(value);
+  let candidate = scheme ? value.slice(scheme[0].length) : value;
+  if (candidate.startsWith("//")) candidate = candidate.slice(2);
+  const boundary = candidate.search(/[\/?#]/);
+  return boundary < 0 ? candidate : candidate.slice(0, boundary);
+}
+
+function hasEncodedAuthority(value: string): boolean {
+  return authorityPrefix(value).includes("%");
+}
+
+function isPlausibleBareHost(host: string): boolean {
+  const normalized = normalizePolicyHost(host);
+  if (normalized === "localhost") return true;
+  if (parseIpv4(normalized)) return true;
+  return normalized.includes(".") && normalized
+    .split(".")
+    .every((label) => label.length > 0 && label.length <= 63 && DNS_LABEL_RE.test(label));
+}
+
 function urlWithHttpsDefault(trimmed: string): string {
   if (trimmed.startsWith("//")) {
     return `https:${trimmed}`;
   }
 
-  const scheme = /^([a-z][a-z\d+.-]*):/i.exec(trimmed);
+  const scheme = SCHEME_RE.exec(trimmed);
   if (!scheme) {
     return `https://${trimmed}`;
   }
@@ -202,7 +337,7 @@ function urlWithHttpsDefault(trimmed: string): string {
   }
   const remainder = trimmed.slice(scheme[0].length);
   const isBareHostWithPort =
-    (schemeName.includes(".") || schemeName === "localhost") &&
+    isPlausibleBareHost(schemeName) &&
     /^\d+(?:[/?#]|$)/.test(remainder);
   return isBareHostWithPort ? `https://${trimmed}` : trimmed;
 }
@@ -216,6 +351,28 @@ export function canonicalizeBriefUrl(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.length < 1) {
     throw new UrlError("url_insecure");
+  }
+  if (
+    URL_CONTROL_RE.test(raw) ||
+    trimmed.includes("\\") ||
+    ENCODED_BACKSLASH_RE.test(trimmed)
+  ) {
+    throw new UrlError("url_forbidden");
+  }
+  if (
+    trimmed.startsWith("/") &&
+    (!trimmed.startsWith("//") || trimmed.startsWith("///"))
+  ) {
+    throw new UrlError("url_insecure");
+  }
+  if (
+    trimmed.startsWith("//") &&
+    (trimmed.length <= 2 || trimmed[2] === "/" || trimmed[2] === "\\")
+  ) {
+    throw new UrlError("url_insecure");
+  }
+  if (hasEncodedAuthority(trimmed)) {
+    throw new UrlError("url_forbidden");
   }
 
   let parsed: URL;
@@ -237,7 +394,7 @@ export function canonicalizeBriefUrl(raw: string): string {
   }
 
   const host = hostnameOf(parsed);
-  if (!host || isUnusableHost(host)) {
+  if (!host || isUnusableHost(host) || !isPlausiblePublicHost(host)) {
     throw new UrlError("url_forbidden");
   }
   if (isShortenerHost(host)) {

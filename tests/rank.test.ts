@@ -12,6 +12,7 @@ import {
   formatDeadline,
   periodFromSearch,
 } from "../src/app/board";
+import { isBriefUrlReady } from "../src/app/outbid-form";
 import { FindPopover } from "../src/app/theme-toggle";
 import { resetListings } from "../src/core/listings";
 import {
@@ -99,6 +100,30 @@ function listing(
 test("empty week stays empty and the live loader invents no briefs", () => {
   assert.deepEqual(rankListings([]), []);
   assert.deepEqual(getBoardListings(new Date("2026-08-17T12:00:00.000Z")), []);
+});
+
+test("Claim rank URL readiness shares the fail-closed server boundary", () => {
+  for (const briefUrl of [
+    "https://brief.example.com/brief",
+    "//brief.example.com/brief",
+    "brief.example.com/brief",
+    "brief.example.com:8443/brief",
+  ]) {
+    assert.equal(isBriefUrlReady(briefUrl), true, briefUrl);
+  }
+  for (const briefUrl of [
+    "/path",
+    "///brief.example.com/brief",
+    "//\\evil.com",
+    "//evil.com\\path",
+    "brief.example\\brief",
+    "java\nscript:123",
+    "java%73cript:123",
+    "[fc00::1]/brief",
+    "[::ffff:127.0.0.1]/brief",
+  ]) {
+    assert.equal(isBriefUrlReady(briefUrl), false, briefUrl);
+  }
 });
 
 test("unpaid checkout never ranks as #1", () => {
