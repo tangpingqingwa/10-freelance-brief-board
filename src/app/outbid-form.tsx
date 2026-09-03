@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { MIN_BID_USD } from "../core/money";
+import { MIN_BID_USD, parseWholeUsd } from "../core/money";
 import { canonicalizeBriefUrl } from "../core/url";
 
 type OutbidFormProps = {
@@ -25,9 +25,19 @@ export function isBriefUrlReady(value: string): boolean {
   }
 }
 
+export function isProjectBudgetReady(value: string): boolean {
+  const budgetUsd = parseWholeUsd(value);
+  return budgetUsd !== undefined && budgetUsd >= 1;
+}
+
 type TicketField = "buyer" | "budgetUsd" | "deadline" | "winnerRule" | "briefUrl";
 
 type TicketFieldValues = Record<TicketField, string>;
+
+type ClaimReadiness = {
+  ready: boolean;
+  message: string;
+};
 
 type IconName = "chevron-down" | "minus" | "plus";
 
@@ -81,7 +91,9 @@ function TicketIdentityFields({
   return (
     <>
       <label className="ticket-row ticket-primary-field">
-        <span className="sr-only">Brief URL</span>
+        <span className="field-label">
+          Brief URL <span className="required-mark">Required</span>
+        </span>
         <input
           name="briefUrl"
           type="text"
@@ -95,14 +107,19 @@ function TicketIdentityFields({
         />
       </label>
 
-      <details className="ticket-details">
+      <details className="ticket-details" open>
         <summary data-slot="ticket-details-control">
-          <span>Project ticket details</span>
+          <span className="field-label">
+            Project ticket details
+            <span className="required-mark">4 required</span>
+          </span>
           <Icon name="chevron-down" />
         </summary>
         <div className="ticket-details-grid">
           <label>
-            Who is buying
+            <span className="field-label">
+              Who is buying <span className="required-mark">Required</span>
+            </span>
             <input
               name="buyer"
               type="text"
@@ -115,21 +132,29 @@ function TicketIdentityFields({
             />
           </label>
           <label>
-          What it pays
-          <input
-            name="budgetUsd"
-            type="number"
-            required
-            min={1}
-            step={1}
-            inputMode="numeric"
-            placeholder="Project budget, USD"
-            value={values.budgetUsd}
-            onChange={(event) => onChange("budgetUsd", event.target.value)}
-          />
+            <span className="field-label">
+              What it pays <span className="required-mark">Required</span>
+            </span>
+            <input
+              name="budgetUsd"
+              type="text"
+              required
+              inputMode="numeric"
+              pattern="[0-9]+"
+              maxLength={16}
+              placeholder="Whole USD, e.g. 2500"
+              aria-describedby="project-budget-help"
+              value={values.budgetUsd}
+              onChange={(event) => onChange("budgetUsd", event.target.value)}
+            />
+            <span className="field-help" id="project-budget-help">
+              Digits only — no $, commas, cents, or exponent notation.
+            </span>
           </label>
           <label className="ticket-deadline-field">
-            When it’s due
+            <span className="field-label">
+              When it’s due <span className="required-mark">Required</span>
+            </span>
             <input
               name="deadline"
               type="date"
@@ -139,7 +164,10 @@ function TicketIdentityFields({
             />
           </label>
           <label className="ticket-row">
-            How a winner is chosen
+            <span className="field-label">
+              How a winner is chosen
+              <span className="required-mark">Required</span>
+            </span>
             <input
               name="winnerRule"
               type="text"
@@ -159,11 +187,11 @@ function TicketIdentityFields({
 function TicketWrite({
   values,
   onChange,
-  ready,
+  readiness,
 }: {
   values: TicketFieldValues;
   onChange: (field: TicketField, value: string) => void;
-  ready: boolean;
+  readiness: ClaimReadiness;
 }) {
   return (
     <div className="claim-controls" data-slot="claim-controls">
@@ -174,21 +202,76 @@ function TicketWrite({
       >
         <TicketIdentityFields values={values} onChange={onChange} />
       </div>
+      <p
+        className="claim-readiness"
+        id="claim-readiness"
+        data-ready={readiness.ready ? "true" : "false"}
+        aria-live="polite"
+      >
+        {readiness.message}
+      </p>
       <div className="bid-row">
         <button
           type="submit"
           className="outbid"
           data-slot="claim-button"
-          disabled={!ready}
-          aria-disabled={!ready}
           aria-label="Claim rank"
-          data-ready={ready ? "true" : "false"}
+          aria-describedby="claim-readiness"
+          data-ready={readiness.ready ? "true" : "false"}
         >
           Claim rank
         </button>
       </div>
     </div>
   );
+}
+
+function getClaimReadiness(values: TicketFieldValues): ClaimReadiness {
+  if (!isBriefUrlReady(values.briefUrl)) {
+    return {
+      ready: false,
+      message: "Enter a public brief URL, such as client.com/brief.",
+    };
+  }
+  const buyer = values.buyer.trim();
+  if (!buyer) {
+    return {
+      ready: false,
+      message: "Add who is buying to complete this required ticket.",
+    };
+  }
+  if (buyer.length > 80) {
+    return {
+      ready: false,
+      message: "Who is buying must be 80 characters or fewer.",
+    };
+  }
+  if (!isProjectBudgetReady(values.budgetUsd)) {
+    return {
+      ready: false,
+      message: "Enter the project budget as whole-dollar digits only, for example 2500.",
+    };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(values.deadline)) {
+    return {
+      ready: false,
+      message: "Choose the required project deadline.",
+    };
+  }
+  const winnerRule = values.winnerRule.trim();
+  if (!winnerRule) {
+    return { ready: false, message: "Explain how the winner will be chosen." };
+  }
+  if (winnerRule.length > 280) {
+    return {
+      ready: false,
+      message: "The winner rule must be 280 characters or fewer.",
+    };
+  }
+  return {
+    ready: true,
+    message: "Ready for checkout. Payment confirmation is what places this ticket.",
+  };
 }
 
 export function OutbidForm({
@@ -213,13 +296,7 @@ export function OutbidForm({
     setValues((current) => ({ ...current, [field]: value }));
   }
 
-  const ready =
-    values.buyer.trim().length > 0 &&
-    Number.isInteger(Number(values.budgetUsd)) &&
-    Number(values.budgetUsd) >= 1 &&
-    values.deadline.length > 0 &&
-    values.winnerRule.trim().length > 0 &&
-    isBriefUrlReady(values.briefUrl);
+  const readiness = getClaimReadiness(values);
 
   return (
     <section
@@ -300,7 +377,7 @@ export function OutbidForm({
           <TicketWrite
             values={values}
             onChange={updateField}
-            ready={ready}
+            readiness={readiness}
           />
         </div>
       </form>

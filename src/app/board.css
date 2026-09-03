@@ -6858,6 +6858,114 @@ a:hover {
 }
 
 /* -------------------------------------------------------------------------
+   r33 claim-entry clarity
+
+   Every required ticket fact is visible on first load. The URL and CTA share
+   the first desktop row; the expanded ticket details get the full writing
+   track below instead of being squeezed into the old disclosure column.
+   ------------------------------------------------------------------------- */
+
+.ticket-primary-field::before {
+  display: none;
+}
+
+.field-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.required-mark {
+  color: var(--stamp);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field-help {
+  color: var(--muted);
+  font-family: "IBM Plex Sans", "DM Sans", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+.ticket-details[open] > summary .icon {
+  transform: rotate(180deg);
+}
+
+.claim-readiness {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.claim-readiness[data-ready="true"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@media (min-width: 761px) {
+  .claim-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(6.5rem, 7.5rem);
+    align-items: start;
+  }
+
+  .claim-controls > .ticket-fields > .ticket-primary-field {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    height: auto;
+  }
+
+  .claim-controls > .ticket-fields > .ticket-primary-field input {
+    margin: 0;
+  }
+
+  .claim-controls > .ticket-fields > .ticket-details {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: stretch;
+  }
+
+  .claim-controls > .claim-readiness {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .claim-controls > .bid-row {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+  }
+}
+
+@media (max-width:760px) {
+  .claim-controls > .ticket-fields > .ticket-primary-field {
+    grid-row: 1;
+    height: auto;
+  }
+
+  .claim-controls > .ticket-fields > .ticket-details {
+    grid-row: 2;
+  }
+
+  .claim-controls > .claim-readiness {
+    grid-row: 3;
+  }
+
+  .claim-controls > .bid-row {
+    grid-row: 4;
+  }
+}
+
+/* -------------------------------------------------------------------------
    r32 reviewer blockers
 
    Occupied claims have older, more specific layout rules. Repeat that

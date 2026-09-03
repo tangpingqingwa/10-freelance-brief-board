@@ -244,7 +244,7 @@ GET  /healthz                  { ok: true }
 
 Board UI (clone outbid.lol, not a redesign):
 
-- Fields: buyer, budget, deadline, how the winner is chosen, brief URL, whole-dollar amount, one **Outbid** button.
+- Fields: buyer, budget, deadline, how the winner is chosen, brief URL, whole-dollar amount, one **Claim rank** button. All required ticket fields are visible on first load, and the native form remains submittable before client hydration.
 - Ranked cards: rank, buyer, budget, deadline, winner rule, **$amount**, public **clicks**, open-brief control.
 - No star widgets. No review scores. No invented ratings.
 

@@ -12,7 +12,10 @@ import {
   formatDeadline,
   periodFromSearch,
 } from "../src/app/board";
-import { isBriefUrlReady } from "../src/app/outbid-form";
+import {
+  isBriefUrlReady,
+  isProjectBudgetReady,
+} from "../src/app/outbid-form";
 import { FindPopover } from "../src/app/theme-toggle";
 import { resetListings } from "../src/core/listings";
 import {
@@ -123,6 +126,25 @@ test("Claim rank URL readiness shares the fail-closed server boundary", () => {
     "[::ffff:127.0.0.1]/brief",
   ]) {
     assert.equal(isBriefUrlReady(briefUrl), false, briefUrl);
+  }
+});
+
+test("Claim rank project budget readiness uses whole-dollar digits only", () => {
+  for (const budget of ["1", "2500", "0005", "9007199254740991"]) {
+    assert.equal(isProjectBudgetReady(budget), true, budget);
+  }
+  for (const budget of [
+    "",
+    " 2500 ",
+    "0",
+    "-1",
+    "$2500",
+    "2,500",
+    "2500.0",
+    "1e3",
+    "9007199254740992",
+  ]) {
+    assert.equal(isProjectBudgetReady(budget), false, budget);
   }
 });
 
@@ -283,6 +305,32 @@ test("empty week markup shows the form and no #1 brief", () => {
   assert.match(formSource, /When it’s due/);
   assert.match(formSource, /How a winner is chosen/);
   assert.doesNotMatch(formSource, RATINGS_FORBIDDEN);
+});
+
+test("Claim rank is progressively usable with required details visible before hydration", () => {
+  const html = renderToStaticMarkup(
+    createElement(Board, { week: WEEK_META, listings: [] }),
+  );
+  assert.match(html, /<details class="ticket-details" open="">/);
+  assert.match(html, /Project ticket details/);
+  assert.match(html, /4 required/);
+  assert.match(
+    html,
+    /<input(?=[^>]*name="budgetUsd")(?=[^>]*type="text")[^>]*>/,
+  );
+  assert.match(
+    html,
+    /<input(?=[^>]*name="budgetUsd")(?=[^>]*pattern="\[0-9\]\+")[^>]*>/,
+  );
+  assert.match(html, /Digits only/);
+  assert.match(html, /id="claim-readiness"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.match(html, /aria-describedby="claim-readiness"/);
+  const submit = html.match(/<button type="submit"[^>]*data-slot="claim-button"[^>]*>/)?.[0];
+  assert.ok(submit);
+  assert.doesNotMatch(submit, /\sdisabled(?:=|\s|>)/);
+  assert.doesNotMatch(submit, /aria-disabled/);
+  assert.match(submit, /data-ready="false"/);
 });
 
 test("mobile period context keeps the rolling window truthful", () => {

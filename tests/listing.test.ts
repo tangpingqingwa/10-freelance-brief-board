@@ -63,6 +63,17 @@ test("listing requires buyer, budget, deadline, and brief URL", () => {
       return true;
     },
   );
+  for (const budgetUsd of ["$3200", " 3200 ", "3,200", "3200.0", "3.2e3"]) {
+    assert.throws(
+      () => parseCheckoutInput(draft({ budgetUsd })),
+      (err: unknown) => {
+        assert.ok(err instanceof CheckoutError);
+        assert.equal(err.code, "budget_not_whole");
+        return true;
+      },
+      budgetUsd,
+    );
+  }
   assert.throws(
     () => parseCheckoutInput(draft({ deadline: "soon" })),
     (err: unknown) => {

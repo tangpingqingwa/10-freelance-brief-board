@@ -1,6 +1,7 @@
 import { HonestyError, rejectInventedRatings } from "../core/honesty";
 import { ListingError, canonicalBriefUrl, quoteBid } from "../core/listing";
 import { findPaidByIdentity } from "../core/listings";
+import { parseWholeUsd } from "../core/money";
 import { isNsfwCopy } from "../core/url";
 import { currentWeekUtc } from "../core/week";
 
@@ -175,18 +176,6 @@ function rejectRatings(body: Record<string, unknown>): void {
     }
     throw error;
   }
-}
-
-function parseWholeUsd(raw: unknown): number | undefined {
-  if (typeof raw === "number") {
-    if (!Number.isSafeInteger(raw) || raw < 0) return undefined;
-    return raw;
-  }
-  if (typeof raw !== "string") return undefined;
-  const trimmed = raw.trim().replace(/^\$/, "");
-  if (!/^\d+$/.test(trimmed)) return undefined;
-  const value = Number(trimmed);
-  return Number.isSafeInteger(value) ? value : undefined;
 }
 
 function parseDeadline(raw: unknown): string {

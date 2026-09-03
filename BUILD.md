@@ -127,10 +127,10 @@ Each heading below is one PR. Dependencies are hard. Do not start the next PR in
 - **Acceptance:** `GET /healthz` → `{ ok: true }`. `bash scripts/test.sh` green offline.
 
 ### PR 2: board UI like outbid.lol
-- **Description:** Public board: buyer, budget, deadline, winner rule, brief URL, whole-dollar amount, Outbid button, ranked cards with **$** and **clicks**. Honest empty week. No invented ratings.
+- **Description:** Public board: buyer, budget, deadline, winner rule, brief URL, whole-dollar amount, Claim rank button, ranked cards with **$** and **clicks**. Honest empty week. No invented ratings.
 - **Files:** `src/app/page.tsx`, `src/core/week.ts`, `src/core/rank.ts`, board styles, `tests/rank.test.ts`
 - **Dependencies:** PR 1
-- **Acceptance:** Empty week renders the form and no #1 brief. Cards show money not ratings. Sort matches SPEC. Listing shape is buyer + budget + deadline + brief URL.
+- **Acceptance:** Empty week renders the form and no #1 brief. Every required ticket field is visible on first load, native validation works before hydration, and Claim rank posts to checkout. Cards show money not ratings. Sort matches SPEC. Listing shape is buyer + budget + deadline + brief URL.
 
 ### PR 3: checkout
 - **Description:** `PaymentPort.createCheckout`. Explicit fixture adapter for tests and official Waffo Pancake for live modes. Rank changes only on a verified paid webhook / fixture event. Min $5. Underbid still lists.
